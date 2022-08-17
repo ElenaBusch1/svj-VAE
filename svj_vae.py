@@ -1,6 +1,7 @@
 import numpy as np
 from tensorflow import keras
 from sklearn.metrics import roc_auc_score, roc_curve
+from sklearn.model_selection import train_test_split
 from plot_helper import plot_loss
 
 #---- REFERENCES 
@@ -18,16 +19,16 @@ batchsize = 16
 # model 
 input_vars = keras.Input ( shape =(input_dim,))
 encoded = keras.layers.Dense(encoding_dim, activation='relu')(input_vars)
-decoded = keras.layers.Dense(784, activation='sigmoid')(encoded)
+decoded = keras.layers.Dense(input_dim, activation='sigmoid')(encoded)
 autoencoder = keras.Model(input_vars, decoded)
 autoencoder.compile(loss = keras.losses.mean_squared_error, optimizer = keras.optimizers.Adam())
 
 # prepare input events
 x = np.random.rand(100, input_dim) #TODO: this is a dummy 100 events modeled by 12 vars, but need a function to pull these from JZW dijet
-sig = np.random.rand(100, input_dim) #TODO same function but for SVJ vars
+sig = np.random.rand(100, input_dim) #TODO same function but loaded from SVJ sample vars
 print(x)
 print(sig)
-x_temp, x_test, _, _ = train_test_split(x, x, test_size=0.05)
+x_temp, x_test, _, _ = train_test_split(x, x, test_size=0.05) #done randomly
 x_train, x_valid, _, _ = train_test_split(x_temp,
                                           x_temp,
                                           test_size=0.1)
