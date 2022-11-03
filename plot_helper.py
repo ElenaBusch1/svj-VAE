@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from root_to_numpy import variable_array
 from math import ceil
 
+tag = "_3layer"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def plot_loss(h):
@@ -14,7 +15,7 @@ def plot_loss(h):
   plt.ylabel('loss')
   plt.xlabel('epoch')
   plt.legend(['train', 'val'], loc='upper left')
-  plt.savefig(plot_dir+'lossVsEpoch.png')
+  plt.savefig(plot_dir+'lossVsEpoch'+tag+'.png')
   plt.clf()
 
 def make_roc(fpr,tpr,auc):
@@ -23,7 +24,7 @@ def make_roc(fpr,tpr,auc):
   plt.ylabel("True Positive Rate")
   plt.title("SVJ AE ROC")
   plt.legend()
-  plt.savefig(plot_dir+'roc_auc.png')
+  plt.savefig(plot_dir+'roc_auc'+tag+'.png')
   plt.clf()
 
 def make_single_roc(rocs,aucs,ylabel):
@@ -42,7 +43,7 @@ def plot_score(bkg_score, sig_score):
   plt.yscale('log')
   plt.legend()
   plt.xlabel('MSE(Input, Reconstructed)')
-  plt.savefig(plot_dir+'score.png')
+  plt.savefig(plot_dir+'score'+tag+'.png')
   plt.clf()
 
 def plot_inputs(bkg, sig):
@@ -53,7 +54,7 @@ def plot_inputs(bkg, sig):
     plt.hist(sig[:,i], bins=30, alpha=0.5, density=True)
     plt.title(variable_array[i])
     if (i%4 == 3):
-      plt.savefig(plot_dir+'input_vars_'+str(i)+'.png')
+      plt.savefig(plot_dir+'input_vars_'+str(i)+tag+'.png')
       plt.clf()
 
       
