@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import numpy as np
 import matplotlib.pyplot as plt
+from root_to_numpy import variable_array
+from math import ceil
 
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
@@ -33,3 +35,26 @@ def make_single_roc(rocs,aucs,ylabel):
   plt.legend()
   plt.savefig(saveTag+'_roc_aucs_'+Ylabel.replace("/","")+'.pdf')
   plt.clf()
+
+def plot_score(bkg_score, sig_score):
+  plt.hist(bkg_score, bins=30, alpha=0.5, label="bkg", density=True)
+  plt.hist(sig_score, bins=30, alpha=0.5, label="sig", density=True)
+  plt.yscale('log')
+  plt.legend()
+  plt.xlabel('MSE(Input, Reconstructed)')
+  plt.savefig(plot_dir+'score.png')
+  plt.clf()
+
+def plot_inputs(bkg, sig):
+  for i in range(len(variable_array)):
+    plt.subplot(2,2,i%4+1)
+    plt.tight_layout(h_pad=1, w_pad=1)
+    plt.hist(bkg[:,i], bins=30, alpha=0.5, density=True)  
+    plt.hist(sig[:,i], bins=30, alpha=0.5, density=True)
+    plt.title(variable_array[i])
+    if (i%4 == 3):
+      plt.savefig(plot_dir+'input_vars_'+str(i)+'.png')
+      plt.clf()
+
+      
+

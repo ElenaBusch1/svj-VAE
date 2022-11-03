@@ -3,6 +3,7 @@ from root_to_numpy import *
 from tensorflow import keras
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from plot_helper import *
 from models import get_ae
 
@@ -22,11 +23,14 @@ batchsize = 16
 model_svj = get_ae(input_dim, encoding_dim)
 
 # prepare input events
-#x = np.random.rand(100, input_dim) #TODO: this is a dummy 100 events modeled by 12 vars, but need a function to pull these from JZW dijet
-#sig = np.random.rand(5, input_dim) #TODO same function but loaded from SVJ sample vars
-x = read_files("../smallBackground.root", 10000)
-sig = read_files("../smallSignal.root", 500)
-
+#x = np.random.rand(10000, input_dim) #TODO: this is a dummy 100 events modeled by 12 vars, but need a function to pull these from JZW dijet
+#sig = np.random.rand(500, input_dim) #TODO same function but loaded from SVJ sample vars
+x_raw = read_files("../smallBackground.root", 10000)
+sig_raw = read_files("../smallSignal.root", 500)
+x_scaler = StandardScaler()
+sig_scaler = StandardScaler()
+x = x_scaler.fit_transform(x_raw)
+sig = sig_scaler.fit_transform(sig_raw)
 print(x)
 print(type(x))
 print(x.shape)
@@ -80,7 +84,17 @@ plot_loss(h)
 # 2. Histogram of reco error (loss) for JZW and evaled SVJ signals (test sets)
 # 3. ROCs/AUCs using sklearn functions imported above  
 # TODO
-fpr, tpr, _ = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
+fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
+#print("eval:  ", eval_vals)
+#print("truth: ", truth_labels)
+#print("fpr:   ", fpr)
+#print("tpr:   ", tpr)
+#print("trh:   ", trh)
 auc = roc_auc_score(truth_labels, eval_vals) #Y_test = true labels, Y_predict = model-determined positive rate
-make_roc(fpr,tpr,auc)
+#make_roc(fpr,tpr,auc)
 #make_single_roc(roc_curve, auc, 'tpr') #TODO plot tpr/sqrt(fpr) vs. fpr
+# 4. Anomaly score
+#plot_score(pred_err_bkg, pred_err_sig)
+
+#5. Plot inputs
+plot_inputs(x,sig)
