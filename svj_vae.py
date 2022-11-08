@@ -13,24 +13,43 @@ from models import *
 #- VRNN code: https://gitlab.cern.ch/dawillia/cxaod-scripts/-/tree/master/train
 #- Weakly supervised CWoLa with PFNs: https://github.com/juliagonski/ILCAnomalies
 
+# input
+hlvs = False
+jets = True
+if(not hlvs and not jets):
+	print("No input type specified")
+
 # params
-input_dim = 12 #start with N HLVs (from KP's BDT)
-encoding_dim = 8
+if (jets):
+	input_dim = 64 #start with N HLVs (from KP's BDT)
+	encoding_dim = 8
+	
+if (hlvs):
+	input_dim = 12
+	encoding_dim = 4
+
 nepochs = 30
 batchsize = 16
 
 # model 
-model_svj = get_better_ae(input_dim, encoding_dim)
+model_svj = get_simple_ae(input_dim, encoding_dim)
 
 # prepare input events
 #x = np.random.rand(10000, input_dim) #TODO: this is a dummy 100 events modeled by 12 vars, but need a function to pull these from JZW dijet
 #sig = np.random.rand(500, input_dim) #TODO same function but loaded from SVJ sample vars
-x_raw = read_files("../smallBackground.root", 30000)
-sig_raw = read_files("../smallSignal.root", 1500)
+if (hlvs):
+	x_raw = read_hlvs("../smallBackground.root", 30000)
+	sig_raw = read_hlvs("../smallSignal.root", 1500)
+
+if (jets):
+	x_raw = read_vectors("../smallBackground.root", 30000)
+	sig_raw = read_vectors("../smallSignal.root", 1500)
+
 x_scaler = StandardScaler()
 sig_scaler = StandardScaler()
 x = x_scaler.fit_transform(x_raw)
 sig = sig_scaler.fit_transform(sig_raw)
+
 #x = x_raw
 #sig = sig_raw
 print(x)
