@@ -14,8 +14,8 @@ from models import *
 #- Weakly supervised CWoLa with PFNs: https://github.com/juliagonski/ILCAnomalies
 
 # input
-hlvs = False
-jets = True
+hlvs = True
+jets = False
 if(not hlvs and not jets):
 	print("No input type specified")
 
@@ -45,13 +45,13 @@ if (jets):
 	x_raw = read_vectors("../smallBackground.root", 30000)
 	sig_raw = read_vectors("../smallSignal.root", 1500)
 
-x_scaler = StandardScaler()
-sig_scaler = StandardScaler()
-x = x_scaler.fit_transform(x_raw)
-sig = sig_scaler.fit_transform(sig_raw)
+#x_scaler = StandardScaler()
+#sig_scaler = StandardScaler()
+#x = x_scaler.fit_transform(x_raw)
+#sig = sig_scaler.fit_transform(sig_raw)
 
-#x = x_raw
-#sig = sig_raw
+x = x_raw
+sig = sig_raw
 print(x)
 print(type(x))
 print(x.shape)
@@ -118,4 +118,4 @@ make_roc(fpr,tpr,auc)
 plot_score(pred_err_bkg, pred_err_sig)
 
 #5. Plot inputs
-#plot_inputs(x,sig)
+plot_inputs(x,sig)

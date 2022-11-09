@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = 'jet_met_linear'
+tag = 'new_bkg_unscaled'
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def plot_loss(h):
