@@ -14,44 +14,44 @@ from models import *
 #- Weakly supervised CWoLa with PFNs: https://github.com/juliagonski/ILCAnomalies
 
 # input
-hlvs = True
-jets = False
+hlvs = False
+jets = True
 if(not hlvs and not jets):
 	print("No input type specified")
 
 # params
 if (jets):
 	input_dim = 64 #start with N HLVs (from KP's BDT)
-	encoding_dim = 8
+	encoding_dim = 16
 	
 if (hlvs):
 	input_dim = 12
 	encoding_dim = 4
 
-nepochs = 30
-batchsize = 16
+nepochs = 100
+batchsize = 32
 
 # model 
-model_svj = get_simple_ae(input_dim, encoding_dim)
+#model_svj = get_better_ae(input_dim, encoding_dim)
 
 # prepare input events
 #x = np.random.rand(10000, input_dim) #TODO: this is a dummy 100 events modeled by 12 vars, but need a function to pull these from JZW dijet
 #sig = np.random.rand(500, input_dim) #TODO same function but loaded from SVJ sample vars
 if (hlvs):
-	x_raw = read_hlvs("../smallBackground.root", 30000)
-	sig_raw = read_hlvs("../smallSignal.root", 1500)
+	x_raw = read_hlvs("../largerBackground.root", 30000)
+	sig_raw = read_hlvs("../largerSignal.root", 1500)
 
 if (jets):
-	x_raw = read_vectors("../smallBackground.root", 30000)
-	sig_raw = read_vectors("../smallSignal.root", 1500)
+	x_raw = read_vectors("../largerBackground.root", 50000)
+	sig_raw = read_vectors("../largerSignal.root", 5000)
 
-#x_scaler = StandardScaler()
-#sig_scaler = StandardScaler()
-#x = x_scaler.fit_transform(x_raw)
-#sig = sig_scaler.fit_transform(sig_raw)
+x_scaler = StandardScaler()
+sig_scaler = StandardScaler()
+x = x_scaler.fit_transform(x_raw)
+sig = sig_scaler.fit_transform(sig_raw)
 
-x = x_raw
-sig = sig_raw
+#x = x_raw
+#sig = sig_raw
 print(x)
 print(type(x))
 print(x.shape)
@@ -59,10 +59,11 @@ print(sig)
 print(type(sig))
 print(sig.shape)
 
-x_temp, x_test, _, _ = train_test_split(x, x, test_size=0.05) #done randomly
+model_svj = get_better_ae(input_dim, encoding_dim)
+x_temp, x_test, _, _ = train_test_split(x, x, test_size=0.1) #done randomly
 x_train, x_valid, _, _ = train_test_split(x_temp,
                                           x_temp,
-                                          test_size=0.1)
+                                          test_size=0.2)
 n_train = len(x_train)
 n_valid = len(x_valid)
 n_test = len(x_test)
@@ -74,6 +75,14 @@ h = model_svj.fit(x_train, x_train,
                 batch_size=batchsize,
                 shuffle=True,
                 validation_data=(x_valid, x_valid))
+
+#save
+model_svj.save("test_model")
+#model_json = model_svj.to_json()
+#with open("bigmodel.json", "w") as json_file:
+#	json_file.write(model_json)
+#model_svj.save_weights("bigmodel.h5")
+print("Saved model")
 
 # evaluate
 # anomaly score = loss (TODO how to improve?)
@@ -98,10 +107,13 @@ print("sig evaluated loss, accuracy: ", accu_sig)
 truth_labels = np.concatenate((truth_bkg, truth_sig))
 eval_vals = np.concatenate((pred_err_bkg, pred_err_sig))
 #eval_vals = [0.3, 0.2, 0.3, 0.5, 0.4, 0.6, 0.8, 0.7, 0.9, 0.7]
+#plot_loss(h,i)
+auc = roc_auc_score(truth_labels, eval_vals)
+print("Iteration test", " AUC = ", auc)
 
 # --- Eval plots 
 # 1. Loss vs. epoch 
-plot_loss(h)
+plot_loss(h,1)
 # 2. Histogram of reco error (loss) for JZW and evaled SVJ signals (test sets)
 # 3. ROCs/AUCs using sklearn functions imported above  
 # TODO
@@ -118,4 +130,4 @@ make_roc(fpr,tpr,auc)
 plot_score(pred_err_bkg, pred_err_sig)
 
 #5. Plot inputs
-plot_inputs(x,sig)
+#plot_inputs(x,sig)

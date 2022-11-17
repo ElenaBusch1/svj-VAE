@@ -10,15 +10,13 @@ def get_simple_ae(input_dim, encoding_dim):
 
 def get_better_ae(input_dim, encoding_dim):
   input_vars = keras.Input ( shape =(input_dim,))
-  encoded = keras.layers.Dense(encoding_dim, activation='relu')(input_vars)
-  encoded = keras.layers.Dense(encoding_dim/2, activation='relu')(encoded)
-  encoded = keras.layers.Dense(encoding_dim/4, activation='relu')(encoded)
+  encoded = keras.layers.Dense(encoding_dim, activation='sigmoid')(input_vars)
+  encoded = keras.layers.Dense(encoding_dim/4, activation='sigmoid')(encoded)
 
-  decoded = keras.layers.Dense(encoding_dim/2, activation='sigmoid')(encoded)
-  decoded = keras.layers.Dense(encoding_dim, activation='sigmoid')(decoded)
+  decoded = keras.layers.Dense(encoding_dim, activation='sigmoid')(encoded)
   decoded = keras.layers.Dense(input_dim, activation='sigmoid')(decoded)
   autoencoder = keras.Model(input_vars, decoded)
-  autoencoder.compile(loss = keras.losses.mean_squared_error, optimizer = keras.optimizers.Adam())
+  autoencoder.compile(loss = keras.losses.mean_squared_error, optimizer = keras.optimizers.Adam(learning_rate=0.01))
   return autoencoder
 
 
