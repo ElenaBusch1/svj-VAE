@@ -24,8 +24,8 @@ python evaluate.py
 ```
 
 ## File descriptions
-`svj_vae.py`: load training/valdiation/testing background & signal, train, save, evaluate \\
-`evaluate.py`: load testing background & signal, load saved model, evaluate \\
-`plot_helper.py`: plotting scripts \\
-`models.py`: AE models \\
+`svj_vae.py`: load training/valdiation/testing background & signal, train, save, evaluate  
+`evaluate.py`: load testing background & signal, load saved model, evaluate  
+`plot_helper.py`: plotting scripts  
+`models.py`: AE models  
 `root_to_numpy.py`: loads data from nTuples
