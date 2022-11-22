@@ -4,7 +4,7 @@ Codes for training & evaluating the SVJ autoencoder
 
 ## Files
 
-Input files can be found in the shares eos area (/eos/atlas/atlascerngroupdisk/phys-exotics/jdm/svjets-schannel)
+Input files can be found in the shares eos area: /eos/atlas/atlascerngroupdisk/phys-exotics/jdm/svjets-schannel
 
 ## Conda environment
 
@@ -24,8 +24,8 @@ python evaluate.py
 ```
 
 ## File descriptions
-`svj_vae.py`: load training/valdiation/testing background & signal, train, save, evaluate
-`evaluate.py`: load testing background & signal, load saved model, evaluate
-`plot_helper.py`: plotting scripts
-`models.py`: AE models
+`svj_vae.py`: load training/valdiation/testing background & signal, train, save, evaluate \\
+`evaluate.py`: load testing background & signal, load saved model, evaluate \\
+`plot_helper.py`: plotting scripts \\
+`models.py`: AE models \\
 `root_to_numpy.py`: loads data from nTuples
