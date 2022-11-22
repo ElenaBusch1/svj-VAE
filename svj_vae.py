@@ -77,12 +77,8 @@ h = model_svj.fit(x_train, x_train,
                 validation_data=(x_valid, x_valid))
 
 #save
-model_svj.save("test_model")
-#model_json = model_svj.to_json()
-#with open("bigmodel.json", "w") as json_file:
-#	json_file.write(model_json)
-#model_svj.save_weights("bigmodel.h5")
-print("Saved model")
+#model_svj.save("test_model")
+#print("Saved model")
 
 # evaluate
 # anomaly score = loss (TODO how to improve?)
