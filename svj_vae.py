@@ -59,7 +59,7 @@ print(sig)
 print(type(sig))
 print(sig.shape)
 
-model_svj = get_better_ae(input_dim, encoding_dim)
+model_svj = get_vae(input_dim, encoding_dim)
 x_temp, x_test, _, _ = train_test_split(x, x, test_size=0.1) #done randomly
 x_train, x_valid, _, _ = train_test_split(x_temp,
                                           x_temp,
