@@ -14,15 +14,15 @@ from models import *
 #loaded_model.load_weights("model.h5")
 
 #load testing data
-x_raw = read_vectors("../largerBackground.root", 5000)
-sig_raw = read_vectors("../WpJets.root", 5000)
+x_raw = read_vectors("../v6smallQCD.root", 10000)
+sig_raw = read_vectors("../user.ebusch.515526.root", 10000)
 x_scaler = StandardScaler()
 sig_scaler = StandardScaler()
 x_test = x_scaler.fit_transform(x_raw)
 sig = sig_scaler.fit_transform(sig_raw)
 
 #load model
-model_svj = keras.models.load_model("test_model")
+model_svj = keras.models.load_model("v6_model3")
 print ("Loaded model")
 
 #evaluate
@@ -57,11 +57,11 @@ fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
 #print("tpr:   ", tpr)
 #print("trh:   ", trh)
 #auc = roc_auc_score(truth_labels, eval_vals) #Y_test = true labels, Y_predict = model-determined positive rate
-#make_roc(fpr,tpr,auc)
+make_roc(fpr,tpr,auc)
 make_sic(fpr,tpr,auc)
 #make_single_roc(roc_curve, auc, 'tpr') #TODO plot tpr/sqrt(fpr) vs. fpr
 # 4. Anomaly score
-plot_score(pred_err_bkg, pred_err_sig, False)
+#plot_score(pred_err_bkg, pred_err_sig, False)
 
 #5. Plot inputs
 #plot_inputs(x,sig)
