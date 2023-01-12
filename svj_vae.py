@@ -42,8 +42,8 @@ if (hlvs):
 	sig_raw = read_hlvs("../largerSignal.root", 1500)
 
 if (jets):
-	x_raw = read_vectors("../largerBackground.root", 50000)
-	sig_raw = read_vectors("../largerSignal.root", 5000)
+	x_raw = read_vectors("../v6smallQCD.root", 1000000)
+	sig_raw = read_vectors("../user.ebusch.515502.root", 20000)
 
 x_scaler = StandardScaler()
 sig_scaler = StandardScaler()
@@ -63,7 +63,7 @@ model_svj = get_vae(input_dim, encoding_dim)
 x_temp, x_test, _, _ = train_test_split(x, x, test_size=0.1) #done randomly
 x_train, x_valid, _, _ = train_test_split(x_temp,
                                           x_temp,
-                                          test_size=0.2)
+                                          test_size=0.1)
 n_train = len(x_train)
 n_valid = len(x_valid)
 n_test = len(x_test)
@@ -77,8 +77,8 @@ h = model_svj.fit(x_train, x_train,
                 validation_data=(x_valid, x_valid))
 
 #save
-#model_svj.save("test_model")
-#print("Saved model")
+model_svj.save("v6_model3")
+print("Saved model")
 
 # evaluate
 # anomaly score = loss (TODO how to improve?)
@@ -126,4 +126,4 @@ make_roc(fpr,tpr,auc)
 plot_score(pred_err_bkg, pred_err_sig)
 
 #5. Plot inputs
-#plot_inputs(x,sig)
+plot_inputs(x,sig)
