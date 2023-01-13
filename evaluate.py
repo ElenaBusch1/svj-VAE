@@ -22,7 +22,7 @@ x_test = x_scaler.fit_transform(x_raw)
 sig = sig_scaler.fit_transform(sig_raw)
 
 #load model
-model_svj = keras.models.load_model("v6_model3")
+model_svj = keras.models.load_model("vae2")
 print ("Loaded model")
 
 #evaluate
@@ -32,8 +32,8 @@ accu_bkg = model_svj.evaluate(x_test, truth_bkg)
 accu_sig = model_svj.evaluate(sig, truth_sig)
 pred_bkg = model_svj.predict(x_test)
 pred_sig = model_svj.predict(sig)
-pred_err_bkg = keras.losses.mse(pred_bkg, x_test).numpy()
-pred_err_sig = keras.losses.mse(pred_sig, sig).numpy()
+pred_err_bkg = keras.losses.kld(pred_bkg, x_test).numpy()
+pred_err_sig = keras.losses.kld(pred_sig, sig).numpy()
 
 print("data evaluated loss, accuracy: ", accu_bkg)
 print("sig evaluated loss, accuracy: ", accu_sig)

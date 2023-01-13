@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = 'v6_model3_515526'
+tag = 'vae3_train'
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -61,19 +61,19 @@ def plot_score(bkg_score, sig_score, remove_outliers=True):
   if remove_outliers:
     bkg_score,nb = detect_outliers(bkg_score)
     sig_score,ns = detect_outliers(sig_score)
-  #bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
+  bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
   bmax = max(max(bkg_score),max(sig_score))
   bmin = min(min(bkg_score),min(sig_score))
-  bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
+  #bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
   #plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg (-"+str(nb)+")", density=True)
   #plt.hist(sig_score, bins=bins, alpha=0.5, label="sig(-"+str(ns)+")", density=True)
   plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg", density=True)
   plt.hist(sig_score, bins=bins, alpha=0.5, label="sig", density=True)
-  plt.xscale('log')
-  plt.yscale('log')
+  #plt.xscale('log')
+  #plt.yscale('log')
   plt.legend()
   plt.title("Anomaly Score")
-  plt.xlabel('MSE(Input, Reconstructed)')
+  plt.xlabel('KLD(Input, Reconstructed)')
   plt.savefig(plot_dir+'score_'+tag+'.png')
   plt.clf()
 
