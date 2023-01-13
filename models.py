@@ -29,6 +29,10 @@ def get_better_ae(input_dim, encoding_dim):
   return autoencoder
 
 def get_vae(input_dim, encoding_dim):
+  # Source 1: https://blog.keras.io/building-autoencoders-in-keras.html
+  # Source 2: https://learnopencv.com/variational-autoencoder-in-tensorflow/
+  # Source 3: https://keras.io/examples/generative/vae/
+
   latent_dim = 2
 
   # encoding
