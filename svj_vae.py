@@ -42,8 +42,8 @@ if (hlvs):
 	sig_raw = read_hlvs("../largerSignal.root", 1500)
 
 if (jets):
-	x_raw = read_vectors("../v6smallQCD.root", 500000)
-	sig_raw = read_vectors("../user.ebusch.515502.root", 5000)
+	x_raw = read_vectors("../v6smallQCD.root", 50000)
+	sig_raw = read_vectors("../user.ebusch.515502.root", 10000)
 
 x_scaler = StandardScaler()
 sig_scaler = StandardScaler()
@@ -61,7 +61,7 @@ print(sig.shape)
 
 model_svj = get_vae(input_dim, encoding_dim)
 
-x_temp, x_test, _, _ = train_test_split(x, x, test_size=0.01) #done randomly
+x_temp, x_test, _, _ = train_test_split(x, x, test_size=0.2) #done randomly
 x_train, x_valid, _, _ = train_test_split(x_temp,
                                           x_temp,
                                           test_size=0.1)
@@ -78,8 +78,8 @@ h = model_svj.fit(x_train, x_train,
                 validation_data=(x_valid, x_valid))
 
 #save
-model_svj.save("vae3")
-print("Saved model")
+#model_svj.save("vae3")
+#print("Saved model")
 
 # evaluate
 # anomaly score = loss (TODO how to improve?)
@@ -89,8 +89,8 @@ accu_bkg = model_svj.evaluate(x_test, truth_bkg)
 accu_sig = model_svj.evaluate(sig, truth_sig)
 pred_bkg = model_svj.predict(x_test)
 pred_sig = model_svj.predict(sig)
-pred_err_bkg = keras.losses.kld(pred_bkg, x_test).numpy()
-pred_err_sig = keras.losses.kld(pred_sig, sig).numpy()
+pred_err_bkg = keras.losses.mse(pred_bkg, x_test).numpy()
+pred_err_sig = keras.losses.mse(pred_sig, sig).numpy()
 
 print("data evaluated loss, accuracy: ", accu_bkg)
 print("sig evaluated loss, accuracy: ", accu_sig)
@@ -127,4 +127,4 @@ make_roc(fpr,tpr,auc)
 plot_score(pred_err_bkg, pred_err_sig)
 
 #5. Plot inputs
-plot_vectors(x,sig,"vec")
+#plot_vectors(x,sig,"vec")
