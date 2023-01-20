@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = 'vae_tests'
+tag = 'vae_getvae2'
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
