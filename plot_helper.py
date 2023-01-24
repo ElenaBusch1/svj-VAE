@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = 'vae_getvae2'
+tag = 'vae2_mse'
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -18,9 +18,9 @@ def detect_outliers(x):
 
 def plot_loss(h,i):
   print(h.history)
-  plt.plot(h.history['loss'])
-  plt.plot(h.history['val_loss'])
-  plt.title('AE MSE Loss')
+  plt.plot(h.history['loss'][2:])
+  plt.plot(h.history['val_loss'][2:])
+  plt.title('VAE Total Loss - from epoch 2')
   plt.ylabel('loss')
   plt.xlabel('epoch')
   plt.legend(['train', 'val'], loc='upper left')
@@ -57,24 +57,28 @@ def make_single_roc(rocs,aucs,ylabel):
   plt.savefig(saveTag+'_roc_aucs_'+Ylabel.replace("/","")+'.pdf')
   plt.clf()
 
-def plot_score(bkg_score, sig_score, remove_outliers=True):
+def plot_score(bkg_score, sig_score, remove_outliers=True, extra_tag=""):
   if remove_outliers:
     bkg_score,nb = detect_outliers(bkg_score)
     sig_score,ns = detect_outliers(sig_score)
-  bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
+  #bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
+  bkg_score = np.absolute(bkg_score)
+  sig_score = np.absolute(sig_score)
   bmax = max(max(bkg_score),max(sig_score))
   bmin = min(min(bkg_score),min(sig_score))
-  #bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
+  if bmin == 0: bmin = 1e-9
+  print("max, min: ", bmax, bmin)
+  bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
   #plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg (-"+str(nb)+")", density=True)
   #plt.hist(sig_score, bins=bins, alpha=0.5, label="sig(-"+str(ns)+")", density=True)
   plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg", density=True)
   plt.hist(sig_score, bins=bins, alpha=0.5, label="sig", density=True)
-  #plt.xscale('log')
-  #plt.yscale('log')
+  plt.xscale('log')
+  plt.yscale('log')
   plt.legend()
-  plt.title("Anomaly Score")
-  plt.xlabel('KLD(Input, Reconstructed)')
-  plt.savefig(plot_dir+'score_'+tag+'.png')
+  plt.title("Anomaly Score " + extra_tag)
+  plt.xlabel('Loss')
+  plt.savefig(plot_dir+'score_'+extra_tag+'_'+tag+'.png')
   plt.clf()
 
 def plot_inputs(bkg, sig):

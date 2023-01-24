@@ -139,7 +139,11 @@ class VAE(keras.Model):
     def call(self, data):
         z_mean,z_log_var,x = self.encoder(data)
         reconstruction = self.decoder(x)
-        return z_mean,z_log_var,reconstruction
+        return {
+            "z_mean": z_mean,
+            "z_log_var": z_log_var,
+            "reconstruction": reconstruction
+        }
 
 
 class Sampling(keras.layers.Layer):

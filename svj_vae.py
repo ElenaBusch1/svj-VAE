@@ -29,8 +29,8 @@ if (hlvs):
 	input_dim = 12
 	encoding_dim = 4
 
-nepochs = 30
-batchsize = 32
+nepochs = 50
+batchsize = 256
 
 # model 
 #model_svj = get_better_ae(input_dim, encoding_dim)
@@ -43,8 +43,8 @@ if (hlvs):
 	sig_raw = read_hlvs("../largerSignal.root", 1500)
 
 if (jets):
-	x_raw = read_vectors("../v6smallQCD.root", 5000)
-	sig_raw = read_vectors("../user.ebusch.515502.root", 1000)
+	x_raw = read_vectors("../v6smallQCD.root", 500000)
+	sig_raw = read_vectors("../user.ebusch.515502.root", 10000)
 
 x_scaler = StandardScaler()
 sig_scaler = StandardScaler()
@@ -62,10 +62,10 @@ print(sig.shape)
 
 model_svj = get_vae2(input_dim, encoding_dim)
 
-x_temp, x_test, _, _ = train_test_split(x, x, test_size=0.2) #done randomly
+x_temp, x_test, _, _ = train_test_split(x, x, test_size=0.02) #done randomly
 x_train, x_valid, _, _ = train_test_split(x_temp,
                                           x_temp,
-                                          test_size=0.1)
+                                          test_size=0.05)
 n_train = len(x_train)
 n_valid = len(x_valid)
 n_test = len(x_test)
@@ -76,17 +76,17 @@ h = model_svj.fit(x_train,
                 epochs=nepochs,
                 batch_size=batchsize,
                 #shuffle=True,
-                validation_data=(x_valid, x_valid))
+                validation_data=(x_valid,x_valid) )
 
 #save
 #model_svj.save("vae_getvae2")
 #saved_model.save(model_svj, "vae_getvae2")
-model_svj.get_layer('encoder').save_weights('encoder_weights.h5')
-model_svj.get_layer('decoder').save_weights('decoder_weights.h5')
-model_svj.get_layer('encoder').save('encoder_arch')
-model_svj.get_layer('decoder').save('decoder_arch')
+#model_svj.get_layer('encoder').save_weights('encoder_weights.h5')
+#model_svj.get_layer('decoder').save_weights('decoder_weights.h5')
+#model_svj.get_layer('encoder').save('encoder_arch')
+#model_svj.get_layer('decoder').save('decoder_arch')
 
-print("Saved model")
+#print("Saved model")
 
 # evaluate
 # anomaly score = loss (TODO how to improve?)
@@ -99,13 +99,13 @@ pred_sig = model_svj.predict(sig)
 #pred_err_bkg = keras.losses.mse(pred_bkg, x_test).numpy()
 #pred_err_sig = keras.losses.mse(pred_sig, sig).numpy()
 
-print(model_svj.metrics_names)
-print("data evaluated loss, accuracy: ", accu_bkg)
-print("sig evaluated loss, accuracy: ", accu_sig)
+#print(model_svj.metrics_names)
+#print("data evaluated loss, accuracy: ", accu_bkg)
+#print("sig evaluated loss, accuracy: ", accu_sig)
 #print("truth_bkg: ", truth_bkg)
 #print("truth_sig: ", truth_sig)
-print("pred_bkg: ", pred_bkg)
-print("pred_sig: ", pred_sig)
+#print("pred_bkg: ", pred_bkg)
+#print("pred_sig: ", pred_sig)
 #print("pred_err_bkg: ", pred_err_bkg)
 #print("pred_err_sig: ", pred_err_sig)
 
