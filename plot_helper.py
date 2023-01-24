@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = 'v6_model3_515526'
+tag = 'v6_model3_loss_515499'
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -64,6 +64,8 @@ def plot_score(bkg_score, sig_score, remove_outliers=True):
   #bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
   bmax = max(max(bkg_score),max(sig_score))
   bmin = min(min(bkg_score),min(sig_score))
+  print("max, min:", bmax, bmin)
+  if (bmin ==0 or bmin < 0): bmin = 1e-9
   bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
   #plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg (-"+str(nb)+")", density=True)
   #plt.hist(sig_score, bins=bins, alpha=0.5, label="sig(-"+str(ns)+")", density=True)

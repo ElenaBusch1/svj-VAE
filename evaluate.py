@@ -14,8 +14,9 @@ from models import *
 #loaded_model.load_weights("model.h5")
 
 #load testing data
-x_raw = read_vectors("../v6smallQCD.root", 10000)
-sig_raw = read_vectors("../user.ebusch.515526.root", 10000)
+nevents = 100
+x_raw = read_vectors("../v6smallQCD.root", nevents)
+sig_raw = read_vectors("../user.ebusch.515499.root", nevents)
 x_scaler = StandardScaler()
 sig_scaler = StandardScaler()
 x_test = x_scaler.fit_transform(x_raw)
@@ -35,14 +36,37 @@ pred_sig = model_svj.predict(sig)
 pred_err_bkg = keras.losses.mse(pred_bkg, x_test).numpy()
 pred_err_sig = keras.losses.mse(pred_sig, sig).numpy()
 
+bkg_loss = []
+sig_loss = []
+
+#for x,y in zip(x_test,sig):
+step_size = 4
+for i in range(0, nevents, step_size):
+  xt = x_test[i:i+step_size]
+  yt = sig[i:i+step_size]
+  #xt = x[np.newaxis, :] #give x and y the correct shape (,64)
+  #yt = y[np.newaxis, :]
+
+  # NOTE - unclear why they are printed in this order, but it seems to be the case
+  x_loss = model_svj.evaluate(xt, batch_size = step_size, verbose=1)
+  y_loss = model_svj.evaluate(yt, batch_size = step_size, verbose=1)
+
+  bkg_loss.append(x_loss)
+  sig_loss.append(y_loss)
+  if i%1000 == 0: print("Processed", i, "events")
+
+
 print("data evaluated loss, accuracy: ", accu_bkg)
 print("sig evaluated loss, accuracy: ", accu_sig)
+
+print(bkg_loss)
+print(sig_loss)
 
 truth_labels = np.concatenate((truth_bkg, truth_sig))
 eval_vals = np.concatenate((pred_err_bkg, pred_err_sig))
 
-auc = roc_auc_score(truth_labels, eval_vals)
-print("Iteration test", " AUC = ", auc)
+#auc = roc_auc_score(truth_labels, eval_vals)
+#rint("Iteration test", " AUC = ", auc)
 
 # --- Eval plots 
 # 1. Loss vs. epoch 
@@ -50,18 +74,18 @@ print("Iteration test", " AUC = ", auc)
 # 2. Histogram of reco error (loss) for JZW and evaled SVJ signals (test sets)
 # 3. ROCs/AUCs using sklearn functions imported above  
 # TODO
-fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
+#fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
 #print("eval:  ", eval_vals)
 #print("truth: ", truth_labels)
 #print("fpr:   ", fpr)
 #print("tpr:   ", tpr)
 #print("trh:   ", trh)
 #auc = roc_auc_score(truth_labels, eval_vals) #Y_test = true labels, Y_predict = model-determined positive rate
-make_roc(fpr,tpr,auc)
-make_sic(fpr,tpr,auc)
+#make_roc(fpr,tpr,auc)
+#make_sic(fpr,tpr,auc)
 #make_single_roc(roc_curve, auc, 'tpr') #TODO plot tpr/sqrt(fpr) vs. fpr
 # 4. Anomaly score
-#plot_score(pred_err_bkg, pred_err_sig, False)
+plot_score(bkg_loss, sig_loss, False)
 
 #5. Plot inputs
 #plot_inputs(x,sig)
