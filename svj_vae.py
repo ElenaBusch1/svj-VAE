@@ -30,7 +30,7 @@ if (hlvs):
 	encoding_dim = 4
 
 nepochs = 50
-batchsize = 256
+batchsize = 64
 
 # model 
 #model_svj = get_better_ae(input_dim, encoding_dim)
@@ -43,8 +43,8 @@ if (hlvs):
 	sig_raw = read_hlvs("../largerSignal.root", 1500)
 
 if (jets):
-	x_raw = read_vectors("../v6smallQCD.root", 500000)
-	sig_raw = read_vectors("../user.ebusch.515502.root", 10000)
+	x_raw = read_vectors("../v6smallQCD.root", 50000)
+	sig_raw = read_vectors("../user.ebusch.515502.root", 1000)
 
 x_scaler = StandardScaler()
 sig_scaler = StandardScaler()
@@ -81,12 +81,12 @@ h = model_svj.fit(x_train,
 #save
 #model_svj.save("vae_getvae2")
 #saved_model.save(model_svj, "vae_getvae2")
-#model_svj.get_layer('encoder').save_weights('encoder_weights.h5')
-#model_svj.get_layer('decoder').save_weights('decoder_weights.h5')
-#model_svj.get_layer('encoder').save('encoder_arch')
-#model_svj.get_layer('decoder').save('decoder_arch')
+model_svj.get_layer('encoder').save_weights('encoder2_weights.h5')
+model_svj.get_layer('decoder').save_weights('decoder2_weights.h5')
+model_svj.get_layer('encoder').save('encoder2_arch')
+model_svj.get_layer('decoder').save('decoder2_arch')
 
-#print("Saved model")
+print("Saved model")
 
 # evaluate
 # anomaly score = loss (TODO how to improve?)

@@ -145,7 +145,6 @@ class VAE(keras.Model):
             "reconstruction": reconstruction
         }
 
-
 class Sampling(keras.layers.Layer):
     """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
 
@@ -155,6 +154,20 @@ class Sampling(keras.layers.Layer):
         dim = tf.shape(z_mean)[1]
         epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
+
+class PermInvEncoder(tf.keras.Model):
+    def __init__(self, num_elements, element_size, encoding_size):
+        super(PermInvEncoder, self).__init__()
+        self.fc1 = keras.layers.Dense(128, activation='relu')
+        self.fc2 = keras.layers.Dense(encoding_size)
+    
+    def call(self, x):
+        x = tf.reshape(x, [-1, x.shape[1] * x.shape[2]])
+        x = self.fc1(x)
+        x = tf.reduce_max(x, axis=1, keepdims=True)
+        x = self.fc2(x)
+        return x
+
 
 def get_vae2(input_dim, encoding_dim):
   latent_dim = 2
@@ -174,6 +187,6 @@ def get_vae2(input_dim, encoding_dim):
   decoder.summary()
 
   vae = VAE(encoder, decoder)
-  vae.compile(optimizer=keras.optimizers.Adam())
+  vae.compile(optimizer=keras.optimizers.Adam(learning_rate = 0.0005))
 
   return vae

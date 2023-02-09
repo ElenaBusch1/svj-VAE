@@ -17,7 +17,7 @@ from models import *
 #load testing data
 nevents = 10000
 x_raw = read_vectors("../v6smallQCD.root", nevents)
-sig_raw = read_vectors("../user.ebusch.515502.root", nevents)
+sig_raw = read_vectors("../user.ebusch.515499.root", nevents)
 x_scaler = StandardScaler()
 sig_scaler = StandardScaler()
 x_test = x_scaler.fit_transform(x_raw)
@@ -27,11 +27,11 @@ sig = sig_scaler.fit_transform(sig_raw)
 #model_svj = keras.models.load_model("vae_getvae2")
 
 #load vae
-encoder = keras.models.load_model('encoder_arch')
-decoder = keras.models.load_model('decoder_arch')
+encoder = keras.models.load_model('encoder2_arch')
+decoder = keras.models.load_model('decoder2_arch')
 model_svj = VAE(encoder,decoder)
-model_svj.get_layer('encoder').load_weights('encoder_weights.h5')
-model_svj.get_layer('decoder').load_weights('decoder_weights.h5')
+model_svj.get_layer('encoder').load_weights('encoder2_weights.h5')
+model_svj.get_layer('decoder').load_weights('decoder2_weights.h5')
 model_svj.compile(optimizer=keras.optimizers.Adam())
 
 print ("Loaded model")
@@ -103,8 +103,8 @@ for i in range(0,nevents, step_size):
 #make_sic(fpr,tpr,auc)
 #make_single_roc(roc_curve, auc, 'tpr') #TODO plot tpr/sqrt(fpr) vs. fpr
 # 4. Anomaly score
-plot_score(bkg_loss, sig_loss, False, "total_loss_515502")
-plot_score(bkg_kld_loss, sig_kld_loss, False, "kld_515502")
+plot_score(bkg_loss, sig_loss, False, "total_loss_515499")
+plot_score(bkg_kld_loss, sig_kld_loss, False, "kld_515499")
 
 #5. Plot inputs
 #plot_inputs(x,sig)

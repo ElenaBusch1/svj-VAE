@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = 'vae2_mse'
+tag = 'vae2_learingRate0p01'
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -18,9 +18,9 @@ def detect_outliers(x):
 
 def plot_loss(h,i):
   print(h.history)
-  plt.plot(h.history['loss'][2:])
-  plt.plot(h.history['val_loss'][2:])
-  plt.title('VAE Total Loss - from epoch 2')
+  plt.plot(h.history['loss'][1:])
+  plt.plot(h.history['val_loss'][1:])
+  plt.title('VAE Total Loss - From Epoch 1')
   plt.ylabel('loss')
   plt.xlabel('epoch')
   plt.legend(['train', 'val'], loc='upper left')
