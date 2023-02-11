@@ -22,14 +22,14 @@ if(not hlvs and not jets):
 
 # params
 if (jets):
-	input_dim = 64 #start with N HLVs (from KP's BDT)
+	input_dim = [16,4] #start with N HLVs (from KP's BDT)
 	encoding_dim = 16
 	
 if (hlvs):
 	input_dim = 12
 	encoding_dim = 4
 
-nepochs = 50
+nepochs = 10
 batchsize = 64
 
 # model 
@@ -43,16 +43,16 @@ if (hlvs):
 	sig_raw = read_hlvs("../largerSignal.root", 1500)
 
 if (jets):
-	x_raw = read_vectors("../v6smallQCD.root", 50000)
-	sig_raw = read_vectors("../user.ebusch.515502.root", 1000)
+	x_raw = read_vectors("../v6smallQCD.root", 5000)
+	sig_raw = read_vectors("../user.ebusch.515502.root", 100)
 
-x_scaler = StandardScaler()
-sig_scaler = StandardScaler()
-x = x_scaler.fit_transform(x_raw)
-sig = sig_scaler.fit_transform(sig_raw)
+#x_scaler = StandardScaler()
+#sig_scaler = StandardScaler()
+#x = x_scaler.fit_transform(x_raw)
+#sig = sig_scaler.fit_transform(sig_raw)
 
-#x = x_raw
-#sig = sig_raw
+x = x_raw
+sig = sig_raw
 print(x)
 print(type(x))
 print(x.shape)
@@ -60,7 +60,7 @@ print(sig)
 print(type(sig))
 print(sig.shape)
 
-model_svj = get_vae2(input_dim, encoding_dim)
+model_svj = get_gvae(input_dim, encoding_dim)
 
 x_temp, x_test, _, _ = train_test_split(x, x, test_size=0.02) #done randomly
 x_train, x_valid, _, _ = train_test_split(x_temp,
@@ -81,10 +81,10 @@ h = model_svj.fit(x_train,
 #save
 #model_svj.save("vae_getvae2")
 #saved_model.save(model_svj, "vae_getvae2")
-model_svj.get_layer('encoder').save_weights('encoder2_weights.h5')
-model_svj.get_layer('decoder').save_weights('decoder2_weights.h5')
-model_svj.get_layer('encoder').save('encoder2_arch')
-model_svj.get_layer('decoder').save('decoder2_arch')
+#model_svj.get_layer('encoder').save_weights('g_encoder_weights.h5')
+#model_svj.get_layer('decoder').save_weights('g_decoder_weights.h5')
+#model_svj.get_layer('encoder').save('g_encoder_arch')
+#model_svj.get_layer('decoder').save('g_decoder_arch')
 
 print("Saved model")
 

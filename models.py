@@ -162,9 +162,17 @@ class PermInvEncoder(tf.keras.Model):
         self.fc2 = keras.layers.Dense(encoding_size)
     
     def call(self, x):
+        mask = tf.cast(tf.reduce_sum(tf.abs(x), axis=-1) > 0, tf.float32)
+        x *= mask[..., tf.newaxis]
+        print("x:", x)
+        print("mask:", mask)
+
         x = tf.reshape(x, [-1, x.shape[1] * x.shape[2]])
+        print("x reshape:", x)
         x = self.fc1(x)
+        print("x fc1:", x) 
         x = tf.reduce_max(x, axis=1, keepdims=True)
+        print("x pooled: ", x)
         x = self.fc2(x)
         return x
 
@@ -190,3 +198,52 @@ def get_vae2(input_dim, encoding_dim):
   vae.compile(optimizer=keras.optimizers.Adam(learning_rate = 0.0005))
 
   return vae
+
+def pfn_mask_func(X, mask_val=0):
+  # map mask_val to zero and return 1 elsewhere
+  return K.cast(K.any(K.not_equal(X, mask_val), axis=-1), K.dtype(X))
+
+def get_gvae(input_dim, encoding_dim):
+  initializer = keras.initializers.HeNormal()
+  loss = keras.losses.CategoricalCrossentropy()
+  optimizer = keras.optimizers.Adam() 
+
+  input_dim_x = input_dim[0]
+  input_dim_y = input_dim[1]
+
+  #input
+  pfn_inputs = keras.Input(shape=(None,input_dim_y))
+  masked = keras.layers.Lambda(pfn_mask_func, name="mask")(pfn_inputs)
+
+  # Phi network
+  dense1 = keras.layers.Dense(100, kernel_initializer=initializer, name="pfn1")
+  x = keras.layers.TimeDistributed(dense1, name="tdist_0")(pfn_inputs)
+  x = keras.layers.Activation('relu')(x)
+  dense2 = keras.layers.Dense(100, kernel_initializer=initializer, name="pfn2") 
+  x = keras.layers.TimeDistributed(dense2, name="tdist_1")(x)
+  x = keras.layers.Activation('relu')(x)
+  dense3 = keras.layers.Dense(128, kernel_initializer=initializer, name="phi") 
+  x = keras.layers.TimeDistributed(dense3, name="tdist_2")(x)
+  phi_outputs = keras.layers.Activation('relu')(x)
+
+  # latent space
+  sum_phi = keras.layers.Dot(1, name="sum")([masked,phi_outputs])
+
+  # F network
+  x = keras.layers.Dense(100, kernel_initializer=initializer)(sum_phi)
+  x = keras.layers.Activation('relu')(x)
+  x = keras.layers.Dense(100, kernel_initializer=initializer)(x)
+  x = keras.layers.Activation('relu')(x)
+  x = keras.layers.Dense(100, kernel_initializer=initializer)(x)
+  x = keras.layers.Activation('relu')(x)
+
+  # output
+  x = keras.layers.Dense(2, kernel_initializer=initializer, name="output")(x)
+  output = keras.layers.Activation('softmax')(x)
+
+  pfn = keras.Model(inputs=pfn_inputs, outputs=output, name="pfn")
+
+  pfn.compile(loss=loss, optimizer=optimizer)
+  pfn.summary()
+  return pfn
+

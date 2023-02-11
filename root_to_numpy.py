@@ -4,6 +4,8 @@ import awkward as ak
 
 variable_array = ["jet1_pt", "met_met", "dphi_min", "pt_balance_12", "mT_jj", "rT", "dR_12", "deltaY_12", "deta_12", "hT", "maxphi_minphi", "n_r04_jets"]
 jet_array = ["all_jets_pt", "all_jets_eta", "all_jets_phi", "all_jets_E"]
+# Use flatten for VAE, not for GVAE
+flatten = False
 
 def get_spaced_elements(arr_len,nElements):
 	return np.round(np.linspace(0,arr_len-1, nElements)).astype(int)
@@ -51,8 +53,8 @@ def read_vectors(infile, nEvents):
 		zeros[0,2] = met[1]
 		zeros[1:jet_ar.shape[0]+1, :jet_ar.shape[1]] = jet_ar
 
-	#flatten
-	padded_jet_array = padded_jet_array.reshape(len(selected_jet_array),(max_jets+1)*4)
+	if (flatten):
+		padded_jet_array = padded_jet_array.reshape(len(selected_jet_array),(max_jets+1)*4)
 	#print(padded_jet_array)
 
 	return padded_jet_array
