@@ -22,7 +22,7 @@ if(not hlvs and not jets):
 
 # params
 if (jets):
-	input_dim = [16,4] #start with N HLVs (from KP's BDT)
+	input_dim = 64 #start with N HLVs (from KP's BDT)
 	encoding_dim = 16
 	
 if (hlvs):
@@ -60,7 +60,7 @@ print(sig)
 print(type(sig))
 print(sig.shape)
 
-model_svj = get_gvae(input_dim, encoding_dim)
+model_svj = get_vae2(input_dim, encoding_dim)
 
 x_temp, x_test, _, _ = train_test_split(x, x, test_size=0.02) #done randomly
 x_train, x_valid, _, _ = train_test_split(x_temp,

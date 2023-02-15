@@ -30,48 +30,6 @@ def get_better_ae(input_dim, encoding_dim):
   autoencoder.compile(loss = keras.losses.mean_squared_error, optimizer = keras.optimizers.Adam(learning_rate=0.01))
   return autoencoder
 
-def get_vae(input_dim, encoding_dim):
-  # Source 1: https://blog.keras.io/building-autoencoders-in-keras.html <- Primary resource
-  # Source 2: https://learnopencv.com/variational-autoencoder-in-tensorflow/
-  # Source 3: https://keras.io/examples/generative/vae/
-
-  latent_dim = 2
-
-  # encoding
-  input_vars = keras.Input ( shape =(input_dim,))
-  encoded = keras.layers.Dense(encoding_dim, activation='relu')(input_vars)
-
-  #sampling layer
-  z_mean = keras.layers.Dense(latent_dim, name="z_mean")(encoded)
-  z_log_sigma = keras.layers.Dense(latent_dim, name="z_log_sigma")(encoded)
-  z = keras.layers.Lambda(sampling)([z_mean, z_log_sigma])
-  encoder_model = keras.Model(input_vars, [z_mean, z_log_sigma, z], name='Encoder')
-  encoder_model.summary()
-
-  #decoding
-  latent_inputs = keras.Input(shape=(latent_dim,), name = 'z_sampling')
-  decoded = keras.layers.Dense(encoding_dim, activation='relu')(latent_inputs)
-  decoded = keras.layers.Dense(input_dim, activation='sigmoid')(decoded)
-  decoder_model = keras.Model(latent_inputs, decoded, name='Decoder')
-  decoder_model.summary()
-
-  #vae
-  output_vars = decoder_model(encoder_model(input_vars)[2])
-  vae = keras.Model(input_vars, output_vars)
-  vae.summary()
-
-  #loss
-  ## also consider binary cross-entropy
-  mse = keras.losses.mean_squared_error(input_vars,output_vars)
-  mse *= input_dim # WHY ??????
-  kl_loss = -0.5* K.sum(1 + z_log_sigma - K.square(z_mean) - K.exp(z_log_sigma), axis = 1)
-  vae_loss = K.mean(mse + kl_loss)
-  vae.add_loss(vae_loss)
-
-  #compile
-  vae.compile(optimizer = keras.optimizers.Adam(learning_rate=0.01))
-  return vae
-
 class VAE(keras.Model):
     #direct copy from https://keras.io/examples/generative/vae/
     def __init__(self, encoder, decoder, **kwargs):
@@ -145,6 +103,91 @@ class VAE(keras.Model):
             "reconstruction": reconstruction
         }
 
+class PFN_VAE(keras.Model):
+    #think about modifying this so it inherits from VAE class
+    def __init__(self, pfn, encoder, decoder, **kwargs):
+        super().__init__(**kwargs)
+        self.pfn = pfn
+        self.encoder = encoder
+        self.decoder = decoder
+        self.total_loss_tracker = keras.metrics.Mean(name="total_loss")
+        self.reconstruction_loss_tracker = keras.metrics.Mean(
+            name="reconstruction_loss"
+        )
+        self.kl_loss_tracker = keras.metrics.Mean(name="kl_loss")
+        self.phi_tracker = keras.metrics.Mean(name="sum_phi")
+
+    @property
+    def metrics(self):
+        return [
+            self.phi_tracker,
+            self.total_loss_tracker,
+            self.reconstruction_loss_tracker,
+            self.kl_loss_tracker,
+        ]
+
+    def train_step(self, data):
+        with tf.GradientTape() as tape:
+            phi = self.pfn(data)
+            z_mean, z_log_var, z = self.encoder(phi)
+            reconstruction = self.decoder(z)
+            #z_mean, z_log_var, reconstruction = call
+            reconstruction_loss = tf.reduce_mean(
+                #tf.reduce_sum(
+                    keras.losses.mse(phi, reconstruction)#, axis=(1, 2)
+                #)
+            )
+            kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
+            kl_loss = tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1))
+            total_loss = reconstruction_loss + kl_loss
+            sum_phi = tf.reduce_mean(phi)
+        grads = tape.gradient(total_loss, self.trainable_weights)
+        self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
+        self.total_loss_tracker.update_state(total_loss)
+        self.reconstruction_loss_tracker.update_state(reconstruction_loss)
+        self.kl_loss_tracker.update_state(kl_loss)
+        self.phi_tracker.update_state(sum_phi)
+        return {
+            "sum_phi": self.phi_tracker.result(),
+            "loss": self.total_loss_tracker.result(),
+            "reconstruction_loss": self.reconstruction_loss_tracker.result(),
+            "kl_loss": self.kl_loss_tracker.result(),
+        }
+
+    def test_step(self, data):
+        #if isinstance(data, tuple):
+        #  data = data[0]
+    
+        phi = self.pfn(data)
+        z_mean, z_log_var, z = self.encoder(phi)
+        reconstruction = self.decoder(z)
+        reconstruction_loss = tf.reduce_mean(
+            keras.losses.mse(phi, reconstruction)
+        )
+        #reconstruction_loss *= 28 * 28
+        kl_loss = 1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var)
+        kl_loss = tf.reduce_mean(kl_loss)
+        kl_loss *= -0.5
+        total_loss = reconstruction_loss + kl_loss
+        sum_phi =  tf.reduce_mean(phi)
+        return {
+            "sum_phi": sum_phi,
+            "loss": total_loss,
+            "reconstruction_loss": reconstruction_loss,
+            "kl_loss": kl_loss,
+        }
+
+    def call(self, data):
+        phi = self.pfn(data)
+        z_mean,z_log_var,x = self.encoder(phi)
+        reconstruction = self.decoder(x)
+        return {
+            "z_mean": z_mean,
+            "z_log_var": z_log_var,
+            "reconstruction": reconstruction
+        }
+
+
 class Sampling(keras.layers.Layer):
     """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
 
@@ -155,26 +198,62 @@ class Sampling(keras.layers.Layer):
         epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
 
-class PermInvEncoder(tf.keras.Model):
-    def __init__(self, num_elements, element_size, encoding_size):
-        super(PermInvEncoder, self).__init__()
-        self.fc1 = keras.layers.Dense(128, activation='relu')
-        self.fc2 = keras.layers.Dense(encoding_size)
-    
-    def call(self, x):
-        mask = tf.cast(tf.reduce_sum(tf.abs(x), axis=-1) > 0, tf.float32)
-        x *= mask[..., tf.newaxis]
-        print("x:", x)
-        print("mask:", mask)
+class PFN_AE(keras.Model):
+    #think about modifying this so it inherits from VAE class
+    def __init__(self, pfn, encoder, decoder, **kwargs):
+        super().__init__(**kwargs)
+        self.pfn = pfn
+        self.encoder = encoder
+        self.decoder = decoder
+        self.reconstruction_loss_tracker = keras.metrics.Mean(
+            name="reconstruction_loss"
+        )
 
-        x = tf.reshape(x, [-1, x.shape[1] * x.shape[2]])
-        print("x reshape:", x)
-        x = self.fc1(x)
-        print("x fc1:", x) 
-        x = tf.reduce_max(x, axis=1, keepdims=True)
-        print("x pooled: ", x)
-        x = self.fc2(x)
-        return x
+    @property
+    def metrics(self):
+        return [
+            self.reconstruction_loss_tracker,
+        ]
+
+    def train_step(self, data):
+        with tf.GradientTape() as tape:
+            phi = self.pfn(data)
+            encoded = self.encoder(phi)
+            reconstruction = self.decoder(encoded)
+            #z_mean, z_log_var, reconstruction = call
+            reconstruction_loss = tf.reduce_mean(
+                #tf.reduce_sum(
+                    keras.losses.mse(phi, reconstruction)#, axis=(1, 2)
+                #)
+            )
+        grads = tape.gradient(reconstruction_loss, self.trainable_weights)
+        self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
+        self.reconstruction_loss_tracker.update_state(reconstruction_loss)
+        return {
+            "reconstruction_loss": self.reconstruction_loss_tracker.result(),
+        }
+
+    def test_step(self, data):
+        #if isinstance(data, tuple):
+        #  data = data[0]
+    
+        phi = self.pfn(data)
+        encoded = self.encoder(phi)
+        reconstruction = self.decoder(encoded)
+        reconstruction_loss = tf.reduce_mean(
+            keras.losses.mse(phi, reconstruction)
+        )
+        return {
+            "reconstruction_loss": reconstruction_loss,
+        }
+
+    def call(self, data):
+        phi = self.pfn(data)
+        encoded = self.encoder(phi)
+        reconstruction = self.decoder(encoded)
+        return {
+            "reconstruction": reconstruction
+        }
 
 
 def get_vae2(input_dim, encoding_dim):
@@ -203,11 +282,12 @@ def pfn_mask_func(X, mask_val=0):
   # map mask_val to zero and return 1 elsewhere
   return K.cast(K.any(K.not_equal(X, mask_val), axis=-1), K.dtype(X))
 
-def get_gvae(input_dim, encoding_dim):
+
+def get_pfn(input_dim, phi_dim):
   initializer = keras.initializers.HeNormal()
   loss = keras.losses.CategoricalCrossentropy()
   optimizer = keras.optimizers.Adam() 
-
+ 
   input_dim_x = input_dim[0]
   input_dim_y = input_dim[1]
 
@@ -222,28 +302,71 @@ def get_gvae(input_dim, encoding_dim):
   dense2 = keras.layers.Dense(100, kernel_initializer=initializer, name="pfn2") 
   x = keras.layers.TimeDistributed(dense2, name="tdist_1")(x)
   x = keras.layers.Activation('relu')(x)
-  dense3 = keras.layers.Dense(128, kernel_initializer=initializer, name="phi") 
+  dense3 = keras.layers.Dense(phi_dim, kernel_initializer=initializer, name="phi") 
   x = keras.layers.TimeDistributed(dense3, name="tdist_2")(x)
   phi_outputs = keras.layers.Activation('relu')(x)
 
   # latent space
   sum_phi = keras.layers.Dot(1, name="sum")([masked,phi_outputs])
-
-  # F network
-  x = keras.layers.Dense(100, kernel_initializer=initializer)(sum_phi)
-  x = keras.layers.Activation('relu')(x)
-  x = keras.layers.Dense(100, kernel_initializer=initializer)(x)
-  x = keras.layers.Activation('relu')(x)
-  x = keras.layers.Dense(100, kernel_initializer=initializer)(x)
-  x = keras.layers.Activation('relu')(x)
-
-  # output
-  x = keras.layers.Dense(2, kernel_initializer=initializer, name="output")(x)
-  output = keras.layers.Activation('softmax')(x)
-
-  pfn = keras.Model(inputs=pfn_inputs, outputs=output, name="pfn")
-
-  pfn.compile(loss=loss, optimizer=optimizer)
+  
+  pfn = keras.Model(pfn_inputs, sum_phi, name="pfn")
   pfn.summary()
   return pfn
+
+def get_encoder(input_dim, encoding_dim):
+  latent_dim = 2
+  inputs = keras.Input(shape=(input_dim,))
+  x = keras.layers.Dense(encoding_dim, activation="relu")(inputs)
+  z_mean = keras.layers.Dense(latent_dim, name="z_mean")(x)
+  z_log_var = keras.layers.Dense(latent_dim, name="z_log_var")(x)
+  z = Sampling()([z_mean, z_log_var])
+  
+  encoder = keras.Model(inputs, [z_mean, z_log_var, z], name="encoder")
+  encoder.summary()
+  return encoder
+
+def get_decoder(input_dim, encoding_dim):
+  latent_dim = 2
+  latent_inputs = keras.Input(shape=(latent_dim,))
+  x = keras.layers.Dense(encoding_dim, activation="sigmoid")(latent_inputs)
+  decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid")(x)
+
+  decoder = keras.Model(latent_inputs, decoder_outputs, name="decoder")
+  decoder.summary()
+  return decoder
+
+def get_pfn_vae(input_dim, phi_dim, encoding_dim):
+  pfn = get_pfn(input_dim, phi_dim)
+  encoder = get_encoder(phi_dim, encoding_dim)
+  decoder = get_decoder(phi_dim, encoding_dim)
+
+  pfn_vae = PFN_VAE(pfn, encoder, decoder)
+  pfn_vae.compile(optimizer=keras.optimizers.Adam())
+
+  return pfn_vae, pfn
+
+def get_pfn_ae(input_dim, phi_dim, encoding_dim):
+  encoding_dim_1 = encoding_dim[0]
+  encoding_dim_2 = encoding_dim[1]
+
+  pfn = get_pfn(input_dim, phi_dim)
+
+  #encoder
+  encoder_inputs = keras.Input(shape=(phi_dim,))
+  encoded = keras.layers.Dense(encoding_dim_1, activation='sigmoid')(encoder_inputs)
+  encoded = keras.layers.Dense(encoding_dim_2, activation='sigmoid')(encoded)
+  encoder = keras.Model(encoder_inputs, encoded, name="encoder")
+  encoder.summary()
+  
+  #decoder
+  decoder_inputs = keras.Input(shape=(encoding_dim_2,))
+  decoded = keras.layers.Dense(encoding_dim_1, activation='sigmoid')(decoder_inputs)
+  decoded = keras.layers.Dense(phi_dim, activation='sigmoid')(decoded)
+  decoder = keras.Model(decoder_inputs, decoded, name="decoder")
+  decoder.summary()
+
+  pfn_ae = PFN_AE(pfn, encoder, decoder)
+  pfn_ae.compile(optimizer=keras.optimizers.Adam())
+
+  return pfn_ae, pfn
 

@@ -5,7 +5,7 @@ import awkward as ak
 variable_array = ["jet1_pt", "met_met", "dphi_min", "pt_balance_12", "mT_jj", "rT", "dR_12", "deltaY_12", "deta_12", "hT", "maxphi_minphi", "n_r04_jets"]
 jet_array = ["all_jets_pt", "all_jets_eta", "all_jets_phi", "all_jets_E"]
 # Use flatten for VAE, not for GVAE
-flatten = False
+flatten = True
 
 def get_spaced_elements(arr_len,nElements):
 	return np.round(np.linspace(0,arr_len-1, nElements)).astype(int)
@@ -40,6 +40,7 @@ def read_vectors(infile, nEvents):
 
 	# select evenly spaced events from input distribution
 	my_jet_array = tree.arrays(jet_array, library = "np")
+	my_eventNumber_array = tree.arrays(["eventNumber"], library = "np")
 	idx = get_spaced_elements(len(my_jet_array[jet_array[0]]),nEvents)
 	my_met_array = tree.arrays(["met_met", "met_phi"], library = "np")
 	selected_met_array = np.array([val[idx] for _,val in my_met_array.items()]).T
