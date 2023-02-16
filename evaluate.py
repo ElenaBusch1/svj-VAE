@@ -15,56 +15,78 @@ from models import *
 #loaded_model.load_weights("model.h5")
 
 #load testing data
-nevents = 10000
-x_raw = read_vectors("../v6smallQCD.root", nevents)
-sig_raw = read_vectors("../user.ebusch.515499.root", nevents)
-x_scaler = StandardScaler()
-sig_scaler = StandardScaler()
-x_test = x_scaler.fit_transform(x_raw)
-sig = sig_scaler.fit_transform(sig_raw)
+#nevents = 10000
+#x_raw = read_vectors("../v6smallQCD.root", nevents)
+#sig_raw = read_vectors("../user.ebusch.515499.root", nevents)
+#x_scaler = StandardScaler()
+#sig_scaler = StandardScaler()
+#x_test = x_scaler.fit_transform(x_raw)
+#sig = sig_scaler.fit_transform(sig_raw)
+#
+##load model
+##model_svj = keras.models.load_model("vae_getvae2")
+#
+##load vae
+#encoder = keras.models.load_model('encoder2_arch')
+#decoder = keras.models.load_model('decoder2_arch')
+#model_svj = VAE(encoder,decoder)
+#model_svj.get_layer('encoder').load_weights('encoder2_weights.h5')
+#model_svj.get_layer('decoder').load_weights('decoder2_weights.h5')
+#model_svj.compile(optimizer=keras.optimizers.Adam())
+#
+#print ("Loaded model")
+##model_svj.summary()
+##print ("Metric names")
+#print(model_svj.metrics_names)
+#
+##evaluate
+#truth_bkg = np.zeros(len(x_test))
+#truth_sig = np.ones(len(sig))
 
-#load model
-#model_svj = keras.models.load_model("vae_getvae2")
+def get_multi_loss(model_svj, x_test, y_test):
+    bkg_total_loss = []
+    sig_total_loss = []
+    bkg_kld_loss = []
+    sig_kld_loss = []
+    bkg_reco_loss = []
+    sig_reco_loss = []
+    nevents = min(len(y_test),len(x_test))
+    step_size = 4
+    for i in range(0,nevents, step_size):
+        xt = x_test[i:i+step_size]
+        yt = sig[i:i+step_size]
+      
+        # NOTE - unclear why they are printed in this order, but it seems to be the case
+        x_reco,x_kld,x_loss = model_svj.evaluate(xt, batch_size = step_size, verbose=0)
+        y_reco,y_kld,y_loss = model_svj.evaluate(yt, batch_size = step_size, verbose=0)
+      
+        bkg_total_loss.append(x_loss)
+        sig_total_loss.append(y_loss)
+        bkg_kld_loss.append(x_kld)
+        sig_kld_loss.append(y_kld)
+        bkg_reco_loss.append(x_reco)
+        sig_reco_loss.append(y_reco)
+        if i%1000 == 0: print("Processed", i, "events")
 
-#load vae
-encoder = keras.models.load_model('encoder2_arch')
-decoder = keras.models.load_model('decoder2_arch')
-model_svj = VAE(encoder,decoder)
-model_svj.get_layer('encoder').load_weights('encoder2_weights.h5')
-model_svj.get_layer('decoder').load_weights('decoder2_weights.h5')
-model_svj.compile(optimizer=keras.optimizers.Adam())
+    return bkg_total_loss, sig_total_loss, bkg_kld_loss, sig_kld_loss, bkg_reco_loss, sig_reco_loss
 
-print ("Loaded model")
-#model_svj.summary()
-#print ("Metric names")
-print(model_svj.metrics_names)
+def get_single_loss(model_svj, x_test, y_test):
+    bkg_loss = []
+    sig_loss = []
+    nevents = min(len(y_test),len(x_test))
+    step_size = 4
+    for i in range(0,nevents, step_size):
+        xt = x_test[i:i+step_size]
+        yt = y_test[i:i+step_size]
+    
+        x_loss = model_svj.evaluate(xt, batch_size = step_size, verbose=0)
+        y_loss = model_svj.evaluate(yt, batch_size = step_size, verbose=0)
+        
+        bkg_loss.append(x_loss)
+        sig_loss.append(y_loss)
+        if i%100 == 0: print("Processed", i, "events")
 
-#evaluate
-truth_bkg = np.zeros(len(x_test))
-truth_sig = np.ones(len(sig))
-
-bkg_loss = []
-sig_loss = []
-bkg_kld_loss = []
-sig_kld_loss = []
-
-#for x,y in zip(x_test,sig):
-step_size = 4
-for i in range(0,nevents, step_size):
-  xt = x_test[i:i+step_size]
-  yt = sig[i:i+step_size]
-  #xt = x[np.newaxis, :] #give x and y the correct shape (,64)
-  #yt = y[np.newaxis, :]
-
-  # NOTE - unclear why they are printed in this order, but it seems to be the case
-  x_reco,x_kld,x_loss = model_svj.evaluate(xt, batch_size = step_size, verbose=0)
-  y_reco,y_kld,y_loss = model_svj.evaluate(yt, batch_size = step_size, verbose=0)
-
-  bkg_loss.append(x_loss)
-  bkg_kld_loss.append(x_kld)
-  sig_loss.append(y_loss)
-  sig_kld_loss.append(y_kld)
-  if i%1000 == 0: print("Processed", i, "events")
+    return bkg_loss, sig_loss
 
 #accu_bkg = model_svj.evaluate(x_test, truth_bkg)
 #accu_sig = model_svj.evaluate(sig, truth_sig)
@@ -103,8 +125,8 @@ for i in range(0,nevents, step_size):
 #make_sic(fpr,tpr,auc)
 #make_single_roc(roc_curve, auc, 'tpr') #TODO plot tpr/sqrt(fpr) vs. fpr
 # 4. Anomaly score
-plot_score(bkg_loss, sig_loss, False, "total_loss_515499")
-plot_score(bkg_kld_loss, sig_kld_loss, False, "kld_515499")
+#plot_score(bkg_loss, sig_loss, False, "total_loss_515499")
+#plot_score(bkg_kld_loss, sig_kld_loss, False, "kld_515499")
 
 #5. Plot inputs
 #plot_inputs(x,sig)

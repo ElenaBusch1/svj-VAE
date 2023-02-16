@@ -4,8 +4,6 @@ import awkward as ak
 
 variable_array = ["jet1_pt", "met_met", "dphi_min", "pt_balance_12", "mT_jj", "rT", "dR_12", "deltaY_12", "deta_12", "hT", "maxphi_minphi", "n_r04_jets"]
 jet_array = ["all_jets_pt", "all_jets_eta", "all_jets_phi", "all_jets_E"]
-# Use flatten for VAE, not for GVAE
-flatten = True
 
 def get_spaced_elements(arr_len,nElements):
 	return np.round(np.linspace(0,arr_len-1, nElements)).astype(int)
@@ -29,7 +27,7 @@ def read_hlvs(infile, nEvents):
 
 	return selected_array
 
-def read_vectors(infile, nEvents):
+def read_vectors(infile, nEvents, flatten=True):
 	file = uproot.open(infile)
 	
 	#print("File keys: ", file.keys())

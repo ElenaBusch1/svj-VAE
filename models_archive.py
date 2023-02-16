@@ -2,6 +2,34 @@ import tensorflow as tf
 from tensorflow import keras
 from keras import backend as K
 
+def sampling(args):
+  z_mean, z_log_var = args
+  #batch = K.shape(z_mean)[0]
+  #latent_dim = K.shape(z_mean)[1]
+  #epsilon = K.random_normal(shape=(batch,latent_dim), mean=0., stddev=0.1)
+  epsilon = K.random_normal(shape=(K.shape(z_mean)[0], 2), mean=0., stddev=0.1)
+  return z_mean + K.exp(z_log_var) * epsilon
+
+def get_simple_ae(input_dim, encoding_dim):
+  input_vars = keras.Input ( shape =(input_dim,))
+  encoded = keras.layers.Dense(encoding_dim, activation='relu')(input_vars)
+  decoded = keras.layers.Dense(input_dim, activation='sigmoid')(encoded)
+  autoencoder = keras.Model(input_vars, decoded)
+  autoencoder.compile(loss = keras.losses.mean_squared_error, optimizer = keras.optimizers.Adam())
+  return autoencoder
+
+def get_better_ae(input_dim, encoding_dim):
+  input_vars = keras.Input ( shape =(input_dim,))
+  encoded = keras.layers.Dense(encoding_dim, activation='sigmoid')(input_vars)
+  encoded = keras.layers.Dense(encoding_dim/4, activation='sigmoid')(encoded)
+  print("in get batter ae")
+  decoded = keras.layers.Dense(encoding_dim, activation='sigmoid')(encoded)
+  decoded = keras.layers.Dense(input_dim, activation='sigmoid')(decoded)
+  autoencoder = keras.Model(input_vars, decoded)
+  autoencoder.summary()
+  autoencoder.compile(loss = keras.losses.mean_squared_error, optimizer = keras.optimizers.Adam(learning_rate=0.01))
+  return autoencoder
+
 def get_vae(input_dim, encoding_dim):
   # Source 1: https://blog.keras.io/building-autoencoders-in-keras.html <- Primary resource
   # Source 2: https://learnopencv.com/variational-autoencoder-in-tensorflow/
@@ -100,28 +128,6 @@ class PFN_AE_delete(keras.Model):
         return {
             "reconstruction": reconstruction
         }
-
-
-class PermInvEncoder(tf.keras.Model):
-    def __init__(self, num_elements, element_size, encoding_size):
-        super(PermInvEncoder, self).__init__()
-        self.fc1 = keras.layers.Dense(128, activation='relu')
-        self.fc2 = keras.layers.Dense(encoding_size)
-    
-    def call(self, x):
-        mask = tf.cast(tf.reduce_sum(tf.abs(x), axis=-1) > 0, tf.float32)
-        x *= mask[..., tf.newaxis]
-        print("x:", x)
-        print("mask:", mask)
-
-        x = tf.reshape(x, [-1, x.shape[1] * x.shape[2]])
-        print("x reshape:", x)
-        x = self.fc1(x)
-        print("x fc1:", x) 
-        x = tf.reduce_max(x, axis=1, keepdims=True)
-        print("x pooled: ", x)
-        x = self.fc2(x)
-        return x
 
 def pfn_mask_func(X, mask_val=0):
   # map mask_val to zero and return 1 elsewhere

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = 'vae2_learingRate0p01'
+tag = "ae_compare"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -16,16 +16,17 @@ def detect_outliers(x):
   print(n_removed, " outliers removed")
   return x_smooth, n_removed
 
-def plot_loss(h,i):
+def plot_loss(h):
   print(h.history)
-  plt.plot(h.history['loss'][1:])
-  plt.plot(h.history['val_loss'][1:])
-  plt.title('VAE Total Loss - From Epoch 1')
+  plt.plot(h.history['loss'])
+  plt.plot(h.history['val_loss'])
+  plt.title('AE Total Loss')
   plt.ylabel('loss')
   plt.xlabel('epoch')
   plt.legend(['train', 'val'], loc='upper left')
-  plt.savefig(plot_dir+'lossVsEpoch'+tag+str(i)+'.png')
+  plt.savefig(plot_dir+'lossVsEpoch'+tag+'.png')
   plt.clf()
+  print("Saved loss to ", plot_dir)
 
 def make_roc(fpr,tpr,auc):
   plt.plot(fpr,tpr,label="AUC = %0.2f" % auc)
@@ -35,6 +36,7 @@ def make_roc(fpr,tpr,auc):
   plt.legend()
   plt.savefig(plot_dir+'roc_auc'+tag+'.png')
   plt.clf()
+  print("Saved ROC to ", plot_dir)
 
 def make_sic(fpr,tpr,auc):
   y = tpr[1:]/np.sqrt(fpr[1:])
@@ -46,6 +48,8 @@ def make_sic(fpr,tpr,auc):
   plt.legend()
   plt.savefig(plot_dir+'sic_auc'+tag+'.png')
   plt.clf()
+  print("Saved SIC to ", plot_dir)
+
 
 def make_single_roc(rocs,aucs,ylabel):
   plt.plot(rocs[0],rocs[1],label=str(np.round(r,4))+", $\sigma$="+str(sigs)+": AUC="+str(np.round(aucs,3)))
@@ -57,7 +61,7 @@ def make_single_roc(rocs,aucs,ylabel):
   plt.savefig(saveTag+'_roc_aucs_'+Ylabel.replace("/","")+'.pdf')
   plt.clf()
 
-def plot_score(bkg_score, sig_score, remove_outliers=True, extra_tag=""):
+def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, extra_tag=""):
   if remove_outliers:
     bkg_score,nb = detect_outliers(bkg_score)
     sig_score,ns = detect_outliers(sig_score)
@@ -66,20 +70,22 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, extra_tag=""):
   sig_score = np.absolute(sig_score)
   bmax = max(max(bkg_score),max(sig_score))
   bmin = min(min(bkg_score),min(sig_score))
-  if bmin == 0: bmin = 1e-9
+  if xlog and bmin == 0: bmin = 1e-9
   print("max, min: ", bmax, bmin)
-  bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
+  if xlog: bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
+  else: bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
   #plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg (-"+str(nb)+")", density=True)
   #plt.hist(sig_score, bins=bins, alpha=0.5, label="sig(-"+str(ns)+")", density=True)
   plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg", density=True)
   plt.hist(sig_score, bins=bins, alpha=0.5, label="sig", density=True)
-  plt.xscale('log')
+  if xlog: plt.xscale('log')
   plt.yscale('log')
   plt.legend()
   plt.title("Anomaly Score " + extra_tag)
   plt.xlabel('Loss')
   plt.savefig(plot_dir+'score_'+extra_tag+'_'+tag+'.png')
   plt.clf()
+  print("Saved score distribution to ", plot_dir)
 
 def plot_inputs(bkg, sig):
   for i in range(len(variable_array)):
@@ -106,6 +112,7 @@ def plot_vectors(bkg,sig,extra_tag):
     plt.title(variable_array[i])
   plt.savefig(plot_dir+'v_kin_'+tag+extra_tag+'.png')
   plt.clf()
+  print("Saved inputs to ", plot_dir)
 
 
 

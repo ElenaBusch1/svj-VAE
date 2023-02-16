@@ -46,10 +46,10 @@ X_train, X_val, _, _ = train_test_split(X_eval, X_eval, test_size=0.2)
 h = pfn_ae.fit(X_train, #Y_train,
         epochs=nepochs,
         batch_size=batchsize,
-        validation_data= X_val,
+        #validation_data=(X_val,X_val),
         verbose=1)
 
-phi_representation = pfn.predict(X_test)
+phi_representation = pfn.predict(x_test)
 
 print("Phi Space:")
 #print(encoded)
@@ -83,7 +83,7 @@ for i in range(0,nevents, step_size):
   sig_loss.append(y_loss)
   if i%100 == 0: print("Processed", i, "events")
 
-plot_loss(h,1)
+#plot_loss(h,1)
 plot_score(bkg_loss, sig_loss, False, "pfn_ae")
 
 ######## EVALUATE SUPERVISED ######
