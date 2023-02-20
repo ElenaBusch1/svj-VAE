@@ -48,8 +48,9 @@ def read_vectors(infile, nEvents, flatten=True):
 	padded_jet_array = np.zeros((len(selected_jet_array),max_jets+1,4))
 	for jets,zeros,met in zip(selected_jet_array,padded_jet_array,selected_met_array):
 		jet_ar = np.stack(jets, axis=1)[:max_jets,:]
-		zeros[0,0] = met[0]
-		zeros[0,2] = met[1]
+		zeros[0,0] = met[0] #pt energy
+		zeros[0,2] = met[1] #phi
+		zeros[0,3] = met[0] #total energy = pt
 		zeros[1:jet_ar.shape[0]+1, :jet_ar.shape[1]] = jet_ar
 
 	if (flatten):

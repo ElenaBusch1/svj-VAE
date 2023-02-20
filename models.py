@@ -64,7 +64,7 @@ class VAE(keras.Model):
         self.decoder = decoder
         self.total_loss_tracker = keras.metrics.Mean(name="loss")
         self.reconstruction_loss_tracker = keras.metrics.Mean(
-            name="reconstruction_loss"
+            name="reco_loss"
         )
         self.kl_loss_tracker = keras.metrics.Mean(name="kl_loss")
 
@@ -93,7 +93,7 @@ class VAE(keras.Model):
         self.kl_loss_tracker.update_state(kl_loss)
         return {
             "loss": self.total_loss_tracker.result(),
-            "reconstruction_loss": self.reconstruction_loss_tracker.result(),
+            "reco_loss": self.reconstruction_loss_tracker.result(),
             "kl_loss": self.kl_loss_tracker.result(),
         }
 
@@ -109,7 +109,7 @@ class VAE(keras.Model):
         total_loss = reconstruction_loss + kl_loss
         return {
             "loss": total_loss,
-            "reconstruction_loss": reconstruction_loss,
+            "reco_loss": reconstruction_loss,
             "kl_loss": kl_loss,
         }
 
@@ -184,7 +184,7 @@ class PFN_VAE(keras.Model):
         self.decoder = decoder
         self.total_loss_tracker = keras.metrics.Mean(name="total_loss")
         self.reconstruction_loss_tracker = keras.metrics.Mean(
-            name="reconstruction_loss"
+            name="reco_loss"
         )
         self.kl_loss_tracker = keras.metrics.Mean(name="kl_loss")
         self.phi_tracker = keras.metrics.Mean(name="sum_phi")
@@ -192,7 +192,7 @@ class PFN_VAE(keras.Model):
     @property
     def metrics(self):
         return [
-            self.phi_tracker,
+            #self.phi_tracker,
             self.total_loss_tracker,
             self.reconstruction_loss_tracker,
             self.kl_loss_tracker,
@@ -217,9 +217,9 @@ class PFN_VAE(keras.Model):
         self.kl_loss_tracker.update_state(kl_loss)
         self.phi_tracker.update_state(sum_phi)
         return {
-            "sum_phi": self.phi_tracker.result(),
+            #"sum_phi": self.phi_tracker.result(),
             "loss": self.total_loss_tracker.result(),
-            "reconstruction_loss": self.reconstruction_loss_tracker.result(),
+            "reco_loss": self.reconstruction_loss_tracker.result(),
             "kl_loss": self.kl_loss_tracker.result(),
         }
 
@@ -236,9 +236,9 @@ class PFN_VAE(keras.Model):
         total_loss = reconstruction_loss + kl_loss
         sum_phi =  tf.reduce_mean(phi)
         return {
-            "sum_phi": sum_phi,
+            #"sum_phi": sum_phi,
             "loss": total_loss,
-            "reconstruction_loss": reconstruction_loss,
+            "reco_loss": reconstruction_loss,
             "kl_loss": kl_loss,
         }
 
@@ -356,7 +356,7 @@ def get_vae(input_dim, encoding_dim, latent_dim):
 ## ------------------------------------------------------------------------------------
 def get_pfn_ae(input_dims, phi_dim, encoding_dim, latent_dim):
   pfn = get_pfn(input_dims, phi_dim)
-  encoder = get_variational_encoder(phi_dim, encoding_dim, latent_dim)
+  encoder = get_encoder(phi_dim, encoding_dim, latent_dim)
   decoder = get_decoder(phi_dim, encoding_dim, latent_dim)
 
   pfn_ae = PFN_AE(pfn, encoder, decoder)
@@ -376,16 +376,16 @@ def get_pfn_vae(input_dims, phi_dim, encoding_dim, latent_dim):
 
 ## ------------------------------------------------------------------------------------
 def get_model(model_name, input_dims, encoding_dim, latent_dim, phi_dim=None):
-  if (model_name == "ae"):
+  if (model_name == "AE"):
     return get_ae(input_dims, encoding_dim, latent_dim)
 
-  elif (model_name == "vae"):
+  elif (model_name == "VAE"):
     return get_vae(input_dims, encoding_dim, latent_dim)
 
-  elif (model_name == "pfn_ae"): 
+  elif (model_name == "PFN_AE"): 
     return get_pfn_ae(input_dims, phi_dim, encoding_dim, latent_dim)
 
-  elif (model_name == "pfn_vae"): 
+  elif (model_name == "PFN_VAE"): 
     return get_pfn_vae(input_dims, phi_dim, encoding_dim, latent_dim)
 
   else:

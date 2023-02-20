@@ -1,13 +1,14 @@
 import numpy as np
+import json
 from root_to_numpy import *
 from tensorflow import keras
 from tensorflow import saved_model
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from plot_helper import *
 from models import *
-from evaluate import get_single_loss, get_multi_loss
+from eval_helper import *
 
 #---- REFERENCES 
 #- Keras tutorials: https://blog.keras.io/building-autoencoders-in-keras.html
@@ -18,20 +19,13 @@ from evaluate import get_single_loss, get_multi_loss
 
 ## ---------- USER PARAMETERS ----------
 ## Model options:
-##    "ae", "vae", "pfn_ae", "pfn_vae"
-model_name = "ae"
-model_tag = "_"
-plot_tag = "ae_vae_pfn_compare"
-
-## Input options - set only 1 to true
-hlvs = False
-jets_1D = True
-jets_2D = False
+##    "AE", "VAE", "PFN_AE", "PFN_VAE"
+model_name = "PFN_AE"
 
 # nEvents: 80% train, 10% valid, 10% test
 # make sig %10 of bkg
-x_events = 5000
-y_events = 500
+x_events = 50000
+y_events = 5000
 
 ## Model architecture
 latent_dim = 2
@@ -39,11 +33,18 @@ encoding_dim = 32
 phi_dim = 64
 
 # Hyper parameters
-nepochs = 10
+nepochs = 30
 batchsize = 50
 
 
 ## ---------- CODE  ----------
+
+## Input options - set only 1 to true
+hlvs = False #defunct
+jets_1D = False
+jets_2D = False
+if model_name.find("PFN")>-1: jets_2D = True
+else: jets_1D = True
 
 ## Check input setting
 if(not ((hlvs ^ jets_1D ^ jets_2D) and not (hlvs and jets_1D and jets_2D)) ):
@@ -65,41 +66,51 @@ if (hlvs):
     x_raw = read_hlvs("../largerBackground.root", x_events)
     sig_raw = read_hlvs("../largerSignal.root", y_events)
 
-if (jets_1D):
-    x_raw = read_vectors("../v6smallQCD.root", x_events, flatten=True)
-    sig_raw = read_vectors("../user.ebusch.515502.root", y_events, flatten=True)
+#if (jets_1D):
+#    x_raw = read_vectors("../v6smallQCD.root", x_events, flatten=True)
+#    sig_raw = read_vectors("../user.ebusch.515502.root", y_events, flatten=True)
 
-if (jets_2D):
+if (jets_1D or jets_2D):
     x_raw = read_vectors("../v6smallQCD.root", x_events, flatten=False)
     sig_raw = read_vectors("../user.ebusch.515502.root", y_events, flatten=False)
 
 ## Apply scaling
-if (scale):
-    x_scaler = StandardScaler()
-    sig_scaler = StandardScaler()
-    x = x_scaler.fit_transform(x_raw)
-    sig = sig_scaler.fit_transform(sig_raw)
-else:
-    x = x_raw
-    sig = sig_raw
+x= np.zeros((x_events,16,4))
+sig= np.zeros((y_events,16,4))
+
+x_nz = np.any(x_raw,2) #find zero padded events
+sig_nz = np.any(sig_raw,2)
+
+x_scale = x_raw[x_nz] #scale only non-zero jets
+sig_scale = sig_raw[sig_nz]
+
+x_fit = StandardScaler().fit_transform(x_scale) #do the scaling
+sig_fit = StandardScaler().fit_transform(sig_scale)
+
+x[x_nz]= x_fit #insert scaled values back into zero padded matrix
+sig[sig_nz]= sig_fit
+
+if (jets_1D):
+    x = x.reshape(x_events,16*4)
+    sig = sig.reshape(y_events,16*4)
 
 print("Bkg input shape: ", x.shape)
 print("Sig input shape: ", sig.shape)
 
 ## Train / Valid / Test split
-x_train, x_temp, _, _ = train_test_split(x, x, test_size=0.2) #done randomly
-x_valid, x_test, _, _ = train_test_split(x_temp, x_temp, test_size=0.5)
+x_train, x_test, _, _ = train_test_split(x, x, test_size=0.1) #done randomly
+#x_valid, x_test, _, _ = train_test_split(x_temp, x_temp, test_size=0.5)
 
-print("Length train :", len(x_train), ", valid: ", len(x_valid), ", test: ", len(x_test))
+print("Length train :", len(x_train), ", test: ", len(x_test))
 
 if (len(x_test) != len(sig)):
     print("WARNING: Testing with ", len(x_test), "background samples and ", len(sig), "signal samples")
 
 
 ## Define the model
-if (model_name == "ae" or model_name == "vae"):
+if (model_name == "AE" or model_name == "VAE"):
     model_svj = get_model(model_name, input_dim, encoding_dim, latent_dim)
-elif (model_name == "pfn_ae"  or model_name == "pfn_vae"):
+elif (model_name == "PFN_AE"  or model_name == "PFN_VAE"):
     model_svj, pfn = get_model(model_name, input_dim, encoding_dim, latent_dim, phi_dim)
 
 ## Train the model
@@ -110,47 +121,44 @@ h = model_svj.fit(x_train,
                 #validation_data=x_valid)
 
 ## Save the model
-#model_svj.save("vae_getvae2")
-#saved_model.save(model_svj, "vae_getvae2")
-model_svj.get_layer('encoder').save_weights(model_name+model_tag+'encoder_weights.h5')
-model_svj.get_layer('decoder').save_weights(model_name+model_tag+'decoder_weights.h5')
-model_svj.get_layer('encoder').save(model_name+model_tag+'encoder_arch')
-model_svj.get_layer('decoder').save(model_name+model_tag+'decoder_arch')
+model_svj.get_layer('encoder').save_weights(model_name+'_encoder_weights.h5')
+model_svj.get_layer('decoder').save_weights(model_name+'_decoder_weights.h5')
+model_svj.get_layer('encoder').save(model_name+'_encoder_arch')
+model_svj.get_layer('decoder').save(model_name+'_decoder_arch')
+if model_name.find('PFN') > -1:
+    model_svj.get_layer('pfn').save_weights(model_name+'_pfn_weights.h5')
+    model_svj.get_layer('pfn').save(model_name+'_pfn_arch')
+with open(model_name+'_history.json', 'w') as f:
+    json.dump(h.history, f)
 
 print("Saved model")
 
-## Evaluate Single Loss model
-if (model_name.find("vae") == -1):
+## Evaluate multi Loss model
+if (model_name.find("VAE") > -1):
+    bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss , sig_reco_loss = get_multi_loss(model_svj, x_test, sig)
+
+## Evaluate single Loss model
+else:
     bkg_loss, sig_loss = get_single_loss(model_svj, x_test, sig)
 
-## Evaluate multi Loss model
-else:
-    bkg_loss, sig_loss, _, _ , _ , _ = get_multi_loss(model_svj, x_test, sig)
 
-
-# --- Eval plots 
+# # --- Eval plots 
 # 1. Loss vs. epoch 
-plot_loss(h)
+plot_loss(h, model_name, 'loss')
+if model_name.find('VAE') > -1:
+    plot_loss(h, model_name, 'kl_loss')
+    plot_loss(h, model_name, 'reco_loss')
 # 2. Anomaly score
-plot_score(bkg_loss, sig_loss, False, True, model_name+"orig")
+plot_score(bkg_loss, sig_loss, False, False, model_name)
+if model_name.find('VAE') > -1:
+    plot_score(bkg_kl_loss, sig_kl_loss, False, False, model_name+'_KLD')
+    plot_score(bkg_reco_loss, sig_reco_loss, False, False, model_name+'_Reco')
 # 3. ROCs/AUCs using sklearn functions imported above  
-nevents = len(sig_loss)
-truth_sig = np.ones(nevents)
-truth_bkg = np.zeros(nevents)
-truth_labels = np.concatenate((truth_bkg, truth_sig))
-eval_vals = np.concatenate((bkg_loss,sig_loss))
-eval_max = max(eval_vals)
-eval_min = min(eval_vals)
-eval_transformed = [(x - eval_min)/eval_max for x in eval_vals]
-bkg_transformed = [(x - eval_min)/eval_max for x in bkg_loss]
-sig_transformed = [(x - eval_min)/eval_max for x in sig_loss]
-plot_score(bkg_transformed, sig_transformed, False, False, model_name+"transformed")
-print("truth", truth_labels)
-print("eval", eval_transformed)
+do_roc(bkg_loss, sig_loss, model_name, True)
+if model_name.find('VAE') > -1:
+    do_roc(bkg_reco_loss, sig_reco_loss, model_name+'_Reco', True)
+    do_roc(bkg_kl_loss, sig_kl_loss, model_name+'_KLD', True)
 
-fpr, tpr, trh = roc_curve(truth_labels, eval_transformed) #[fpr,tpr]
-auc = roc_auc_score(truth_labels, eval_vals)
-print("AUC: ", auc)
-make_roc(fpr,tpr,auc)
 #4. Plot inputs
-#plot_vectors(x,sig,"vec")
+#plot_vectors(x_fit,sig_fit,"scaled")
+#plot_vectors(x_scale,sig_scale,"raw")
