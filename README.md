@@ -26,7 +26,7 @@ You can optionally save your trained network, and evaluate using the evaluate.py
 python evaluate.py
 ```
 
-**Note**: currently there is too much copy pasting between training and eval scripts, this should be fixed\\
+**Note**: currently there is too much copy pasting between training and eval scripts, this should be fixed  
 **Note**: plot path is hardcoded in `plot_heler.py`
 
 ## File descriptions
