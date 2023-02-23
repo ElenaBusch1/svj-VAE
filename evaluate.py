@@ -1,93 +1,109 @@
 import numpy as np
+import json
 from root_to_numpy import *
 from tensorflow import keras
+from tensorflow import saved_model
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from plot_helper import *
 from models import *
+from eval_helper import *
 
-#json_file = open("model.json", "r")
-#loaded_model_json = json_file.read()
-#json_file.close()
-#loaded_model = keras.models.model_from_json(loaded_model_json)
-#loaded_model.load_weights("model.h5")
+## ---------- USER PARAMETERS ----------
+## Model options:
+##    "AE", "VAE", "PFN_AE", "PFN_VAE"
+model = "PFN_AE"
 
-#load testing data
-nevents = 100
-x_raw = read_vectors("../v6smallQCD.root", nevents)
-sig_raw = read_vectors("../user.ebusch.515499.root", nevents)
-x_scaler = StandardScaler()
-sig_scaler = StandardScaler()
-x_test = x_scaler.fit_transform(x_raw)
-sig = sig_scaler.fit_transform(sig_raw)
+nevents = 5000
 
-#load model
-model_svj = keras.models.load_model("v6_model3")
+## ---------- CODE ----------
+
+hlvs = False #defunct
+jets_1D = False
+jets_2D = False
+if model.find("PFN")>-1: jets_2D = True
+else: jets_1D = True
+
+## Load testing data
+x_raw = read_vectors("../v6smallQCD.root", nevents, False)
+sig_raw = read_vectors("../user.ebusch.515499.root", nevents, False)
+
+## Apply scaling
+x= np.zeros((nevents,16,4))
+sig= np.zeros((nevents,16,4))
+
+x_nz = np.any(x_raw,2) #find zero padded events
+sig_nz = np.any(sig_raw,2)
+
+x_scale = x_raw[x_nz] #scale only non-zero jets
+sig_scale = sig_raw[sig_nz]
+
+x_fit = StandardScaler().fit_transform(x_scale) #do the scaling
+sig_fit = StandardScaler().fit_transform(sig_scale)
+
+x[x_nz]= x_fit #insert scaled values back into zero padded matrix
+sig[sig_nz]= sig_fit
+
+if (jets_1D):
+    x = x.reshape(nevents,16*4)
+    sig = sig.reshape(nevents,16*4)
+
+
+## Load model
+encoder = keras.models.load_model(model+'_encoder_arch')
+decoder = keras.models.load_model(model+'_decoder_arch')
+if model.find("PFN") >-1:
+    pfn = keras.models.load_model(model+'_pfn_arch')
+
+if model == "AE":
+    model_svj = AE(encoder,decoder)
+elif model == "VAE":
+    model_svj = VAE(encoder,decoder)
+elif model == "PFN_AE":
+    model_svj = PFN_AE(pfn,encoder,decoder)
+elif model == "PFN_VAE":
+    model_svj = PFN_VAE(pfn,encoder,decoder)
+
+model_svj.get_layer('encoder').load_weights(model+'_encoder_weights.h5')
+model_svj.get_layer('decoder').load_weights(model+'_decoder_weights.h5')
+if model.find("PFN") >-1:
+    model_svj.get_layer('pfn').load_weights(model+'_pfn_weights.h5')
+
+model_svj.compile(optimizer=keras.optimizers.Adam())
+#model_svj.summary()
+
+## Load history
+with open(model+"_history.json", 'r') as f:
+    h = json.load(f)
+print(h)
+print(type(h))
+
 print ("Loaded model")
 
-#evaluate
-truth_bkg = np.zeros(len(x_test))
-truth_sig = np.ones(len(sig))
-accu_bkg = model_svj.evaluate(x_test, truth_bkg)
-accu_sig = model_svj.evaluate(sig, truth_sig)
-pred_bkg = model_svj.predict(x_test)
-pred_sig = model_svj.predict(sig)
-pred_err_bkg = keras.losses.mse(pred_bkg, x_test).numpy()
-pred_err_sig = keras.losses.mse(pred_sig, sig).numpy()
-
-bkg_loss = []
-sig_loss = []
-
-#for x,y in zip(x_test,sig):
-step_size = 4
-for i in range(0, nevents, step_size):
-  xt = x_test[i:i+step_size]
-  yt = sig[i:i+step_size]
-  #xt = x[np.newaxis, :] #give x and y the correct shape (,64)
-  #yt = y[np.newaxis, :]
-
-  # NOTE - unclear why they are printed in this order, but it seems to be the case
-  x_loss = model_svj.evaluate(xt, batch_size = step_size, verbose=1)
-  y_loss = model_svj.evaluate(yt, batch_size = step_size, verbose=1)
-
-  bkg_loss.append(x_loss)
-  sig_loss.append(y_loss)
-  if i%1000 == 0: print("Processed", i, "events")
-
-
-print("data evaluated loss, accuracy: ", accu_bkg)
-print("sig evaluated loss, accuracy: ", accu_sig)
-
-print(bkg_loss)
-print(sig_loss)
-
-truth_labels = np.concatenate((truth_bkg, truth_sig))
-eval_vals = np.concatenate((pred_err_bkg, pred_err_sig))
-
-#auc = roc_auc_score(truth_labels, eval_vals)
-#rint("Iteration test", " AUC = ", auc)
+## Evaluate multi Loss model
+# if (model.find("VAE") > -1):
+#     bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss , sig_reco_loss = get_multi_loss(model_svj, x, sig)
+# 
+# ## Evaluate single Loss model
+# else:
+#     bkg_loss, sig_loss = get_single_loss(model_svj, x, sig)
 
 # --- Eval plots 
 # 1. Loss vs. epoch 
-#plot_loss(h,1)
-# 2. Histogram of reco error (loss) for JZW and evaled SVJ signals (test sets)
-# 3. ROCs/AUCs using sklearn functions imported above  
-# TODO
-#fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
-#print("eval:  ", eval_vals)
-#print("truth: ", truth_labels)
-#print("fpr:   ", fpr)
-#print("tpr:   ", tpr)
-#print("trh:   ", trh)
-#auc = roc_auc_score(truth_labels, eval_vals) #Y_test = true labels, Y_predict = model-determined positive rate
-#make_roc(fpr,tpr,auc)
-#make_sic(fpr,tpr,auc)
-#make_single_roc(roc_curve, auc, 'tpr') #TODO plot tpr/sqrt(fpr) vs. fpr
-# 4. Anomaly score
-plot_score(bkg_loss, sig_loss, False)
+plot_saved_loss(h, model, "loss")
+# if model.find('VAE') > -1:
+#     plot_saved_loss(h, model, "kl_loss")
+#     plot_saved_loss(h, model, "reco_loss")
+# # 2. Anomaly score
+# plot_score(bkg_loss, sig_loss, False, False, model)
+# plot_score(bkg_loss, sig_loss, False, True, model+"_xlog")
+# if model.find('VAE') > -1:
+#     plot_score(bkg_kl_loss, sig_kl_loss, remove_outliers=False, xlog=True, extra_tag=model+"_KLD")
+#     plot_score(bkg_reco_loss, sig_reco_loss, False, False, model_name+'_Reco')
+# # 3. ROCs/AUCs using sklearn functions imported above  
+# do_roc(bkg_loss, sig_loss, model_name, True)
+# if model_name.find('VAE') > -1:
+#     do_roc(bkg_reco_loss, sig_reco_loss, model_name+'_Reco', True)
+#     do_roc(bkg_kl_loss, sig_kl_loss, model_name+'_KLD', True)
 
-#5. Plot inputs
-#plot_inputs(x,sig)
-#plot_vectors(x_raw,sig_raw,"unscaled")
-#plot_vectors(x_test,sig,"scaled")
