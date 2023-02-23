@@ -20,21 +20,21 @@ from eval_helper import *
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-model_name = "PFN_AE"
+model_name = "AE"
 
 # nEvents: 80% train, 10% valid, 10% test
 # make sig %10 of bkg
-x_events = 50000
-y_events = 5000
+x_events = 500000
+y_events = 20000
 
 ## Model architecture
 latent_dim = 2
-encoding_dim = 32
+encoding_dim = 16
 phi_dim = 64
 
 # Hyper parameters
 nepochs = 30
-batchsize = 50
+batchsize = 32
 
 
 ## ---------- CODE  ----------
@@ -72,7 +72,7 @@ if (hlvs):
 
 if (jets_1D or jets_2D):
     x_raw = read_vectors("../v6smallQCD.root", x_events, flatten=False)
-    sig_raw = read_vectors("../user.ebusch.515502.root", y_events, flatten=False)
+    sig_raw = read_vectors("../user.ebusch.515500.root", y_events, flatten=False)
 
 ## Apply scaling
 x= np.zeros((x_events,16,4))
@@ -98,7 +98,7 @@ print("Bkg input shape: ", x.shape)
 print("Sig input shape: ", sig.shape)
 
 ## Train / Valid / Test split
-x_train, x_test, _, _ = train_test_split(x, x, test_size=0.1) #done randomly
+x_train, x_test, _, _ = train_test_split(x, x, test_size=0.04) #done randomly
 #x_valid, x_test, _, _ = train_test_split(x_temp, x_temp, test_size=0.5)
 
 print("Length train :", len(x_train), ", test: ", len(x_test))
@@ -117,7 +117,7 @@ elif (model_name == "PFN_AE"  or model_name == "PFN_VAE"):
 h = model_svj.fit(x_train,
                 epochs=nepochs,
                 batch_size=batchsize,
-                validation_split=0.1)
+                validation_split=0.04)
                 #validation_data=x_valid)
 
 ## Save the model
@@ -150,6 +150,7 @@ if model_name.find('VAE') > -1:
     plot_loss(h, model_name, 'reco_loss')
 # 2. Anomaly score
 plot_score(bkg_loss, sig_loss, False, False, model_name)
+plot_score(bkg_loss, sig_loss, False, True, model_name+"_logx")
 if model_name.find('VAE') > -1:
     plot_score(bkg_kl_loss, sig_kl_loss, False, False, model_name+'_KLD')
     plot_score(bkg_reco_loss, sig_reco_loss, False, False, model_name+'_Reco')
