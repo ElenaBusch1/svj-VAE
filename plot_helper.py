@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = "my_plots"
+tag = "new_scaling"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -113,10 +113,11 @@ def plot_inputs(bkg, sig):
 def plot_vectors(train,sig,extra_tag):
   variable_array = ["pT + MET", "eta", "phi", "E"]
   for i in range(4):
-    train_v = train[:,i::4].flatten()
+    train_v = train[:,i].flatten()
     #test_v = test[:,i::4].flatten()
-    sig_v = sig[:,i::4].flatten()
-    bins=np.histogram(np.hstack((train_v,sig_v)),bins=40)[1]
+    sig_v = sig[:,i].flatten()
+    bins=np.histogram(np.hstack((train_v,sig_v)),bins=60)[1]
+    #if(bins[-1] > 3000): bins = np.arange(0,3000,50)
     plt.subplot(2,2,i+1)
     plt.tight_layout(h_pad=1, w_pad=1)
     plt.hist(train_v, alpha=0.5, label="bkg", bins=bins, density=True)

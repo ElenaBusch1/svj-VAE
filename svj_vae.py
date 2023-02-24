@@ -66,33 +66,22 @@ if (hlvs):
     x_raw = read_hlvs("../largerBackground.root", x_events)
     sig_raw = read_hlvs("../largerSignal.root", y_events)
 
-#if (jets_1D):
-#    x_raw = read_vectors("../v6smallQCD.root", x_events, flatten=True)
-#    sig_raw = read_vectors("../user.ebusch.515502.root", y_events, flatten=True)
-
 if (jets_1D or jets_2D):
     x_raw = read_vectors("../v6smallQCD.root", x_events, flatten=False)
     sig_raw = read_vectors("../user.ebusch.515500.root", y_events, flatten=False)
 
-## Apply scaling
-x= np.zeros((x_events,16,4))
-sig= np.zeros((y_events,16,4))
+## old scaling method -> don't use except maybe for consistency checks!
+#x, sig = apply_StandardScaling(x_raw, sig_raw)
 
-x_nz = np.any(x_raw,2) #find zero padded events
-sig_nz = np.any(sig_raw,2)
-
-x_scale = x_raw[x_nz] #scale only non-zero jets
-sig_scale = sig_raw[sig_nz]
-
-x_fit = StandardScaler().fit_transform(x_scale) #do the scaling
-sig_fit = StandardScaler().fit_transform(sig_scale)
-
-x[x_nz]= x_fit #insert scaled values back into zero padded matrix
-sig[sig_nz]= sig_fit
+## apply per-event scaling
+x_2D, sig_2D = apply_EventScaling(x_raw, sig_raw)
 
 if (jets_1D):
-    x = x.reshape(x_events,16*4)
-    sig = sig.reshape(y_events,16*4)
+    x = x_2D.reshape(x_events,16*4)
+    sig = sig_2D.reshape(y_events,16*4)
+else:
+    x = x_2D
+    sig = sig_2D
 
 print("Bkg input shape: ", x.shape)
 print("Sig input shape: ", sig.shape)
@@ -161,5 +150,10 @@ if model_name.find('VAE') > -1:
     do_roc(bkg_kl_loss, sig_kl_loss, model_name+'_KLD', True)
 
 #4. Plot inputs
-#plot_vectors(x_fit,sig_fit,"scaled")
-#plot_vectors(x_scale,sig_scale,"raw")
+x_raw_nz = remove_zero_padding(x_raw)
+sig_raw_nz = remove_zero_padding(sig_raw)
+x_nz = remove_zero_padding(x_2D)
+sig_nz = remove_zero_padding(sig_2D)
+
+plot_vectors(x_raw_nz,sig_raw_nz,"raw")
+plot_vectors(x_nz,sig_nz,"scaled")

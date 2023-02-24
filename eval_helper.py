@@ -8,41 +8,47 @@ from sklearn.preprocessing import StandardScaler
 from plot_helper import *
 from models import *
 
-#json_file = open("model.json", "r")
-#loaded_model_json = json_file.read()
-#json_file.close()
-#loaded_model = keras.models.model_from_json(loaded_model_json)
-#loaded_model.load_weights("model.h5")
+def remove_zero_padding(x):
+    #x has shape (nEvents, nSteps, nFeatures)
+    #x_out has shape (nEvents, nFeatures)
+    x_nz = np.any(x,axis=2) #find zero padded steps
+    x_out = x[x_nz]
 
-#load testing data
-#nevents = 10000
-#x_raw = read_vectors("../v6smallQCD.root", nevents)
-#sig_raw = read_vectors("../user.ebusch.515499.root", nevents)
-#x_scaler = StandardScaler()
-#sig_scaler = StandardScaler()
-#x_test = x_scaler.fit_transform(x_raw)
-#sig = sig_scaler.fit_transform(sig_raw)
-#
-##load model
-##model_svj = keras.models.load_model("vae_getvae2")
-#
-##load vae
-#encoder = keras.models.load_model('encoder2_arch')
-#decoder = keras.models.load_model('decoder2_arch')
-#model_svj = VAE(encoder,decoder)
-#model_svj.get_layer('encoder').load_weights('encoder2_weights.h5')
-#model_svj.get_layer('decoder').load_weights('decoder2_weights.h5')
-#model_svj.compile(optimizer=keras.optimizers.Adam())
-#
-#print ("Loaded model")
-##model_svj.summary()
-##print ("Metric names")
-#print(model_svj.metrics_names)
-#
-##evaluate
-#truth_bkg = np.zeros(len(x_test))
-#truth_sig = np.ones(len(sig))
+    return x_out
 
+def apply_StandardScaling(x_raw, sig_raw):
+    x= np.zeros(x_raw.shape)
+    sig= np.zeros(sig_raw.shape)
+    
+    x_nz = np.any(x_raw,axis=2) #find zero padded events
+    sig_nz = np.any(sig_raw,axis=2)
+    
+    x_scale = x_raw[x_nz] #scale only non-zero jets
+    sig_scale = sig_raw[sig_nz]
+    
+    x_fit = StandardScaler().fit_transform(x_scale) #do the scaling
+    sig_fit = StandardScaler().fit_transform(sig_scale)
+    
+    x[x_nz]= x_fit #insert scaled values back into zero padded matrix
+    sig[sig_nz]= sig_fit
+    
+    return x, sig
+
+def apply_EventScaling(x_raw, sig_raw):
+    
+    x = np.copy(x_raw) #copy
+    sig = np.copy(sig_raw)
+
+    x_totals = x_raw.sum(axis=1) #get sum total pt, eta, phi, E for each event
+    sig_totals = sig_raw.sum(axis=1)
+
+    x[:,:,0] = (x_raw[:,:,0].T/x_totals[:,0]).T  #divide each pT entry by event pT total
+    sig[:,:,0] = (sig_raw[:,:,0].T/sig_totals[:,0]).T
+
+    x[:,:,3] = (x_raw[:,:,3].T/x_totals[:,3]).T  #divide each E entry by event E total
+    sig[:,:,3] = (sig_raw[:,:,3].T/sig_totals[:,3]).T
+
+    return x, sig
 
 def get_multi_loss(model_svj, x_test, y_test):
     bkg_total_loss = []
@@ -112,47 +118,3 @@ def do_roc(bkg_loss, sig_loss, plot_tag, make_transformed_plot=False):
     make_roc(fpr,tpr,auc,plot_tag)
     make_sic(fpr,tpr,auc,plot_tag)
 
-#accu_bkg = model_svj.evaluate(x_test, truth_bkg)
-#accu_sig = model_svj.evaluate(sig, truth_sig)
-#pred_bkg = model_svj.predict(x_test)
-#pred_sig = model_svj.predict(sig)
-#pred_err_bkg = keras.losses.mse(pred_bkg, x_test).numpy()
-#pred_err_sig = keras.losses.mse(pred_sig, sig).numpy()
-
-#print(bkg_loss)
-#print(sig_kld_loss)
-
-#print("data evaluated", model_svj.metrics_names, ":", accu_bkg)
-#print("sig evaluated", model_svj.metrics_names, ";", accu_sig)
-#print("data predict", pred_bkg.shape)
-#print(pred_bkg)
-#truth_labels = np.concatenate((truth_bkg, truth_sig))
-#eval_vals = np.concatenate((pred_bkg, pred_sig))
-
-#auc = roc_auc_score(truth_labels, eval_vals)
-#print("Iteration test", " AUC = ", auc)
-
-# --- Eval plots 
-# 1. Loss vs. epoch 
-#plot_loss(h,1)
-# 2. Histogram of reco error (loss) for JZW and evaled SVJ signals (test sets)
-# 3. ROCs/AUCs using sklearn functions imported above  
-# TODO
-#fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
-#print("eval:  ", eval_vals)
-#print("truth: ", truth_labels)
-#print("fpr:   ", fpr)
-#print("tpr:   ", tpr)
-#print("trh:   ", trh)
-#auc = roc_auc_score(truth_labels, eval_vals) #Y_test = true labels, Y_predict = model-determined positive rate
-#make_roc(fpr,tpr,auc)
-#make_sic(fpr,tpr,auc)
-#make_single_roc(roc_curve, auc, 'tpr') #TODO plot tpr/sqrt(fpr) vs. fpr
-# 4. Anomaly score
-#plot_score(bkg_loss, sig_loss, False, "total_loss_515499")
-#plot_score(bkg_kld_loss, sig_kld_loss, False, "kld_515499")
-
-#5. Plot inputs
-#plot_inputs(x,sig)
-#plot_vectors(x_raw,sig_raw,"unscaled")
-#plot_vectors(x_test,sig,"scaled")
