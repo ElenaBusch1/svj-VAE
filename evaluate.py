@@ -13,7 +13,7 @@ from eval_helper import *
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-model = "PFN_AE"
+model = "VAE"
 
 nevents = 5000
 
@@ -92,9 +92,9 @@ print ("Loaded model")
 # --- Eval plots 
 # 1. Loss vs. epoch 
 plot_saved_loss(h, model, "loss")
-# if model.find('VAE') > -1:
-#     plot_saved_loss(h, model, "kl_loss")
-#     plot_saved_loss(h, model, "reco_loss")
+if model.find('VAE') > -1:
+    plot_saved_loss(h, model, "kl_loss")
+    plot_saved_loss(h, model, "reco_loss")
 # # 2. Anomaly score
 # plot_score(bkg_loss, sig_loss, False, False, model)
 # plot_score(bkg_loss, sig_loss, False, True, model+"_xlog")

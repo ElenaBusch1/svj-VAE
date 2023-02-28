@@ -34,9 +34,9 @@ def plot_saved_loss(h, model="", loss='loss'):
   plt.title(model+' '+loss)
   plt.ylabel('loss')
   plt.xlabel('epoch')
-  #plt.yscale('log')
+  plt.yscale('log')
   plt.legend(['train', 'val'], loc='upper left')
-  plt.savefig(plot_dir+loss+'VsEpoch_'+model+'_'+tag+'linear.png')
+  plt.savefig(plot_dir+loss+'VsEpoch_'+model+'_'+tag+'log.png')
   plt.clf()
   print("Saved loss plot for ", model, loss)
 

@@ -341,7 +341,7 @@ def get_ae(input_dim, encoding_dim, latent_dim):
   decoder = get_decoder(input_dim, encoding_dim, latent_dim)
 
   ae = AE(encoder, decoder)
-  ae.compile(optimizer=keras.optimizers.Adam())
+  ae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0005))
   return ae
 
 ## ------------------------------------------------------------------------------------
@@ -350,7 +350,7 @@ def get_vae(input_dim, encoding_dim, latent_dim):
   decoder = get_decoder(input_dim, encoding_dim, latent_dim)
 
   vae = VAE(encoder, decoder)
-  vae.compile(optimizer=keras.optimizers.Adam())
+  vae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0005))
   return vae
 
 ## ------------------------------------------------------------------------------------
@@ -360,7 +360,7 @@ def get_pfn_ae(input_dims, phi_dim, encoding_dim, latent_dim):
   decoder = get_decoder(phi_dim, encoding_dim, latent_dim)
 
   pfn_ae = PFN_AE(pfn, encoder, decoder)
-  pfn_ae.compile(optimizer=keras.optimizers.Adam())
+  pfn_ae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0005))
 
   return pfn_ae, pfn
 
@@ -371,7 +371,7 @@ def get_pfn_vae(input_dims, phi_dim, encoding_dim, latent_dim):
   decoder = get_decoder(phi_dim, encoding_dim, latent_dim)
 
   pfn_vae = PFN_VAE(pfn, encoder, decoder)
-  pfn_vae.compile(optimizer=keras.optimizers.Adam())
+  pfn_vae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0005))
   return pfn_vae, pfn
 
 ## ------------------------------------------------------------------------------------

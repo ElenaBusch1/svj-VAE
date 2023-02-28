@@ -150,10 +150,10 @@ if model_name.find('VAE') > -1:
     do_roc(bkg_kl_loss, sig_kl_loss, model_name+'_KLD', True)
 
 #4. Plot inputs
-x_raw_nz = remove_zero_padding(x_raw)
-sig_raw_nz = remove_zero_padding(sig_raw)
-x_nz = remove_zero_padding(x_2D)
-sig_nz = remove_zero_padding(sig_2D)
-
-plot_vectors(x_raw_nz,sig_raw_nz,"raw")
-plot_vectors(x_nz,sig_nz,"scaled")
+# x_raw_nz = remove_zero_padding(x_raw)
+# sig_raw_nz = remove_zero_padding(sig_raw)
+# x_nz = remove_zero_padding(x_2D)
+# sig_nz = remove_zero_padding(sig_2D)
+# 
+# plot_vectors(x_raw_nz,sig_raw_nz,"raw")
+# plot_vectors(x_nz,sig_nz,"scaled")
