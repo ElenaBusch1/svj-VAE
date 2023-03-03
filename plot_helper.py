@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = "new_scaling"
+tag = "stability3_newae"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -79,8 +79,8 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, extra_tag=
     bkg_score,nb = detect_outliers(bkg_score)
     sig_score,ns = detect_outliers(sig_score)
   #bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
-  bkg_score = np.absolute(bkg_score)
-  sig_score = np.absolute(sig_score)
+  #bkg_score = np.absolute(bkg_score)
+  #sig_score = np.absolute(sig_score)
   bmax = max(max(bkg_score),max(sig_score))
   bmin = min(min(bkg_score),min(sig_score))
   if xlog and bmin == 0: bmin = 1e-9

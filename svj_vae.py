@@ -21,14 +21,15 @@ from eval_helper import *
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
 model_name = "AE"
+arch_dir = "architectures_saved/"
 
 # nEvents: 80% train, 10% valid, 10% test
 # make sig %10 of bkg
-x_events = 500000
-y_events = 20000
+x_events = 150000
+y_events = 6000
 
 ## Model architecture
-latent_dim = 2
+latent_dim = 4
 encoding_dim = 16
 phi_dim = 64
 
@@ -106,18 +107,18 @@ elif (model_name == "PFN_AE"  or model_name == "PFN_VAE"):
 h = model_svj.fit(x_train,
                 epochs=nepochs,
                 batch_size=batchsize,
-                validation_split=0.04)
+                validation_split=0.2)
                 #validation_data=x_valid)
 
 ## Save the model
-model_svj.get_layer('encoder').save_weights(model_name+'_encoder_weights.h5')
-model_svj.get_layer('decoder').save_weights(model_name+'_decoder_weights.h5')
-model_svj.get_layer('encoder').save(model_name+'_encoder_arch')
-model_svj.get_layer('decoder').save(model_name+'_decoder_arch')
+model_svj.get_layer('encoder').save_weights(arch_dir+model_name+'_encoder_weights.h5')
+model_svj.get_layer('decoder').save_weights(arch_dir+model_name+'_decoder_weights.h5')
+model_svj.get_layer('encoder').save(arch_dir+model_name+'_encoder_arch')
+model_svj.get_layer('decoder').save(arch_dir+model_name+'_decoder_arch')
 if model_name.find('PFN') > -1:
-    model_svj.get_layer('pfn').save_weights(model_name+'_pfn_weights.h5')
-    model_svj.get_layer('pfn').save(model_name+'_pfn_arch')
-with open(model_name+'_history.json', 'w') as f:
+    model_svj.get_layer('pfn').save_weights(arch_dir+model_name+'_pfn_weights.h5')
+    model_svj.get_layer('pfn').save(arch_dir+model_name+'_pfn_arch')
+with open(arch_dir+model_name+'_history.json', 'w') as f:
     json.dump(h.history, f)
 
 print("Saved model")
@@ -137,13 +138,22 @@ plot_loss(h, model_name, 'loss')
 if model_name.find('VAE') > -1:
     plot_loss(h, model_name, 'kl_loss')
     plot_loss(h, model_name, 'reco_loss')
+
 # 2. Anomaly score
 plot_score(bkg_loss, sig_loss, False, False, model_name)
-plot_score(bkg_loss, sig_loss, False, True, model_name+"_logx")
+#plot_score(bkg_loss, sig_loss, False, True, model_name+"_logx")
 if model_name.find('VAE') > -1:
     plot_score(bkg_kl_loss, sig_kl_loss, False, False, model_name+'_KLD')
     plot_score(bkg_reco_loss, sig_reco_loss, False, False, model_name+'_Reco')
-# 3. ROCs/AUCs using sklearn functions imported above  
+
+# 3. Signal Sensitivity Score
+score = getSignalSensitivityScore(bkg_loss, sig_loss)
+print("score = ",score)
+if model_name.find('VAE') > -1:
+    score_kld = getSignalSensitivityScore(bkg_kl_loss, sig_kl_loss)
+    print("score_kl =", score_kld)
+
+# 4. ROCs/AUCs using sklearn functions imported above  
 do_roc(bkg_loss, sig_loss, model_name, True)
 if model_name.find('VAE') > -1:
     do_roc(bkg_reco_loss, sig_reco_loss, model_name+'_Reco', True)
