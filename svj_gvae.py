@@ -12,21 +12,22 @@ from eval_helper import *
 # Example usage
 num_elements = 16
 element_size = 4
-encoding_size = 32
-phi_dim = 128
-nepochs=10
-batchsize=100
+encoding_dim = 16
+latent_dim = 4
+phi_dim = 64
+nepochs=30
+batchsize=32
 
-model_name = 'PFN'
+pfn_model = 'sigPFN'
+ae_model = 'sigPFN_AE'
 arch_dir = "architectures_saved/"
-#encoder = PermInvEncoder(num_elements, element_size, encoding_size)
 
 # Input of shape (batch_size, num_elements, element_size)
 #input_data = np.random.randn(500, num_elements, element_size).astype(np.float32)
-bkg_raw = read_vectors("../v6.4/v6p4smallQCD.root", 10000, False)
-sig_raw = read_vectors("../v6.4/totalSig.root", 10000, False)
+bkg_raw = read_vectors("../v6.4/v6p4smallQCD.root", 110000, False)
+sig_raw = read_vectors("../v6.4/v6p4smallZnunu.root", 110000, False)
 
-bkg2_raw = read_vectors("../v6.4/v6p4smallQCD.root", 10000, False)
+bkg2_raw = read_vectors("../v6.4/v6p4smallQCD2.root", 100000, False)
 sig2_raw = read_vectors("../v6.4/user.ebusch.515500.root", 10000, False)
 
 bkg, sig = apply_EventScaling(bkg_raw, sig_raw)
@@ -44,79 +45,81 @@ print(input_data.shape, truth.shape)
 
 # Encoded representation of shape (batch_size, encoding_size)
 #pfn_ae, pfn = get_pfn_ae([num_elements,element_size],phi_dim, [32,16])
-pfn,graph_orig = get_full_PFN([num_elements,element_size])
+pfn,graph_orig = get_full_PFN([num_elements,element_size], phi_dim)
 
 #(X_train, X_test,
 # Y_train, Y_test) = train_test_split(input_data, truth, test_size=0.1)
 
-x_eval, x_test, y_eval, y_test = train_test_split(input_data, truth, test_size=0.1)
-X_train, X_val, Y_train, Y_val = train_test_split(x_eval, y_eval, test_size=0.2)
+x_train, x_test, y_train, y_test = train_test_split(input_data, truth, test_size=0.909)
+#X_train, X_val, Y_train, Y_val = train_test_split(x_eval, y_eval, test_size=0.2)
 
 
-h = pfn.fit(X_train, Y_train,
-        epochs=nepochs,
-        batch_size=batchsize,
-        validation_data=(X_val,Y_val),
-        verbose=1)
+##  h = pfn.fit(x_train, y_train,
+##          epochs=nepochs,
+##          batch_size=batchsize,
+##          validation_split=0.2,
+##          verbose=1)
+##  
+##  ## save the model
+##  pfn.get_layer('graph').save_weights(arch_dir+pfn_model+'_graph_weights.h5')
+##  pfn.get_layer('classifier').save_weights(arch_dir+pfn_model+'_classifier_weights.h5')
+##  pfn.get_layer('graph').save(arch_dir+pfn_model+'_graph_arch')
+##  pfn.get_layer('classifier').save(arch_dir+pfn_model+'_classifier_arch')
+##  
+##  ## PFN training plots
+##  # 1. Loss vs. epoch 
+##  plot_loss(h, pfn_model, 'loss')
+##  # 2. Score 
+##  preds = pfn.predict(x_test)
+##  bkg_score = preds[:,1][y_test[:,1] == 0]
+##  sig_score = preds[:,1][y_test[:,1] == 1]
+##  plot_score(bkg_score, sig_score, False, False, pfn_model)
 
-pfn.get_layer('graph').save_weights(arch_dir+model_name+'_graph_weights.h5')
-pfn.get_layer('classifier').save_weights(arch_dir+model_name+'_classifier_weights.h5')
-pfn.get_layer('graph').save(arch_dir+model_name+'_graph_arch')
-pfn.get_layer('classifier').save(arch_dir+model_name+'_classifier_arch')
-
-#phi_representation = pfn.predict(x_test)
-
-#print("Phi Space:")
-#print(encoded)
-#print(encoded.shape)
-#print(type(encoded))
-#print()
-#b = phi_representation.T
-#print(b)
-#print(b.shape)
-#c = b[[not (n==0).all() for n in b]]
-#print("Pruned:")
-#print(c)
-#print(c.shape)
-
-graph = keras.models.load_model(arch_dir+'PFN_graph_arch')
-graph.load_weights(arch_dir+'PFN_graph_weights.h5')
+################### Train the AE ###############################
+graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
+graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
 graph.compile()
 
 phi_bkg = graph.predict(bkg2)
 phi_sig = graph.predict(sig2)
 
-phi_evalb, phi_testb, _, phi_tests = train_test_split(phi_bkg, phi_sig, test_size=0.1)
+phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=0.1)
 
-ae = get_ae(64,32,4)
+ae = get_simple_ae(phi_dim,encoding_dim,latent_dim)
 
-h2 = ae.fit(phi_evalb, 
+h2 = ae.fit(phi_evalb, phi_evalb, 
         epochs=nepochs,
         batch_size=batchsize,
         validation_split=0.2,
         verbose=1)
 
-#bkg_pred = ae.predict(phi_testb)
-#sig_pred = ae.predict(phi_tests)
+ae.save(arch_dir+ae_model)
+print("saved model")
 
-#print(phi_testb)
-#print(bkg_pred)
-#print(sig_pred)
-
-#bkg_loss = keras.losses.mse(bkg_pred, phi_testb)
-#sig_loss = keras.losses.mse(sig_pred, phi_tests)
-bkg_loss, sig_loss = get_single_loss(ae, phi_testb, phi_tests)
-
-print(bkg_loss)
-
-#print(phi_rep)
-#print(phi_rep.shape)
+#ae.get_layer('encoder').save_weights(arch_dir+ae_model+'_encoder_weights.h5')
+#ae.get_layer('decoder').save_weights(arch_dir+ae_model+'_decoder_weights.h5')
+#ae.get_layer('encoder').save(arch_dir+ae_model+'_encoder_arch')
+#ae.get_layer('decoder').save(arch_dir+ae_model+'_decoder_arch')
 
 ######## EVALUATE SUPERVISED ######
 # # --- Eval plots 
 # 1. Loss vs. epoch 
-plot_loss(h2, 'trainPFN_AE', 'loss')
-plot_score(bkg_loss, sig_loss, False, False, 'trainPFN_AE')
+plot_loss(h2, ae_model, 'loss')
+
+#2. Get loss
+#bkg_loss, sig_loss = get_single_loss(ae, phi_testb, phi_sig)
+pred_phi_bkg = ae.predict(phi_testb) #['reconstruction']
+pred_phi_sig = ae.predict(phi_sig) #['reconstruction']
+bkg_loss = keras.losses.mse(phi_testb, pred_phi_bkg)
+sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
+
+plot_score(bkg_loss, sig_loss, False, False, ae_model)
+
+# # 3. Signal Sensitivity Score
+score = getSignalSensitivityScore(bkg_loss, sig_loss)
+print("95 percentile score = ",score)
+# # 4. ROCs/AUCs using sklearn functions imported above  
+do_roc(bkg_loss, sig_loss, ae_model, True)
 
 # ## get predictions on test data
 # preds = pfn.predict(x_test)

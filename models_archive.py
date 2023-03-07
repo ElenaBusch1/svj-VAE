@@ -229,12 +229,11 @@ class supervisedPFN(keras.Model):
     return result
 
 
-def get_full_PFN(input_dim):
+def get_full_PFN(input_dim, phi_dim):
   initializer = keras.initializers.HeNormal()
   loss = keras.losses.CategoricalCrossentropy()
   optimizer = keras.optimizers.Adam() 
 
-  phi_dim = 64
   input_dim_x = input_dim[0]
   input_dim_y = input_dim[1]
 

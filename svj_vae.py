@@ -20,13 +20,13 @@ from eval_helper import *
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-model_name = "AE"
+model_name = "VAE"
 arch_dir = "architectures_saved/"
 
 # nEvents: 80% train, 10% valid, 10% test
 # make sig %10 of bkg
 x_events = 150000
-y_events = 6000
+y_events = 10000
 
 ## Model architecture
 latent_dim = 4
@@ -68,8 +68,8 @@ if (hlvs):
     sig_raw = read_hlvs("../largerSignal.root", y_events)
 
 if (jets_1D or jets_2D):
-    x_raw = read_vectors("../v6smallQCD.root", x_events, flatten=False)
-    sig_raw = read_vectors("../user.ebusch.515500.root", y_events, flatten=False)
+    x_raw = read_vectors("../v6.4/v6p4smallQCD.root", x_events, flatten=False)
+    sig_raw = read_vectors("../v6.4/user.ebusch.515500.root", y_events, flatten=False)
 
 ## old scaling method -> don't use except maybe for consistency checks!
 #x, sig = apply_StandardScaling(x_raw, sig_raw)
@@ -148,10 +148,10 @@ if model_name.find('VAE') > -1:
 
 # 3. Signal Sensitivity Score
 score = getSignalSensitivityScore(bkg_loss, sig_loss)
-print("score = ",score)
+print("95 percentile score = ",score)
 if model_name.find('VAE') > -1:
     score_kld = getSignalSensitivityScore(bkg_kl_loss, sig_kl_loss)
-    print("score_kl =", score_kld)
+    print("95 percentile score_kl =", score_kld)
 
 # 4. ROCs/AUCs using sklearn functions imported above  
 do_roc(bkg_loss, sig_loss, model_name, True)
