@@ -114,6 +114,9 @@ def getSignalSensitivityScore(bkg_loss, sig_loss, percentile=95):
     nSigAboveThreshold = np.sum(sig_loss > np.percentile(bkg_loss, percentile))
     return nSigAboveThreshold / len(sig_loss)
 
+def applyScoreCut(loss,test_array,cut_val):
+    return test_array[loss>cut_val] 
+
 def do_roc(bkg_loss, sig_loss, plot_tag, make_transformed_plot=False):
     truth_labels, eval_vals = transform_loss(bkg_loss, sig_loss, make_plot=make_transformed_plot, plot_tag=plot_tag) 
     fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]

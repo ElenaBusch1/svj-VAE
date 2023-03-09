@@ -40,6 +40,21 @@ def plot_saved_loss(h, model="", loss='loss'):
   plt.clf()
   print("Saved loss plot for ", model, loss)
 
+def plot_var(x_dict, y_dict, x_cut, y_cut, key):
+  #bmax = max(max(x_orig),max(y_orig))
+  #bmin = min(min(x_orig),min(y_orig))
+  bins=np.histogram(np.hstack((x_dict[key],y_dict[key])),bins=80)[1]
+  plt.hist(x_dict[key], bins=bins, weights=x_dict['weight'], alpha=0.5, label="Full bkg")
+  plt.hist(y_dict[key], bins=bins, weights=y_dict['weight'], histtype='step', label="Full sig")
+  plt.hist(x_cut[key], bins=bins, weights=x_cut['weight'], histtype='step',  label="Cut bkg", color = 'k')
+  plt.hist(y_cut[key], bins=bins, weights=y_cut['weight'], histtype='step', label="Cut sig", color = 'r')
+  plt.yscale('log')
+  plt.legend()
+  plt.title(key + "; Before & After 50% cut")
+  plt.xlabel('GeV')
+  plt.savefig(plot_dir+key+'_'+tag+'.png')
+  plt.clf()
+  print("Saved cut distribution for", key)
 
 def make_roc(fpr,tpr,auc,model=""):
   plt.plot(fpr,tpr,label="AUC = %0.2f" % auc)
