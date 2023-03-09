@@ -12,14 +12,14 @@ from eval_helper import *
 # Example usage
 num_elements = 16
 element_size = 4
-encoding_dim = 16
+encoding_dim = 32
 latent_dim = 4
 phi_dim = 64
 nepochs=30
 batchsize=32
 
-pfn_model = 'sigPFN'
-ae_model = 'sigPFN_AE'
+pfn_model = 'znnPFN32'
+ae_model = 'znnPFN32_AE'
 arch_dir = "architectures_saved/"
 
 # Input of shape (batch_size, num_elements, element_size)
@@ -54,26 +54,26 @@ x_train, x_test, y_train, y_test = train_test_split(input_data, truth, test_size
 #X_train, X_val, Y_train, Y_val = train_test_split(x_eval, y_eval, test_size=0.2)
 
 
-##  h = pfn.fit(x_train, y_train,
-##          epochs=nepochs,
-##          batch_size=batchsize,
-##          validation_split=0.2,
-##          verbose=1)
-##  
-##  ## save the model
-##  pfn.get_layer('graph').save_weights(arch_dir+pfn_model+'_graph_weights.h5')
-##  pfn.get_layer('classifier').save_weights(arch_dir+pfn_model+'_classifier_weights.h5')
-##  pfn.get_layer('graph').save(arch_dir+pfn_model+'_graph_arch')
-##  pfn.get_layer('classifier').save(arch_dir+pfn_model+'_classifier_arch')
-##  
-##  ## PFN training plots
-##  # 1. Loss vs. epoch 
-##  plot_loss(h, pfn_model, 'loss')
-##  # 2. Score 
-##  preds = pfn.predict(x_test)
-##  bkg_score = preds[:,1][y_test[:,1] == 0]
-##  sig_score = preds[:,1][y_test[:,1] == 1]
-##  plot_score(bkg_score, sig_score, False, False, pfn_model)
+h = pfn.fit(x_train, y_train,
+        epochs=nepochs,
+        batch_size=batchsize,
+        validation_split=0.2,
+        verbose=1)
+
+## save the model
+pfn.get_layer('graph').save_weights(arch_dir+pfn_model+'_graph_weights.h5')
+pfn.get_layer('classifier').save_weights(arch_dir+pfn_model+'_classifier_weights.h5')
+pfn.get_layer('graph').save(arch_dir+pfn_model+'_graph_arch')
+pfn.get_layer('classifier').save(arch_dir+pfn_model+'_classifier_arch')
+
+## PFN training plots
+# 1. Loss vs. epoch 
+plot_loss(h, pfn_model, 'loss')
+# 2. Score 
+preds = pfn.predict(x_test)
+bkg_score = preds[:,1][y_test[:,1] == 0]
+sig_score = preds[:,1][y_test[:,1] == 1]
+plot_score(bkg_score, sig_score, False, False, pfn_model)
 
 ################### Train the AE ###############################
 graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
@@ -85,21 +85,23 @@ phi_sig = graph.predict(sig2)
 
 phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=0.1)
 
-ae = get_simple_ae(phi_dim,encoding_dim,latent_dim)
+ae = get_ae(phi_dim,encoding_dim,latent_dim)
 
-h2 = ae.fit(phi_evalb, phi_evalb, 
+h2 = ae.fit(phi_evalb, 
         epochs=nepochs,
         batch_size=batchsize,
         validation_split=0.2,
         verbose=1)
 
-ae.save(arch_dir+ae_model)
-print("saved model")
+# # simple ae
+# ae.save(arch_dir+ae_model)
+# print("saved model")
 
-#ae.get_layer('encoder').save_weights(arch_dir+ae_model+'_encoder_weights.h5')
-#ae.get_layer('decoder').save_weights(arch_dir+ae_model+'_decoder_weights.h5')
-#ae.get_layer('encoder').save(arch_dir+ae_model+'_encoder_arch')
-#ae.get_layer('decoder').save(arch_dir+ae_model+'_decoder_arch')
+#complex ae
+ae.get_layer('encoder').save_weights(arch_dir+ae_model+'_encoder_weights.h5')
+ae.get_layer('decoder').save_weights(arch_dir+ae_model+'_decoder_weights.h5')
+ae.get_layer('encoder').save(arch_dir+ae_model+'_encoder_arch')
+ae.get_layer('decoder').save(arch_dir+ae_model+'_decoder_arch')
 
 ######## EVALUATE SUPERVISED ######
 # # --- Eval plots 
@@ -108,8 +110,8 @@ plot_loss(h2, ae_model, 'loss')
 
 #2. Get loss
 #bkg_loss, sig_loss = get_single_loss(ae, phi_testb, phi_sig)
-pred_phi_bkg = ae.predict(phi_testb) #['reconstruction']
-pred_phi_sig = ae.predict(phi_sig) #['reconstruction']
+pred_phi_bkg = ae.predict(phi_testb)['reconstruction']
+pred_phi_sig = ae.predict(phi_sig)['reconstruction']
 bkg_loss = keras.losses.mse(phi_testb, pred_phi_bkg)
 sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
 

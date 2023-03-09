@@ -259,6 +259,7 @@ def get_full_PFN(input_dim, phi_dim):
    
   # F network
   classifier_inputs = keras.Input(shape=(phi_dim,))
+  x = classifier_inputs
   x = keras.layers.Dense(50, kernel_initializer=initializer)(classifier_inputs)
   x = keras.layers.Activation('relu')(x)
   x = keras.layers.Dense(50, kernel_initializer=initializer)(x)
