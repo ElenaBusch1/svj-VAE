@@ -20,7 +20,29 @@ def read_test_variables(infile, nEvents, variables):
         my_dict[key] = my_dict[key][idx]
     return my_dict
 
-def read_vectors(infile, nEvents, flatten=True):
+def read_vectors(infile, nEvents):
+    file = uproot.open(infile)
+    
+    #print("File keys: ", file.keys())
+    max_jets = 10
+
+    tree = file["PostSel"]
+    #print("Tree Variables: ", tree.keys())
+
+    # select evenly spaced events from input distribution
+    my_jet_array = tree.arrays(jet_array, library = "np")
+    idx = get_spaced_elements(len(my_jet_array[jet_array[0]]),nEvents)
+    selected_jet_array = np.array([val[idx] for _,val in my_jet_array.items()]).T
+
+    # create jet matrix
+    padded_jet_array = np.zeros((len(selected_jet_array),max_jets,4))
+    for jets,zeros in zip(selected_jet_array,padded_jet_array):
+        jet_ar = np.stack(jets, axis=1)[:max_jets,:]
+        zeros[:jet_ar.shape[0], :jet_ar.shape[1]] = jet_ar
+
+    return padded_jet_array
+
+def read_vectors_MET(infile, nEvents, flatten=True):
     file = uproot.open(infile)
     
     #print("File keys: ", file.keys())

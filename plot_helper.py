@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = "znn_32"
+tag = "znn_noMET"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -40,18 +40,26 @@ def plot_saved_loss(h, model="", loss='loss'):
   plt.clf()
   print("Saved loss plot for ", model, loss)
 
-def plot_var(x_dict, y_dict, x_cut, y_cut, key):
+def plot_var(x_dict, x_cut1, x_cut2, key):
   #bmax = max(max(x_orig),max(y_orig))
   #bmin = min(min(x_orig),min(y_orig))
-  bins=np.histogram(np.hstack((x_dict[key],y_dict[key])),bins=80)[1]
-  plt.hist(x_dict[key], bins=bins, weights=x_dict['weight'], alpha=0.5, label="Full bkg")
-  plt.hist(y_dict[key], bins=bins, weights=y_dict['weight'], histtype='step', label="Full sig")
-  plt.hist(x_cut[key], bins=bins, weights=x_cut['weight'], histtype='step',  label="Cut bkg", color = 'k')
-  plt.hist(y_cut[key], bins=bins, weights=y_cut['weight'], histtype='step', label="Cut sig", color = 'r')
-  plt.yscale('log')
-  plt.legend()
-  plt.title(key + "; Before & After 50% cut")
-  plt.xlabel('GeV')
+  #bins=np.histogram(np.hstack((x_dict[key],x_cut1[key])),bins=20)[1]
+  bins= np.linspace(0,8000,20)
+  fig, ax = plt.subplots(2,1, gridspec_kw={'height_ratios': [3, 1]})
+  h1 = ax[0].hist(x_dict[key], bins=bins, weights=1.39e8*x_dict['weight'], alpha=0.5, label="Full bkg", color='dimgray')
+  h2 = ax[0].hist(x_cut1[key], bins=bins, weights=1.39e8*x_cut1['weight'], histtype='step',  label="Cut - 50%", color = 'mediumblue')
+  h3 = ax[0].hist(x_cut2[key], bins=bins, weights=1.39e8*x_cut2['weight'], histtype='step', label="Cut - 2%", color = 'forestgreen')
+  ax[0].set_yscale('log')
+  ax[0].set_ylabel('Events')
+  ax[0].legend()
+  ax[0].set_title(key + "; 50% and 2% Cuts")
+  #plt.subplot(2,1,2)
+  ax[1].plot(bins[:-1],np.ones(len(bins)-1), linestyle='dashed', color = 'dimgray')
+  ax[1].plot(bins[:-1],2*h2[0]/h1[0], drawstyle='steps', color='mediumblue')
+  ax[1].plot(bins[:-1],50*h3[0]/h1[0], drawstyle='steps', color='forestgreen')
+  ax[1].set_ylim(0,2)
+  ax[1].set_xlabel('GeV')
+  ax[1].set_ylabel('Ratio * (1/cut)')
   plt.savefig(plot_dir+key+'_'+tag+'.png')
   plt.clf()
   print("Saved cut distribution for", key)

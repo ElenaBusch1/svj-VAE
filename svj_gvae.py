@@ -18,17 +18,17 @@ phi_dim = 64
 nepochs=30
 batchsize=32
 
-pfn_model = 'znnPFN32'
-ae_model = 'znnPFN32_AE'
+pfn_model = 'znnPFN'
+ae_model = 'znnPFN_AE'
 arch_dir = "architectures_saved/"
 
 # Input of shape (batch_size, num_elements, element_size)
 #input_data = np.random.randn(500, num_elements, element_size).astype(np.float32)
-bkg_raw = read_vectors("../v6.4/v6p4smallQCD.root", 110000, False)
-sig_raw = read_vectors("../v6.4/v6p4smallZnunu.root", 110000, False)
+bkg_raw = read_vectors("../v6.4/v6p4smallQCD.root", 500000)
+sig_raw = read_vectors("../v6.4/v6p4smallZnunu.root", 500000)
 
-bkg2_raw = read_vectors("../v6.4/v6p4smallQCD2.root", 100000, False)
-sig2_raw = read_vectors("../v6.4/user.ebusch.515500.root", 10000, False)
+bkg2_raw = read_vectors("../v6.4/v6p4smallQCD2.root", 1000000)
+sig2_raw = read_vectors("../v6.4/user.ebusch.515500.root", 10000)
 
 bkg, sig = apply_EventScaling(bkg_raw, sig_raw)
 bkg2, sig2 = apply_EventScaling(bkg2_raw, sig2_raw)
@@ -41,6 +41,7 @@ truth_sig = np.ones(sig.shape[0])
 truth_1D = np.concatenate((truth_bkg,truth_sig))
 truth = tf.keras.utils.to_categorical(truth_1D, num_classes=2)
 
+print("Training shape, truth shape")
 print(input_data.shape, truth.shape)
 
 # Encoded representation of shape (batch_size, encoding_size)
@@ -83,7 +84,7 @@ graph.compile()
 phi_bkg = graph.predict(bkg2)
 phi_sig = graph.predict(sig2)
 
-phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=0.1)
+phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=0.01)
 
 ae = get_ae(phi_dim,encoding_dim,latent_dim)
 

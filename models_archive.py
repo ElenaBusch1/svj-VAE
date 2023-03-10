@@ -230,7 +230,7 @@ class supervisedPFN(keras.Model):
 
 
 def get_full_PFN(input_dim, phi_dim):
-  initializer = keras.initializers.HeNormal()
+  #initializer = keras.initializers.HeNormal()
   loss = keras.losses.CategoricalCrossentropy()
   optimizer = keras.optimizers.Adam() 
 
@@ -242,13 +242,13 @@ def get_full_PFN(input_dim, phi_dim):
   masked = keras.layers.Lambda(pfn_mask_func, name="mask")(pfn_inputs)
 
   # Phi network
-  dense1 = keras.layers.Dense(50, kernel_initializer=initializer, name="pfn1")
+  dense1 = keras.layers.Dense(50, name="pfn1")
   x = keras.layers.TimeDistributed(dense1, name="tdist_0")(pfn_inputs)
   x = keras.layers.Activation('relu')(x)
-  dense2 = keras.layers.Dense(50, kernel_initializer=initializer, name="pfn2") 
+  dense2 = keras.layers.Dense(50, name="pfn2") 
   x = keras.layers.TimeDistributed(dense2, name="tdist_1")(x)
   x = keras.layers.Activation('relu')(x)
-  dense3 = keras.layers.Dense(phi_dim, kernel_initializer=initializer, name="phi") 
+  dense3 = keras.layers.Dense(phi_dim, name="phi") 
   x = keras.layers.TimeDistributed(dense3, name="tdist_2")(x)
   phi_outputs = keras.layers.Activation('relu')(x)
 
@@ -260,15 +260,15 @@ def get_full_PFN(input_dim, phi_dim):
   # F network
   classifier_inputs = keras.Input(shape=(phi_dim,))
   x = classifier_inputs
-  x = keras.layers.Dense(50, kernel_initializer=initializer)(classifier_inputs)
+  x = keras.layers.Dense(50, name = "F1")(classifier_inputs)
   x = keras.layers.Activation('relu')(x)
-  x = keras.layers.Dense(50, kernel_initializer=initializer)(x)
+  x = keras.layers.Dense(50, name = "F2")(x)
   x = keras.layers.Activation('relu')(x)
-  x = keras.layers.Dense(50, kernel_initializer=initializer)(x)
+  x = keras.layers.Dense(50, name="F3")(x)
   x = keras.layers.Activation('relu')(x)
 
   # output
-  x = keras.layers.Dense(2, kernel_initializer=initializer, name="output")(x)
+  x = keras.layers.Dense(2, name="output")(x)
   output = keras.layers.Activation('softmax')(x)
 
   classifier = keras.Model(inputs=classifier_inputs, outputs=output, name="classifier")

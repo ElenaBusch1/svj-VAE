@@ -14,17 +14,17 @@ from eval_helper import *
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-ae_model = "znnPFN32_GOOD_AE"
-pfn_model = 'znnPFN32_GOOD'
+ae_model = "znnPFN_AE"
+pfn_model = 'znnPFN'
 arch_dir = "architectures_saved/"
 
-nevents = 10000
+nevents = 100000
 
 ## ---------- CODE ----------
 
 ## Load testing data
-x_raw = read_vectors("../v6.4/v6p4smallQCD2.root", nevents, False)
-sig_raw = read_vectors("../v6.4/user.ebusch.515500.root", nevents, False)
+x_raw = read_vectors("../v6.4/v6p4smallQCD2.root", nevents)
+sig_raw = read_vectors("../v6.4/totalSig.root", nevents)
 
 ## apply per-event scaling
 bkg, sig = apply_EventScaling(x_raw, sig_raw)
@@ -93,14 +93,17 @@ sig_dict = read_test_variables("../v6.4/user.ebusch.515500.root", nevents, varia
 
 #apply cut & plot
 x_cut = {}
+x_cut2 = {}
 sig_cut = {}
 cut = np.percentile(bkg_loss,50)
+cut2 = np.percentile(bkg_loss,98)
 for key in variables:
     if (len(x_dict[key]) != len(bkg_loss) or len(sig_dict[key]) != len(sig_loss)): print("ERROR: evaluated loss and test variables must have same length")
     x_cut[key] = applyScoreCut(bkg_loss, x_dict[key], cut)
+    x_cut2[key] = applyScoreCut(bkg_loss, x_dict[key], cut2)
     sig_cut[key] = applyScoreCut(sig_loss, sig_dict[key], cut)
 
 for key in variables:
     if key == 'weight': continue
-    plot_var(x_dict, sig_dict, x_cut, sig_cut, key) 
+    plot_var(x_dict, x_cut, x_cut2, key) 
 
