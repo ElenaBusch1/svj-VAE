@@ -2,10 +2,11 @@
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
+from matplotlib import colors
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = "znn_noMET"
+tag = "2j"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -121,6 +122,27 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, extra_tag=
   plt.savefig(plot_dir+'score_'+extra_tag+'_'+tag+'.png')
   plt.clf()
   print("Saved score distribution for", extra_tag)
+
+def plot_phi(phis,name,extra_tag):
+  nphis = phis.shape[1]
+  nevents = phis.shape[0]
+  idx = [i for i in range(nphis)]*nevents
+
+  phiT = phis.T
+  print("n zeros = ", len(np.where(~phiT.any(axis=1))[0]))
+  phis = phis.flatten()
+  nbinsx = 10
+  bin_width = max(phis)/nbinsx
+  phis[phis==0] = -bin_width 
+
+  fig, ax = plt.subplots()
+  h = ax.hist2d(phis,idx,bins=[nbinsx+1,nphis])
+  fig.colorbar(h[3], ax=ax)
+  ax.set_xlabel('Value')
+  ax.set_ylabel('Index')
+  ax.set_title('PFN Set Representation - '+name)
+  plt.savefig(plot_dir+'phi2D_'+name+'_'+extra_tag+'_'+tag+'.png')
+  print("Saved 2D plot of phi-rep for", extra_tag)
 
 def plot_inputs(bkg, sig):
   for i in range(len(variable_array)):

@@ -24,7 +24,7 @@ def read_vectors(infile, nEvents):
     file = uproot.open(infile)
     
     #print("File keys: ", file.keys())
-    max_jets = 10
+    max_jets = 2
 
     tree = file["PostSel"]
     #print("Tree Variables: ", tree.keys())

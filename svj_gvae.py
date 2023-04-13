@@ -10,16 +10,17 @@ from plot_helper import *
 from eval_helper import *
 
 # Example usage
-num_elements = 16
+num_elements = 2
 element_size = 4
 encoding_dim = 32
 latent_dim = 4
 phi_dim = 64
 nepochs=30
-batchsize=32
+batchsize_pfn=500
+batchsize_ae=32
 
-pfn_model = 'znnPFN'
-ae_model = 'znnPFN_AE'
+pfn_model = 'znnPFN2j'
+ae_model = 'znnPFN2j_AE'
 arch_dir = "architectures_saved/"
 
 # Input of shape (batch_size, num_elements, element_size)
@@ -30,8 +31,10 @@ sig_raw = read_vectors("../v6.4/v6p4smallZnunu.root", 500000)
 bkg2_raw = read_vectors("../v6.4/v6p4smallQCD2.root", 1000000)
 sig2_raw = read_vectors("../v6.4/user.ebusch.515500.root", 10000)
 
-bkg, sig = apply_EventScaling(bkg_raw, sig_raw)
-bkg2, sig2 = apply_EventScaling(bkg2_raw, sig2_raw)
+bkg = apply_EventScaling(bkg_raw)
+sig = apply_EventScaling(sig_raw)
+bkg2 = apply_EventScaling(bkg2_raw)
+sig2 = apply_EventScaling(sig2_raw)
 
 input_data = np.concatenate((bkg,sig),axis=0)
 
@@ -51,13 +54,13 @@ pfn,graph_orig = get_full_PFN([num_elements,element_size], phi_dim)
 #(X_train, X_test,
 # Y_train, Y_test) = train_test_split(input_data, truth, test_size=0.1)
 
-x_train, x_test, y_train, y_test = train_test_split(input_data, truth, test_size=0.909)
+x_train, x_test, y_train, y_test = train_test_split(input_data, truth, test_size=0.01)
 #X_train, X_val, Y_train, Y_val = train_test_split(x_eval, y_eval, test_size=0.2)
 
 
 h = pfn.fit(x_train, y_train,
         epochs=nepochs,
-        batch_size=batchsize,
+        batch_size=batchsize_pfn,
         validation_split=0.2,
         verbose=1)
 
@@ -90,7 +93,7 @@ ae = get_ae(phi_dim,encoding_dim,latent_dim)
 
 h2 = ae.fit(phi_evalb, 
         epochs=nepochs,
-        batch_size=batchsize,
+        batch_size=batchsize_ae,
         validation_split=0.2,
         verbose=1)
 

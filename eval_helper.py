@@ -34,21 +34,17 @@ def apply_StandardScaling(x_raw, sig_raw):
     
     return x, sig
 
-def apply_EventScaling(x_raw, sig_raw):
+def apply_EventScaling(x_raw):
     
     x = np.copy(x_raw) #copy
-    sig = np.copy(sig_raw)
 
     x_totals = x_raw.sum(axis=1) #get sum total pt, eta, phi, E for each event
-    sig_totals = sig_raw.sum(axis=1)
 
     x[:,:,0] = (x_raw[:,:,0].T/x_totals[:,0]).T  #divide each pT entry by event pT total
-    sig[:,:,0] = (sig_raw[:,:,0].T/sig_totals[:,0]).T
 
     x[:,:,3] = (x_raw[:,:,3].T/x_totals[:,3]).T  #divide each E entry by event E total
-    sig[:,:,3] = (sig_raw[:,:,3].T/sig_totals[:,3]).T
 
-    return x, sig
+    return x
 
 def get_multi_loss(model_svj, x_test, y_test):
     bkg_total_loss = []
@@ -124,4 +120,5 @@ def do_roc(bkg_loss, sig_loss, plot_tag, make_transformed_plot=False):
     print("AUC - "+plot_tag+": ", auc)
     make_roc(fpr,tpr,auc,plot_tag)
     make_sic(fpr,tpr,auc,plot_tag)
+    return auc
 

@@ -446,7 +446,7 @@ def get_ae(input_dim, encoding_dim, latent_dim):
   decoder = get_decoder(input_dim, encoding_dim, latent_dim)
 
   ae = AE(encoder, decoder)
-  ae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0005))
+  ae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0001))
   return ae
 
 ## ------------------------------------------------------------------------------------
