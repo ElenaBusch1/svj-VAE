@@ -16,23 +16,28 @@ def remove_zero_padding(x):
 
     return x_out
 
-def apply_StandardScaling(x_raw, sig_raw):
+def apply_TrackSelection(x_raw):
+    x = np.copy(x_raw)
+    x[x[:,:,0] < 10] = 0
+    print(x.shape)
+    # require at least 3 tracks
+    x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 3 for jet in x])
+    x = x[x_nz]
+    print(x.shape)
+    return x
+
+def apply_StandardScaling(x_raw):
     x= np.zeros(x_raw.shape)
-    sig= np.zeros(sig_raw.shape)
     
     x_nz = np.any(x_raw,axis=2) #find zero padded events
-    sig_nz = np.any(sig_raw,axis=2)
     
     x_scale = x_raw[x_nz] #scale only non-zero jets
-    sig_scale = sig_raw[sig_nz]
     
     x_fit = StandardScaler().fit_transform(x_scale) #do the scaling
-    sig_fit = StandardScaler().fit_transform(sig_scale)
     
     x[x_nz]= x_fit #insert scaled values back into zero padded matrix
-    sig[sig_nz]= sig_fit
     
-    return x, sig
+    return x
 
 def apply_EventScaling(x_raw):
     
@@ -45,6 +50,27 @@ def apply_EventScaling(x_raw):
     x[:,:,3] = (x_raw[:,:,3].T/x_totals[:,3]).T  #divide each E entry by event E total
 
     return x
+
+def apply_JetScalingRotation(x_raw, jet):
+    
+    x = np.copy(x_raw) #copy
+
+    x_totals = x_raw.sum(axis=1) #get sum total pt, eta, phi, E for each event
+
+    x[:,:,0] = (x_raw[:,:,0].T/x_totals[:,0]).T  #divide each pT entry by event pT total
+
+    x[:,:,3] = (x_raw[:,:,3].T/x_totals[:,3]).T  #divide each E entry by event E total
+
+    for e in range(x.shape[0]):
+        for t in range(x.shape[1]):
+            if not x[e,t,:].any():
+                #print(x[e,t,:])
+                continue
+            x[e,t,1] = x_raw[e,t,1] - jet[e,1,0] # subtrack subleading jet eta from each track
+            x[e,t,2] = x_raw[e,t,2] - jet[e,1,1] # subtrack subleading jet phi from each track
+
+    return x
+
 
 def get_multi_loss(model_svj, x_test, y_test):
     bkg_total_loss = []

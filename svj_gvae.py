@@ -10,7 +10,7 @@ from plot_helper import *
 from eval_helper import *
 
 # Example usage
-num_elements = 2
+num_elements = 100
 element_size = 4
 encoding_dim = 32
 latent_dim = 4
@@ -19,30 +19,51 @@ nepochs=30
 batchsize_pfn=500
 batchsize_ae=32
 
-pfn_model = 'znnPFN2j'
-ae_model = 'znnPFN2j_AE'
+pfn_model = 'trackPFN1'
+ae_model = 'trackPFN1_AE'
 arch_dir = "architectures_saved/"
 
 # Input of shape (batch_size, num_elements, element_size)
 #input_data = np.random.randn(500, num_elements, element_size).astype(np.float32)
-bkg_raw = read_vectors("../v6.4/v6p4smallQCD.root", 500000)
-sig_raw = read_vectors("../v6.4/v6p4smallZnunu.root", 500000)
+track_array = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"]
+jet_array = ["jet_eta", "jet_phi"]
+bkg_in = read_vectors("../v8/v8SmallPartialQCDmc20e.root", 250000, track_array)
+sig_in = read_vectors("../v8/v8SmallSIGmc20e.root", 250000, track_array)
+jet_bkg = read_vectors("../v8/v8SmallPartialQCDmc20e.root", 250000, jet_array)
+jet_sig = read_vectors("../v8/v8SmallSIGmc20e.root", 250000, jet_array)
+#bkg2_raw = read_vectors("../v6.4/v6p4smallQCD2.root", 1000000)
+#sig2_raw = read_vectors("../v6.4/user.ebusch.515500.root", 10000)
 
-bkg2_raw = read_vectors("../v6.4/v6p4smallQCD2.root", 1000000)
-sig2_raw = read_vectors("../v6.4/user.ebusch.515500.root", 10000)
+bkg_raw = apply_TrackSelection(bkg_in)
+sig_raw = apply_TrackSelection(sig_in)
 
-bkg = apply_EventScaling(bkg_raw)
-sig = apply_EventScaling(sig_raw)
-bkg2 = apply_EventScaling(bkg2_raw)
-sig2 = apply_EventScaling(sig2_raw)
+bkg = apply_JetScalingRotation(bkg_raw, jet_bkg)
+sig = apply_JetScalingRotation(sig_raw, jet_sig)
 
+# 4. Plot inputs
+x_raw_nz = remove_zero_padding(bkg_raw)
+sig_raw_nz = remove_zero_padding(sig_raw)
+x_nz = remove_zero_padding(bkg)
+sig_nz = remove_zero_padding(sig)
+plot_vectors(x_raw_nz,sig_raw_nz,"raw")
+plot_vectors(x_nz,sig_nz,"rotated")
+
+plot_nTracks(bkg_raw, sig_raw)
+
+# Create truth target
 input_data = np.concatenate((bkg,sig),axis=0)
+input_data = apply_StandardScaling(input_data)
 
 truth_bkg = np.zeros(bkg.shape[0])
 truth_sig = np.ones(sig.shape[0])
 
 truth_1D = np.concatenate((truth_bkg,truth_sig))
 truth = tf.keras.utils.to_categorical(truth_1D, num_classes=2)
+
+bkg_scaled = input_data[truth_1D == 0]
+sig_scaled = input_data[truth_1D == 1]
+
+plot_vectors(remove_zero_padding(bkg_scaled),remove_zero_padding(sig_scaled),"scaled")
 
 print("Training shape, truth shape")
 print(input_data.shape, truth.shape)
@@ -59,10 +80,10 @@ x_train, x_test, y_train, y_test = train_test_split(input_data, truth, test_size
 
 
 h = pfn.fit(x_train, y_train,
-        epochs=nepochs,
-        batch_size=batchsize_pfn,
-        validation_split=0.2,
-        verbose=1)
+    epochs=nepochs,
+    batch_size=batchsize_pfn,
+    validation_split=0.2,
+    verbose=1)
 
 ## save the model
 pfn.get_layer('graph').save_weights(arch_dir+pfn_model+'_graph_weights.h5')
@@ -79,6 +100,7 @@ bkg_score = preds[:,1][y_test[:,1] == 0]
 sig_score = preds[:,1][y_test[:,1] == 1]
 plot_score(bkg_score, sig_score, False, False, pfn_model)
 
+quit()
 ################### Train the AE ###############################
 graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
 graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
@@ -92,10 +114,10 @@ phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=0.01)
 ae = get_ae(phi_dim,encoding_dim,latent_dim)
 
 h2 = ae.fit(phi_evalb, 
-        epochs=nepochs,
-        batch_size=batchsize_ae,
-        validation_split=0.2,
-        verbose=1)
+    epochs=nepochs,
+    batch_size=batchsize_ae,
+    validation_split=0.2,
+    verbose=1)
 
 # # simple ae
 # ae.save(arch_dir+ae_model)

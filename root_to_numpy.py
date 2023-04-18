@@ -3,7 +3,9 @@ import numpy as np
 import awkward as ak
 
 variable_array = ["jet1_pt", "met_met", "dphi_min", "pt_balance_12", "mT_jj", "rT", "dR_12", "deltaY_12", "deta_12", "hT", "maxphi_minphi", "n_r04_jets"]
-jet_array = ["all_jets_pt", "all_jets_eta", "all_jets_phi", "all_jets_E"]
+#jet_array = ["all_jets_pt", "all_jets_eta", "all_jets_phi", "all_jets_E"]
+## Track array
+#jet_array = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"] #"jet_GhostTrack_d0_0", "jet_GhostTrack_z0_0", "jet_GhostTrack_qOverP_0"]
 
 def get_spaced_elements(arr_len,nElements):
     return np.round(np.linspace(0,arr_len-1, nElements)).astype(int)
@@ -20,13 +22,13 @@ def read_test_variables(infile, nEvents, variables):
         my_dict[key] = my_dict[key][idx]
     return my_dict
 
-def read_vectors(infile, nEvents):
+def read_vectors(infile, nEvents, jet_array):
     file = uproot.open(infile)
     
     #print("File keys: ", file.keys())
-    max_jets = 2
+    max_jets = 40
 
-    tree = file["PostSel"]
+    tree = file["outTree"]
     #print("Tree Variables: ", tree.keys())
 
     # select evenly spaced events from input distribution
@@ -35,7 +37,7 @@ def read_vectors(infile, nEvents):
     selected_jet_array = np.array([val[idx] for _,val in my_jet_array.items()]).T
 
     # create jet matrix
-    padded_jet_array = np.zeros((len(selected_jet_array),max_jets,4))
+    padded_jet_array = np.zeros((len(selected_jet_array),max_jets,len(jet_array)))
     for jets,zeros in zip(selected_jet_array,padded_jet_array):
         jet_ar = np.stack(jets, axis=1)[:max_jets,:]
         zeros[:jet_ar.shape[0], :jet_ar.shape[1]] = jet_ar

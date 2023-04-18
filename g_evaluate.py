@@ -14,8 +14,8 @@ from eval_helper import *
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-ae_model = "znnPFN2j_AE"
-pfn_model = 'znnPFN2j'
+ae_model = "trackPFN_AE"
+pfn_model = 'trackPFN'
 arch_dir = "architectures_saved/"
 
 nevents = 10000
@@ -28,20 +28,20 @@ graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
 graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
 graph.compile()
 
-##  ## Load classifier model
-##  classifier = keras.models.load_model(arch_dir+pfn_model+'_classifier_arch')
-##  classifier.load_weights(arch_dir+pfn_model+'_classifier_weights.h5')
-##  classifier.compile()
+## Load classifier model
+classifier = keras.models.load_model(arch_dir+pfn_model+'_classifier_arch')
+classifier.load_weights(arch_dir+pfn_model+'_classifier_weights.h5')
+classifier.compile()
 
-## Load ae model
-encoder = keras.models.load_model(arch_dir+ae_model+'_encoder_arch')
-decoder = keras.models.load_model(arch_dir+ae_model+'_decoder_arch')
-ae = AE(encoder,decoder)
+# ## Load ae model
+# encoder = keras.models.load_model(arch_dir+ae_model+'_encoder_arch')
+# decoder = keras.models.load_model(arch_dir+ae_model+'_decoder_arch')
+# ae = AE(encoder,decoder)
 
-ae.get_layer('encoder').load_weights(arch_dir+ae_model+'_encoder_weights.h5')
-ae.get_layer('decoder').load_weights(arch_dir+ae_model+'_decoder_weights.h5')
-
-ae.compile(optimizer=keras.optimizers.Adam())
+# ae.get_layer('encoder').load_weights(arch_dir+ae_model+'_encoder_weights.h5')
+# ae.get_layer('decoder').load_weights(arch_dir+ae_model+'_decoder_weights.h5')
+# 
+# ae.compile(optimizer=keras.optimizers.Adam())
 #ae.summary()
 
 ## Load history
@@ -53,8 +53,8 @@ ae.compile(optimizer=keras.optimizers.Adam())
 print ("Loaded model")
 
 ## Load testing data
-x_raw = read_vectors("../v6.4/v6p4smallQCD.root", nevents)
-sig_raw = read_vectors("../v6.4/user.ebusch.515500.root", nevents)
+x_raw = read_vectors("../v8/v8SmallPartialQCDmc20e.root", nevents)
+sig_raw = read_vectors("../v8/v8SmallSIGmc20e.root", nevents)
 
 ## apply per-event scaling
 bkg = apply_EventScaling(x_raw)
@@ -63,11 +63,14 @@ sig = apply_EventScaling(sig_raw)
 ## Make graph representation
 phi_bkg = graph.predict(bkg)
 phi_sig = graph.predict(sig)
-pred_phi_bkg = ae.predict(phi_bkg)['reconstruction']
-pred_phi_sig = ae.predict(phi_sig)['reconstruction']
+pred_phi_bkg = classifier.predict(phi_bkg)
+pred_phi_sig = classifier.predict(phi_sig)
 
-bkg_loss = keras.losses.mse(phi_bkg, pred_phi_bkg)
-sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
+bkg_loss = pred_phi_bkg[:,1]
+sig_loss = pred_phi_sig[:,1]
+
+#bkg_loss = keras.losses.mse(phi_bkg, pred_phi_bkg)
+#sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
 
 ##  #--- Grid test
 ##  scores = np.zeros((10,4))
@@ -99,8 +102,8 @@ sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
 ##  if model.find('VAE') > -1:
 ##      plot_saved_loss(h, ae_model, "kl_loss")
 ##      plot_saved_loss(h, ae_model, "reco_loss")
-##  # 2. Anomaly score
-##  plot_score(bkg_loss, sig_loss, False, False, ae_model+"_znnlin")
+# 2. Anomaly score
+plot_score(bkg_loss, sig_loss, False, False, pfn_model)
 ##  #plot_score(bkg_loss, sig_loss, False, True, ae_model+"_xlog")
 ##  if ae_model.find('VAE') > -1:
 ##      plot_score(bkg_kl_loss, sig_kl_loss, remove_outliers=False, xlog=True, extra_tag=model+"_KLD")

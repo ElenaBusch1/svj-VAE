@@ -13,10 +13,10 @@ from eval_helper import *
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-model = "VAE"
+model = "AE"
 arch_dir = "architectures_saved/"
 
-nevents = 6000
+nevents = 10000
 
 ## ---------- CODE ----------
 
@@ -27,39 +27,22 @@ if model.find("PFN")>-1: jets_2D = True
 else: jets_1D = True
 
 ## Load testing data
-x_raw = read_vectors("../v6smallQCD.root", nevents, False)
-sig_raw = read_vectors("../user.ebusch.515519.root", nevents, False)
+x_raw = read_vectors("../v8/v8SmallPartialQCDmc20e.root", nevents)
+sig_raw = read_vectors("../v8/v8_515500_mc20e.root", nevents)
 
 ## apply per-event scaling
-x_2D, sig_2D = apply_EventScaling(x_raw, sig_raw)
+#x_2D, sig_2D = apply_EventScaling(x_raw, sig_raw)
+x_2D = x_raw
+sig_2D = sig_raw
 
 if (jets_1D):
-    x = x_2D.reshape(nevents,16*4)
-    sig = sig_2D.reshape(nevents,16*4)
+    x = x_2D.reshape(nevents,100*7)
+    sig = sig_2D.reshape(nevents,100*7)
 else:
     x = x_2D
     sig = sig_2D
 
 
-## Apply scaling
-# x= np.zeros((nevents,16,4))
-# sig= np.zeros((nevents,16,4))
-# 
-# x_nz = np.any(x_raw,2) #find zero padded events
-# sig_nz = np.any(sig_raw,2)
-# 
-# x_scale = x_raw[x_nz] #scale only non-zero jets
-# sig_scale = sig_raw[sig_nz]
-# 
-# x_fit = StandardScaler().fit_transform(x_scale) #do the scaling
-# sig_fit = StandardScaler().fit_transform(sig_scale)
-# 
-# x[x_nz]= x_fit #insert scaled values back into zero padded matrix
-# sig[sig_nz]= sig_fit
-
-#if (jets_1D):
-#    x = x.reshape(nevents,16*4)
-#    sig = sig.reshape(nevents,16*4)
 
 
 ## Load model
@@ -93,26 +76,31 @@ print(type(h))
 
 print ("Loaded model")
 
-# ## Evaluate multi Loss model
-# if (model.find("VAE") > -1):
-#     bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss , sig_reco_loss = get_multi_loss(model_svj, x, sig)
-# 
-# ## Evaluate single Loss model
-# else:
-#     bkg_loss, sig_loss = get_single_loss(model_svj, x, sig)
+## Evaluate multi Loss model
+if (model.find("VAE") > -1):
+    bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss , sig_reco_loss = get_multi_loss(model_svj, x, sig)
+
+## Evaluate single Loss model
+else:
+    pred_bkg = model_svj.predict(x)['reconstruction']
+    pred_sig = model_svj.predict(sig)['reconstruction']
+    
+    bkg_loss = keras.losses.mse(x, pred_bkg)
+    sig_loss = keras.losses.mse(sig, pred_sig)
+    #bkg_loss, sig_loss = get_single_loss(model_svj, x, sig)
 
 # --- Eval plots 
-# 1. Loss vs. epoch 
-plot_saved_loss(h, model, "loss")
-if model.find('VAE') > -1:
-    plot_saved_loss(h, model, "kl_loss")
-    plot_saved_loss(h, model, "reco_loss")
-# # 2. Anomaly score
-# plot_score(bkg_loss, sig_loss, False, False, model+'_515519')
-# #plot_score(bkg_loss, sig_loss, False, True, model+"_xlog")
+# # 1. Loss vs. epoch 
+# plot_saved_loss(h, model, "loss")
 # if model.find('VAE') > -1:
-#     plot_score(bkg_kl_loss, sig_kl_loss, remove_outliers=False, xlog=True, extra_tag=model+"_KLD")
-#     plot_score(bkg_reco_loss, sig_reco_loss, False, False, model_name+'_Reco')
+#     plot_saved_loss(h, model, "kl_loss")
+#     plot_saved_loss(h, model, "reco_loss")
+# 2. Anomaly score
+plot_score(bkg_loss, sig_loss, False, False, model)
+#plot_score(bkg_loss, sig_loss, False, True, model+"_xlog")
+if model.find('VAE') > -1:
+    plot_score(bkg_kl_loss, sig_kl_loss, remove_outliers=False, xlog=True, extra_tag=model+"_KLD")
+    plot_score(bkg_reco_loss, sig_reco_loss, False, False, model_name+'_Reco')
 # # 3. Signal Sensitivity Score
 # score = getSignalSensitivityScore(bkg_loss, sig_loss)
 # print("score = ",score)

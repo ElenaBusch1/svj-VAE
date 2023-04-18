@@ -380,21 +380,21 @@ def get_pfn(input_dims, phi_dim):
 
 ## ------------------------------------------------------------------------------------
 def get_encoder(input_dim, encoding_dim, latent_dim):
-  encoder = tf.keras.models.Sequential(name="encoder")
-  encoder.add(Dropout(0.1, input_shape=(input_dim,)))
-  encoder.add(Dense(32))
-  encoder.add(Dropout(0.1))
-  encoder.add(LeakyReLU(alpha=0.3))
-  encoder.add(Dense(encoding_dim))
-  encoder.add(Dropout(0.1))
-  encoder.add(LeakyReLU(alpha=0.3))
-  encoder.add(Dense(latent_dim))
-  encoder.add(LeakyReLU(alpha=0.3))
-  #inputs = keras.Input(shape=(input_dim,))
-  #encoded = keras.layers.Dense(encoding_dim, activation='relu')(inputs)
-  #encoder_outputs = keras.layers.Dense(latent_dim, activation='relu')(encoded)
+  #encoder = tf.keras.models.Sequential(name="encoder")
+  #encoder.add(Dropout(0.1, input_shape=(input_dim,)))
+  #encoder.add(Dense(32))
+  #encoder.add(Dropout(0.1))
+  #encoder.add(LeakyReLU(alpha=0.3))
+  #encoder.add(Dense(encoding_dim))
+  #encoder.add(Dropout(0.1))
+  #encoder.add(LeakyReLU(alpha=0.3))
+  #encoder.add(Dense(latent_dim))
+  #encoder.add(LeakyReLU(alpha=0.3))
+  inputs = keras.Input(shape=(input_dim,))
+  encoded = keras.layers.Dense(encoding_dim, activation='relu')(inputs)
+  encoder_outputs = keras.layers.Dense(latent_dim, activation='relu')(encoded)
 
-  #encoder = keras.Model(inputs, encoder_outputs, name="encoder")
+  encoder = keras.Model(inputs, encoder_outputs, name="encoder")
   encoder.summary()
   return encoder
 
@@ -423,20 +423,20 @@ def get_variational_encoder(input_dim, encoding_dim, latent_dim):
 
 ## ------------------------------------------------------------------------------------
 def get_decoder(input_dim, encoding_dim, latent_dim):
-  decoder = tf.keras.models.Sequential(name="decoder")
-  decoder.add(Dense(encoding_dim, input_dim=latent_dim))
-  decoder.add(Dropout(0.1))
-  decoder.add(LeakyReLU(alpha=0.3))
-  decoder.add(Dense(32, input_dim=latent_dim))
-  decoder.add(Dropout(0.1))
-  decoder.add(LeakyReLU(alpha=0.3))
-  decoder.add(Dense(input_dim, activation='sigmoid'))
+  #decoder = tf.keras.models.Sequential(name="decoder")
+  #decoder.add(Dense(encoding_dim, input_dim=latent_dim))
+  #decoder.add(Dropout(0.1))
+  #decoder.add(LeakyReLU(alpha=0.3))
+  #decoder.add(Dense(32, input_dim=latent_dim))
+  #decoder.add(Dropout(0.1))
+  #decoder.add(LeakyReLU(alpha=0.3))
+  #decoder.add(Dense(input_dim, activation='sigmoid'))
 
-  #latent_inputs = keras.Input(shape=(latent_dim,))
-  #x = keras.layers.Dense(encoding_dim, activation="relu")(latent_inputs)
-  #decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid")(x)
+  latent_inputs = keras.Input(shape=(latent_dim,))
+  x = keras.layers.Dense(encoding_dim, activation="relu")(latent_inputs)
+  decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid")(x)
 
-  #decoder = keras.Model(latent_inputs, decoder_outputs, name="decoder")
+  decoder = keras.Model(latent_inputs, decoder_outputs, name="decoder")
   decoder.summary()
   return decoder
 
@@ -446,7 +446,7 @@ def get_ae(input_dim, encoding_dim, latent_dim):
   decoder = get_decoder(input_dim, encoding_dim, latent_dim)
 
   ae = AE(encoder, decoder)
-  ae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0001))
+  ae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001))
   return ae
 
 ## ------------------------------------------------------------------------------------

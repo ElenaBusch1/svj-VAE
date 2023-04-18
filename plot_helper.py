@@ -6,7 +6,7 @@ from matplotlib import colors
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = "2j"
+tag = "tracksStats"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -110,6 +110,7 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, extra_tag=
   if xlog and bmin == 0: bmin = 1e-9
   if xlog: bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
   else: bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
+  #bins = np.linspace(0,10000,80)
   #plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg (-"+str(nb)+")", density=True)
   #plt.hist(sig_score, bins=bins, alpha=0.5, label="sig(-"+str(ns)+")", density=True)
   plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg", density=True)
@@ -155,6 +156,27 @@ def plot_inputs(bkg, sig):
       plt.savefig(plot_dir+'input_vars_'+str(i)+tag+'.png')
       plt.clf()
 
+def get_nTracks(x):
+  n_tracks = []
+  for i in range(x.shape[0]):
+    tracks = x[i,:,:].any(axis=1)
+    tracks = tracks[tracks == True]
+    n_tracks.append(len(tracks))
+  return n_tracks
+ 
+def plot_nTracks(bkg, sig):
+  bkg_tracks = get_nTracks(bkg)
+  sig_tracks = get_nTracks(sig)
+  #bins=np.histogram(np.hstack((bkg_tracks,sig_tracks)),bins=60)[1]
+  bins = np.arange(0,50,1)
+  plt.hist(bkg_tracks,alpha=0.5, label="bkg", bins=bins, density=False)
+  plt.hist(sig_tracks,alpha=0.5, label="sig", bins=bins, density=False)
+  plt.title("nTracks (after pT>10)")
+  plt.legend()
+  plt.savefig(plot_dir+'nTracks_'+tag+'.png')
+  plt.clf()
+  print("Saved plot of nTracks")
+
 def plot_vectors(train,sig,extra_tag):
   variable_array = ["pT + MET", "eta", "phi", "E"]
   for i in range(4):
@@ -162,18 +184,18 @@ def plot_vectors(train,sig,extra_tag):
     #test_v = test[:,i::4].flatten()
     sig_v = sig[:,i].flatten()
     bins=np.histogram(np.hstack((train_v,sig_v)),bins=60)[1]
-    #if(bins[-1] > 3000): bins = np.arange(0,3000,50)
+    if(bins[-1] > 3000): bins = np.arange(0,3000,50)
     plt.subplot(2,2,i+1)
     plt.tight_layout(h_pad=1, w_pad=1)
-    plt.hist(train_v, alpha=0.5, label="bkg", bins=bins, density=True)
+    plt.hist(train_v, alpha=0.5, label="bkg", bins=bins, density=False)
     #plt.hist(test_v, alpha=0.5, label="test", bins=bins, density=True, color='lightskyblue')
-    plt.hist(sig_v, alpha=0.5, label="sig", bins=bins, density=True)
+    plt.hist(sig_v, alpha=0.5, label="sig", bins=bins, density=False)
     plt.yscale('log')
     plt.title(variable_array[i])
     if i == 1: plt.legend()
   plt.savefig(plot_dir+'inputs_'+extra_tag+'_'+tag+'.png')
   plt.clf()
-  print("Saved inputs (", extra_tag, ")")
+  print("Saved inputs plot (", extra_tag, ")")
 
 
 

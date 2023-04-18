@@ -20,17 +20,17 @@ from eval_helper import *
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-model_name = "VAE"
+model_name = "AE"
 arch_dir = "architectures_saved/"
 
 # nEvents: 80% train, 10% valid, 10% test
 # make sig %10 of bkg
-x_events = 150000
+x_events = 500000
 y_events = 10000
 
 ## Model architecture
-latent_dim = 4
-encoding_dim = 16
+latent_dim = 35
+encoding_dim = 175
 phi_dim = 64
 
 # Hyper parameters
@@ -56,7 +56,7 @@ if (hlvs):
     input_dim = 12
     scale = False
 if (jets_1D):
-    input_dim = 64
+    input_dim = 700
     scale = True
 if (jets_2D):
     input_dim = [16, 4]
@@ -68,18 +68,20 @@ if (hlvs):
     sig_raw = read_hlvs("../largerSignal.root", y_events)
 
 if (jets_1D or jets_2D):
-    x_raw = read_vectors("../v6.4/v6p4smallQCD.root", x_events, flatten=False)
-    sig_raw = read_vectors("../v6.4/user.ebusch.515500.root", y_events, flatten=False)
+    x_raw = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events)
+    sig_raw = read_vectors("../v8/v8_515500_mc20e.root", y_events)
 
 ## old scaling method -> don't use except maybe for consistency checks!
 #x, sig = apply_StandardScaling(x_raw, sig_raw)
 
 ## apply per-event scaling
-x_2D, sig_2D = apply_EventScaling(x_raw, sig_raw)
+#x_2D, sig_2D = apply_EventScaling(x_raw, sig_raw)
+x_2D = x_raw
+sig_2D = sig_raw
 
 if (jets_1D):
-    x = x_2D.reshape(x_events,16*4)
-    sig = sig_2D.reshape(y_events,16*4)
+    x = x_2D.reshape(x_events,100*7)
+    sig = sig_2D.reshape(y_events,100*7)
 else:
     x = x_2D
     sig = sig_2D
@@ -88,7 +90,7 @@ print("Bkg input shape: ", x.shape)
 print("Sig input shape: ", sig.shape)
 
 ## Train / Valid / Test split
-x_train, x_test, _, _ = train_test_split(x, x, test_size=0.04) #done randomly
+x_train, x_test, _, _ = train_test_split(x, x, test_size=0.02) #done randomly
 #x_valid, x_test, _, _ = train_test_split(x_temp, x_temp, test_size=0.5)
 
 print("Length train :", len(x_train), ", test: ", len(x_test))
