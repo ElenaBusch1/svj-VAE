@@ -29,8 +29,8 @@ x_events = 500000
 y_events = 10000
 
 ## Model architecture
-latent_dim = 35
-encoding_dim = 175
+latent_dim = 10
+encoding_dim = 40
 phi_dim = 64
 
 # Hyper parameters
@@ -56,7 +56,7 @@ if (hlvs):
     input_dim = 12
     scale = False
 if (jets_1D):
-    input_dim = 700
+    input_dim = 160
     scale = True
 if (jets_2D):
     input_dim = [16, 4]
@@ -64,24 +64,43 @@ if (jets_2D):
 
 # Read in data
 if (hlvs):
-    x_raw = read_hlvs("../largerBackground.root", x_events)
-    sig_raw = read_hlvs("../largerSignal.root", y_events)
+    x_in = read_hlvs("../largerBackground.root", x_events)
+    sig_in = read_hlvs("../largerSignal.root", y_events)
 
 if (jets_1D or jets_2D):
-    x_raw = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events)
-    sig_raw = read_vectors("../v8/v8_515500_mc20e.root", y_events)
+    track_array = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"]
+    jet_array = ["jet_eta", "jet_phi"]
+    bkg_in = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array)
+    sig_in = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array)
+    jet_bkg = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, jet_array)
+    jet_sig = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, jet_array)
 
-## old scaling method -> don't use except maybe for consistency checks!
-#x, sig = apply_StandardScaling(x_raw, sig_raw)
+bkg_sel, bjet_sel = apply_TrackSelection(bkg_in, jet_bkg)
+sig_sel, sjet_sel = apply_TrackSelection(sig_in, jet_sig)
 
-## apply per-event scaling
-#x_2D, sig_2D = apply_EventScaling(x_raw, sig_raw)
-x_2D = x_raw
-sig_2D = sig_raw
+bkg = apply_JetScalingRotation(bkg_sel, bjet_sel)
+sig = apply_JetScalingRotation(sig_sel, sjet_sel)
+
+
+# 4. Plot inputs
+x_sel_nz = remove_zero_padding(bkg_sel)
+sig_sel_nz = remove_zero_padding(sig_sel)
+x_nz = remove_zero_padding(bkg)
+sig_nz = remove_zero_padding(sig)
+#plot_vectors(x_sel_nz,sig_sel_nz,"AEraw")
+#plot_vectors(x_nz,sig_nz,"AErotated")
+
+x_2D,scaler = apply_StandardScaling(bkg)
+sig_2D,_ = apply_StandardScaling(sig, scaler, False)
+
+#print(sig_2D.shape)
+#print(x_2D.shape)
+
+#plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
 
 if (jets_1D):
-    x = x_2D.reshape(x_events,100*7)
-    sig = sig_2D.reshape(y_events,100*7)
+    x = x_2D.reshape(x_2D.shape[0],40*4)
+    sig = sig_2D.reshape(sig_2D.shape[0],40*4)
 else:
     x = x_2D
     sig = sig_2D
@@ -90,7 +109,7 @@ print("Bkg input shape: ", x.shape)
 print("Sig input shape: ", sig.shape)
 
 ## Train / Valid / Test split
-x_train, x_test, _, _ = train_test_split(x, x, test_size=0.02) #done randomly
+x_train, x_test, _, _ = train_test_split(x, x, test_size=sig_2D.shape[0]) #done randomly
 #x_valid, x_test, _, _ = train_test_split(x_temp, x_temp, test_size=0.5)
 
 print("Length train :", len(x_train), ", test: ", len(x_test))
@@ -131,7 +150,12 @@ if (model_name.find("VAE") > -1):
 
 ## Evaluate single Loss model
 else:
-    bkg_loss, sig_loss = get_single_loss(model_svj, x_test, sig)
+    pred_bkg = model_svj.predict(x_test)['reconstruction']
+    pred_sig = model_svj.predict(sig)['reconstruction']
+    
+    bkg_loss = keras.losses.mse(x_test, pred_bkg)
+    sig_loss = keras.losses.mse(sig, pred_sig)
+    #bkg_loss, sig_loss = get_single_loss(model_svj, x_test, sig)
 
 
 # # --- Eval plots 
@@ -148,12 +172,12 @@ if model_name.find('VAE') > -1:
     plot_score(bkg_kl_loss, sig_kl_loss, False, False, model_name+'_KLD')
     plot_score(bkg_reco_loss, sig_reco_loss, False, False, model_name+'_Reco')
 
-# 3. Signal Sensitivity Score
-score = getSignalSensitivityScore(bkg_loss, sig_loss)
-print("95 percentile score = ",score)
-if model_name.find('VAE') > -1:
-    score_kld = getSignalSensitivityScore(bkg_kl_loss, sig_kl_loss)
-    print("95 percentile score_kl =", score_kld)
+# # 3. Signal Sensitivity Score
+# score = getSignalSensitivityScore(bkg_loss, sig_loss)
+# print("95 percentile score = ",score)
+# if model_name.find('VAE') > -1:
+#     score_kld = getSignalSensitivityScore(bkg_kl_loss, sig_kl_loss)
+#     print("95 percentile score_kl =", score_kld)
 
 # 4. ROCs/AUCs using sklearn functions imported above  
 do_roc(bkg_loss, sig_loss, model_name, True)

@@ -8,6 +8,14 @@ from sklearn.preprocessing import StandardScaler
 from plot_helper import *
 from models import *
 
+def get_dPhi(x1,x2):
+    dPhi = x1 - x2
+    if(dPhi > 3.14):
+        dPhi -= 2*3.14
+    elif(dPhi < -3.14):
+        dPhi += 2*3.14
+    return dPhi
+
 def remove_zero_padding(x):
     #x has shape (nEvents, nSteps, nFeatures)
     #x_out has shape (nEvents, nFeatures)
@@ -16,49 +24,53 @@ def remove_zero_padding(x):
 
     return x_out
 
-def apply_TrackSelection(x_raw):
+def apply_TrackSelection(x_raw, jets):
     x = np.copy(x_raw)
     x[x[:,:,0] < 10] = 0
-    print(x.shape)
+    print("Input track shape: ", x.shape)
     # require at least 3 tracks
     x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 3 for jet in x])
     x = x[x_nz]
-    print(x.shape)
-    return x
+    jets = jets[x_nz]
+    print("Selected track shape: ", x.shape)
+    print("Selected jet shape: ", jets.shape)
+    return x, jets
 
-def apply_StandardScaling(x_raw):
+def apply_StandardScaling(x_raw, scaler=StandardScaler(), doFit=True):
     x= np.zeros(x_raw.shape)
     
     x_nz = np.any(x_raw,axis=2) #find zero padded events
     
     x_scale = x_raw[x_nz] #scale only non-zero jets
-    
-    x_fit = StandardScaler().fit_transform(x_scale) #do the scaling
+   
+    #scaler = StandardScaler()
+    if (doFit): scaler.fit(x_scale) 
+    x_fit = scaler.transform(x_scale) #do the scaling
     
     x[x_nz]= x_fit #insert scaled values back into zero padded matrix
     
-    return x
+    return x, scaler
 
 def apply_EventScaling(x_raw):
     
     x = np.copy(x_raw) #copy
 
     x_totals = x_raw.sum(axis=1) #get sum total pt, eta, phi, E for each event
-
     x[:,:,0] = (x_raw[:,:,0].T/x_totals[:,0]).T  #divide each pT entry by event pT total
-
     x[:,:,3] = (x_raw[:,:,3].T/x_totals[:,3]).T  #divide each E entry by event E total
 
     return x
 
 def apply_JetScalingRotation(x_raw, jet):
-    
+   
+    if (x_raw.shape[0] != jet.shape[0]):
+        print("Track shape", x_raw.shape, "is incompatible with jet shape", jet.shape)
+        print("Exiting...")
+        return
+
     x = np.copy(x_raw) #copy
-
     x_totals = x_raw.sum(axis=1) #get sum total pt, eta, phi, E for each event
-
     x[:,:,0] = (x_raw[:,:,0].T/x_totals[:,0]).T  #divide each pT entry by event pT total
-
     x[:,:,3] = (x_raw[:,:,3].T/x_totals[:,3]).T  #divide each E entry by event E total
 
     for e in range(x.shape[0]):
@@ -67,7 +79,7 @@ def apply_JetScalingRotation(x_raw, jet):
                 #print(x[e,t,:])
                 continue
             x[e,t,1] = x_raw[e,t,1] - jet[e,1,0] # subtrack subleading jet eta from each track
-            x[e,t,2] = x_raw[e,t,2] - jet[e,1,1] # subtrack subleading jet phi from each track
+            x[e,t,2] = get_dPhi(x_raw[e,t,2],jet[e,1,1]) # subtrack subleading jet phi from each track
 
     return x
 
