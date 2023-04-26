@@ -25,12 +25,12 @@ arch_dir = "architectures_saved/"
 
 # nEvents: 80% train, 10% valid, 10% test
 # make sig %10 of bkg
-x_events = 500000
+x_events = 100000
 y_events = 10000
 
 ## Model architecture
-latent_dim = 10
-encoding_dim = 40
+latent_dim = 12
+encoding_dim = 32
 phi_dim = 64
 
 # Hyper parameters
@@ -56,7 +56,7 @@ if (hlvs):
     input_dim = 12
     scale = False
 if (jets_1D):
-    input_dim = 160
+    input_dim = 64
     scale = True
 if (jets_2D):
     input_dim = [16, 4]
@@ -68,42 +68,76 @@ if (hlvs):
     sig_in = read_hlvs("../largerSignal.root", y_events)
 
 if (jets_1D or jets_2D):
-    track_array = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"]
+    track_array0 = ["jet_GhostTrack_pt_0", "jet_GhostTrack_eta_0", "jet_GhostTrack_phi_0", "jet_GhostTrack_e_0"]
+    track_array1 = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"]
     jet_array = ["jet_eta", "jet_phi"]
-    bkg_in = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array)
-    sig_in = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array)
+    bkg_in0 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array0)
+    sig_in0 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array0)
+    bkg_in1 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array1)
+    sig_in1 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array1)
     jet_bkg = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, jet_array)
     jet_sig = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, jet_array)
 
-bkg_sel, bjet_sel = apply_TrackSelection(bkg_in, jet_bkg)
-sig_sel, sjet_sel = apply_TrackSelection(sig_in, jet_sig)
+    _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
+    _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig)
+    _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
+    _, _, sig_nz1 = apply_TrackSelection(sig_in1, jet_sig)
+    
+    bkg_nz = bkg_nz0 & bkg_nz1
+    sig_nz = sig_nz0 & sig_nz1
 
-bkg = apply_JetScalingRotation(bkg_sel, bjet_sel)
-sig = apply_JetScalingRotation(sig_sel, sjet_sel)
+    # select events which have both valid leading and subleading jet tracks
+    bkg_sel0 = bkg_in0[bkg_nz]
+    bkg_sel1 = bkg_in1[bkg_nz]
+    sig_sel0 = sig_in0[sig_nz]
+    sig_sel1 = sig_in1[sig_nz]
+    bjet_sel = jet_bkg[bkg_nz]
+    sjet_sel = jet_sig[sig_nz]
 
+    bkg_rot0 = apply_JetScalingRotation(bkg_sel0, bjet_sel,0)
+    bkg_rot1 = apply_JetScalingRotation(bkg_sel1, bjet_sel,1)
+    sig_rot0 = apply_JetScalingRotation(sig_sel0, sjet_sel,0)
+    sig_rot1 = apply_JetScalingRotation(sig_sel1, sjet_sel,1)
+    
+    bkg0 = pt_sort(bkg_rot0, 0)
+    bkg1 = pt_sort(bkg_rot1, 1)
+    sig0 = pt_sort(sig_rot0, 0)
+    sig1 = pt_sort(sig_rot1, 1)
 
-# 4. Plot inputs
-x_sel_nz = remove_zero_padding(bkg_sel)
-sig_sel_nz = remove_zero_padding(sig_sel)
-x_nz = remove_zero_padding(bkg)
-sig_nz = remove_zero_padding(sig)
-#plot_vectors(x_sel_nz,sig_sel_nz,"AEraw")
-#plot_vectors(x_nz,sig_nz,"AErotated")
+    bkg = np.concatenate((bkg0,bkg1),axis=1)
+    sig = np.concatenate((sig0,sig1),axis=1)
 
-x_2D,scaler = apply_StandardScaling(bkg)
-sig_2D,_ = apply_StandardScaling(sig, scaler, False)
+    x_2D,scaler = apply_StandardScaling(bkg)
+    sig_2D,_ = apply_StandardScaling(sig, scaler, False)
+
+    print(bkg.shape)
+    print(sig.shape)
+    x = x_2D.reshape(x_2D.shape[0],x_2D.shape[1]*4)
+    sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
+
+##  # 4. Plot inputs
+##  x_sel_nz = remove_zero_padding(bkg_sel)
+##  sig_sel_nz = remove_zero_padding(sig_sel)
+##  x_nz = remove_zero_padding(bkg)
+##  sig_nz = remove_zero_padding(sig)
+##  plot_vectors(x_sel_nz,sig_sel_nz,"AEraw")
+##  plot_vectors(x_nz,sig_nz,"AErotated")
+
+## Non-mulitjet
+##x_2D,scaler = apply_StandardScaling(bkg)
+##sig_2D,_ = apply_StandardScaling(sig, scaler, False)
 
 #print(sig_2D.shape)
 #print(x_2D.shape)
 
-#plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
+#plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled_2jet")
 
-if (jets_1D):
-    x = x_2D.reshape(x_2D.shape[0],40*4)
-    sig = sig_2D.reshape(sig_2D.shape[0],40*4)
-else:
-    x = x_2D
-    sig = sig_2D
+##  if (jets_1D):
+##      x = x_2D.reshape(x_2D.shape[0],8*4)
+##      sig = sig_2D.reshape(sig_2D.shape[0],8*4)
+##  else:
+##      x = x_2D
+##      sig = sig_2D
 
 print("Bkg input shape: ", x.shape)
 print("Sig input shape: ", sig.shape)

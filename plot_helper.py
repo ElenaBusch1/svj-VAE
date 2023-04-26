@@ -6,7 +6,7 @@ from matplotlib import colors
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = "j_rot"
+tag = "2jets"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -171,7 +171,7 @@ def plot_nTracks(bkg, sig):
   bins = np.arange(0,50,1)
   plt.hist(bkg_tracks,alpha=0.5, label="bkg", bins=bins, density=False)
   plt.hist(sig_tracks,alpha=0.5, label="sig", bins=bins, density=False)
-  plt.title("nTracks (after pT>10)")
+  plt.title("nTracks (after pT>10) - Tertiary")
   plt.legend()
   plt.savefig(plot_dir+'nTracks_'+tag+'.png')
   plt.clf()

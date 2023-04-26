@@ -19,18 +19,18 @@ nepochs=30
 batchsize_pfn=500
 batchsize_ae=32
 
-pfn_model = 'trackPFN1'
-ae_model = 'trackPFN1_AE'
+pfn_model = 'PFN'
+ae_model = 'PFN'
 arch_dir = "architectures_saved/"
 
 # Input of shape (batch_size, num_elements, element_size)
 #input_data = np.random.randn(500, num_elements, element_size).astype(np.float32)
-track_array = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"]
+track_array = ["jet_GhostTrack_pt_2", "jet_GhostTrack_eta_2", "jet_GhostTrack_phi_2", "jet_GhostTrack_e_2"]
 jet_array = ["jet_eta", "jet_phi"]
-bkg_in = read_vectors("../v8/v8SmallPartialQCDmc20e.root", 25000, track_array)
-sig_in = read_vectors("../v8/v8SmallSIGmc20e.root", 25000, track_array)
-jet_bkg = read_vectors("../v8/v8SmallPartialQCDmc20e.root", 25000, jet_array)
-jet_sig = read_vectors("../v8/v8SmallSIGmc20e.root", 25000, jet_array)
+bkg_in = read_vectors("../v8/v8SmallPartialQCDmc20e.root", 250000, track_array)
+sig_in = read_vectors("../v8/v8SmallSIGmc20e.root", 250000, track_array)
+jet_bkg = read_vectors("../v8/v8SmallPartialQCDmc20e.root", 250000, jet_array)
+jet_sig = read_vectors("../v8/v8SmallSIGmc20e.root", 250000, jet_array)
 #bkg2_raw = read_vectors("../v6.4/v6p4smallQCD2.root", 1000000)
 #sig2_raw = read_vectors("../v6.4/user.ebusch.515500.root", 10000)
 
@@ -52,7 +52,7 @@ sig_nz = remove_zero_padding(sig)
 
 # Create truth target
 input_data = np.concatenate((bkg,sig),axis=0)
-input_data = apply_StandardScaling(input_data)
+input_data,_ = apply_StandardScaling(input_data)
 
 truth_bkg = np.zeros(bkg.shape[0])
 truth_sig = np.ones(sig.shape[0])
@@ -65,6 +65,9 @@ truth = tf.keras.utils.to_categorical(truth_1D, num_classes=2)
 bkg_scaled = input_data[truth_1D == 0]
 sig_scaled = input_data[truth_1D == 1]
 
+## MAKE 1D DATA - DNN only
+#input_data = input_data.reshape(input_data.shape[0],40*4)
+
 #plot_vectors(remove_zero_padding(bkg_scaled),remove_zero_padding(sig_scaled),"scaled")
 
 print("Training shape, truth shape")
@@ -72,11 +75,12 @@ print(input_data.shape, truth.shape)
 # Encoded representation of shape (batch_size, encoding_size)
 #pfn_ae, pfn = get_pfn_ae([num_elements,element_size],phi_dim, [32,16])
 pfn,graph_orig = get_full_PFN([num_elements,element_size], phi_dim)
+#pfn = get_dnn(160)
 
 #(X_train, X_test,
 # Y_train, Y_test) = train_test_split(input_data, truth, test_size=0.1)
 
-x_train, x_test, y_train, y_test = train_test_split(input_data, truth, test_size=0.01)
+x_train, x_test, y_train, y_test = train_test_split(input_data, truth, test_size=0.02)
 #X_train, X_val, Y_train, Y_val = train_test_split(x_eval, y_eval, test_size=0.2)
 
 
@@ -86,11 +90,11 @@ h = pfn.fit(x_train, y_train,
     validation_split=0.2,
     verbose=1)
 
-## save the model
-pfn.get_layer('graph').save_weights(arch_dir+pfn_model+'_graph_weights.h5')
-pfn.get_layer('classifier').save_weights(arch_dir+pfn_model+'_classifier_weights.h5')
-pfn.get_layer('graph').save(arch_dir+pfn_model+'_graph_arch')
-pfn.get_layer('classifier').save(arch_dir+pfn_model+'_classifier_arch')
+# ## save the model
+# pfn.get_layer('graph').save_weights(arch_dir+pfn_model+'_graph_weights.h5')
+# pfn.get_layer('classifier').save_weights(arch_dir+pfn_model+'_classifier_weights.h5')
+# pfn.get_layer('graph').save(arch_dir+pfn_model+'_graph_arch')
+# pfn.get_layer('classifier').save(arch_dir+pfn_model+'_classifier_arch')
 
 ## PFN training plots
 # 1. Loss vs. epoch 
@@ -100,6 +104,10 @@ preds = pfn.predict(x_test)
 bkg_score = preds[:,1][y_test[:,1] == 0]
 sig_score = preds[:,1][y_test[:,1] == 1]
 plot_score(bkg_score, sig_score, False, False, pfn_model)
+n_test = min(len(sig_score),len(bkg_score))
+bkg_score = bkg_score[:n_test]
+sig_score = sig_score[:n_test]
+do_roc(bkg_score, sig_score, "PFN", False)
 
 quit()
 ################### Train the AE ###############################

@@ -378,6 +378,18 @@ def get_pfn(input_dims, phi_dim):
   pfn.summary()
   return pfn
 
+def get_dnn(input_dim):
+  input_vars = keras.Input ( shape =(input_dim,))
+  # encode
+  x = keras.layers.Dense(50, activation='relu')(input_vars)
+  x = keras.layers.Dense(50, activation='relu')(x)
+  x = keras.layers.Dense(50, activation='relu')(x)
+  output = keras.layers.Dense(2, activation='softmax')(x)
+  dnn = keras.Model(input_vars, output)
+  dnn.summary()
+  dnn.compile(loss = keras.losses.CategoricalCrossentropy(), optimizer = keras.optimizers.Adam(learning_rate=0.001))
+  return dnn
+
 ## ------------------------------------------------------------------------------------
 def get_encoder(input_dim, encoding_dim, latent_dim):
   #encoder = tf.keras.models.Sequential(name="encoder")

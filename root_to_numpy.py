@@ -26,7 +26,7 @@ def read_vectors(infile, nEvents, jet_array):
     file = uproot.open(infile)
     
     #print("File keys: ", file.keys())
-    max_jets = 40
+    max_jets = 100
 
     tree = file["outTree"]
     #print("Tree Variables: ", tree.keys())

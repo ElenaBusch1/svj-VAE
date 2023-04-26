@@ -24,6 +24,18 @@ def remove_zero_padding(x):
 
     return x_out
 
+def pt_sort(x, jet_idx):
+    for i in range(x.shape[0]):
+        ev = x[i]
+        x[i] = ev[ev[:,0].argsort()]
+    if (jet_idx == 0):
+        y = x[:,-9:,:]
+    elif (jet_idx == 1):
+        y = x[:,-7:,:]
+    else:
+        y = x[:,-3:,:]
+    return y
+
 def apply_TrackSelection(x_raw, jets):
     x = np.copy(x_raw)
     x[x[:,:,0] < 10] = 0
@@ -32,9 +44,10 @@ def apply_TrackSelection(x_raw, jets):
     x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 3 for jet in x])
     x = x[x_nz]
     jets = jets[x_nz]
+    print("Track selections")
     print("Selected track shape: ", x.shape)
     print("Selected jet shape: ", jets.shape)
-    return x, jets
+    return x, jets, x_nz
 
 def apply_StandardScaling(x_raw, scaler=StandardScaler(), doFit=True):
     x= np.zeros(x_raw.shape)
@@ -61,7 +74,7 @@ def apply_EventScaling(x_raw):
 
     return x
 
-def apply_JetScalingRotation(x_raw, jet):
+def apply_JetScalingRotation(x_raw, jet, jet_idx):
    
     if (x_raw.shape[0] != jet.shape[0]):
         print("Track shape", x_raw.shape, "is incompatible with jet shape", jet.shape)
@@ -78,8 +91,11 @@ def apply_JetScalingRotation(x_raw, jet):
             if not x[e,t,:].any():
                 #print(x[e,t,:])
                 continue
-            x[e,t,1] = x_raw[e,t,1] - jet[e,1,0] # subtrack subleading jet eta from each track
-            x[e,t,2] = get_dPhi(x_raw[e,t,2],jet[e,1,1]) # subtrack subleading jet phi from each track
+            if not jet[e,jet_idx,:].any():
+                x[e,t,:] = 0
+            else:
+                x[e,t,1] = x_raw[e,t,1] - jet[e,jet_idx,0] # subtrack subleading jet eta from each track
+                x[e,t,2] = get_dPhi(x_raw[e,t,2],jet[e,jet_idx,1]) # subtrack subleading jet phi from each track
 
     return x
 
