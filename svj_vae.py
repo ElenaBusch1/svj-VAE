@@ -68,59 +68,13 @@ if (hlvs):
     sig_in = read_hlvs("../largerSignal.root", y_events)
 
 if (jets_1D or jets_2D):
-    track_array0 = ["jet_GhostTrack_pt_0", "jet_GhostTrack_eta_0", "jet_GhostTrack_phi_0", "jet_GhostTrack_e_0"]
-    track_array1 = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"]
-    jet_array = ["jet_eta", "jet_phi"]
-    bkg_in0 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array0)
-    sig_in0 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array0)
-    bkg_in1 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array1)
-    sig_in1 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array1)
-    jet_bkg = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, jet_array)
-    jet_sig = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, jet_array)
-
-    _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
-    _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig)
-    _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
-    _, _, sig_nz1 = apply_TrackSelection(sig_in1, jet_sig)
-    
-    bkg_nz = bkg_nz0 & bkg_nz1
-    sig_nz = sig_nz0 & sig_nz1
-
-    # select events which have both valid leading and subleading jet tracks
-    bkg_sel0 = bkg_in0[bkg_nz]
-    bkg_sel1 = bkg_in1[bkg_nz]
-    sig_sel0 = sig_in0[sig_nz]
-    sig_sel1 = sig_in1[sig_nz]
-    bjet_sel = jet_bkg[bkg_nz]
-    sjet_sel = jet_sig[sig_nz]
-
-    bkg_rot0 = apply_JetScalingRotation(bkg_sel0, bjet_sel,0)
-    bkg_rot1 = apply_JetScalingRotation(bkg_sel1, bjet_sel,1)
-    sig_rot0 = apply_JetScalingRotation(sig_sel0, sjet_sel,0)
-    sig_rot1 = apply_JetScalingRotation(sig_sel1, sjet_sel,1)
-    
-    bkg0 = pt_sort(bkg_rot0, 0)
-    bkg1 = pt_sort(bkg_rot1, 1)
-    sig0 = pt_sort(sig_rot0, 0)
-    sig1 = pt_sort(sig_rot1, 1)
-
-    bkg = np.concatenate((bkg0,bkg1),axis=1)
-    sig = np.concatenate((sig0,sig1),axis=1)
-
-    x_2D,scaler = apply_StandardScaling(bkg)
-    sig_2D,_ = apply_StandardScaling(sig, scaler, False)
-
-    print(bkg.shape)
-    print(sig.shape)
-    x = x_2D.reshape(x_2D.shape[0],x_2D.shape[1]*4)
-    sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
-
+   x, sig = getTwoJetSystem(x_events,y_events)
 ##  # 4. Plot inputs
-##  x_sel_nz = remove_zero_padding(bkg_sel)
-##  sig_sel_nz = remove_zero_padding(sig_sel)
+#x_sel_nz = remove_zero_padding(bkg_sel)
+#sig_sel_nz = remove_zero_padding(sig_sel)
 ##  x_nz = remove_zero_padding(bkg)
 ##  sig_nz = remove_zero_padding(sig)
-##  plot_vectors(x_sel_nz,sig_sel_nz,"AEraw")
+#plot_vectors(x_sel_nz,sig_sel_nz,"AEraw")
 ##  plot_vectors(x_nz,sig_nz,"AErotated")
 
 ## Non-mulitjet
@@ -130,7 +84,8 @@ if (jets_1D or jets_2D):
 #print(sig_2D.shape)
 #print(x_2D.shape)
 
-#plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled_2jet")
+#plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled_avg")
+#quit()
 
 ##  if (jets_1D):
 ##      x = x_2D.reshape(x_2D.shape[0],8*4)
@@ -143,8 +98,10 @@ print("Bkg input shape: ", x.shape)
 print("Sig input shape: ", sig.shape)
 
 ## Train / Valid / Test split
-x_train, x_test, _, _ = train_test_split(x, x, test_size=sig_2D.shape[0]) #done randomly
+x_train, x_test, _, _ = train_test_split(x, x, test_size=sig.shape[0]) #done randomly
 #x_valid, x_test, _, _ = train_test_split(x_temp, x_temp, test_size=0.5)
+plot_vectors(x_train,sig,"AEtrain")
+plot_vectors(x_test,sig,"AEtest")
 
 print("Length train :", len(x_train), ", test: ", len(x_test))
 
@@ -166,14 +123,14 @@ h = model_svj.fit(x_train,
                 #validation_data=x_valid)
 
 ## Save the model
-model_svj.get_layer('encoder').save_weights(arch_dir+model_name+'_encoder_weights.h5')
-model_svj.get_layer('decoder').save_weights(arch_dir+model_name+'_decoder_weights.h5')
-model_svj.get_layer('encoder').save(arch_dir+model_name+'_encoder_arch')
-model_svj.get_layer('decoder').save(arch_dir+model_name+'_decoder_arch')
+model_svj.get_layer('encoder').save_weights(arch_dir+model_name+'6_encoder_weights.h5')
+model_svj.get_layer('decoder').save_weights(arch_dir+model_name+'6_decoder_weights.h5')
+model_svj.get_layer('encoder').save(arch_dir+model_name+'6_encoder_arch')
+model_svj.get_layer('decoder').save(arch_dir+model_name+'6_decoder_arch')
 if model_name.find('PFN') > -1:
     model_svj.get_layer('pfn').save_weights(arch_dir+model_name+'_pfn_weights.h5')
     model_svj.get_layer('pfn').save(arch_dir+model_name+'_pfn_arch')
-with open(arch_dir+model_name+'_history.json', 'w') as f:
+with open(arch_dir+model_name+'6_history.json', 'w') as f:
     json.dump(h.history, f)
 
 print("Saved model")
@@ -186,6 +143,7 @@ if (model_name.find("VAE") > -1):
 else:
     pred_bkg = model_svj.predict(x_test)['reconstruction']
     pred_sig = model_svj.predict(sig)['reconstruction']
+    plot_vectors(pred_bkg,pred_sig,"AEpred")
     
     bkg_loss = keras.losses.mse(x_test, pred_bkg)
     sig_loss = keras.losses.mse(sig, pred_sig)

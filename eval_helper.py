@@ -5,8 +5,68 @@ from tensorflow import saved_model
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+#from sklearn.preprocessing import MaxAbsScaler
 from plot_helper import *
 from models import *
+
+def getTwoJetSystem(x_events,y_events):
+    track_array0 = ["jet_GhostTrack_pt_0", "jet_GhostTrack_eta_0", "jet_GhostTrack_phi_0", "jet_GhostTrack_e_0"]
+    track_array1 = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"]
+    jet_array = ["jet_eta", "jet_phi"]
+    bkg_in0 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array0)
+    sig_in0 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array0)
+    bkg_in1 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array1)
+    sig_in1 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array1)
+    jet_bkg = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, jet_array)
+    jet_sig = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, jet_array)
+
+    _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
+    _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig)
+    _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
+    _, _, sig_nz1 = apply_TrackSelection(sig_in1, jet_sig)
+    
+    bkg_nz = bkg_nz0 & bkg_nz1
+    sig_nz = sig_nz0 & sig_nz1
+
+    # select events which have both valid leading and subleading jet tracks
+    bkg_pt0 = bkg_in0[bkg_nz]
+    bkg_pt1 = bkg_in1[bkg_nz]
+    sig_pt0 = sig_in0[sig_nz]
+    sig_pt1 = sig_in1[sig_nz]
+    bjet_sel = jet_bkg[bkg_nz]
+    sjet_sel = jet_sig[sig_nz]
+
+    bkg_sel0 = pt_sort(bkg_pt0, 0)
+    bkg_sel1 = pt_sort(bkg_pt1, 1)
+    sig_sel0 = pt_sort(sig_pt0, 0)
+    sig_sel1 = pt_sort(sig_pt1, 1)
+
+    bkg_sel = np.concatenate((bkg_sel0,bkg_sel1),axis=1)
+    sig_sel = np.concatenate((sig_sel0,sig_sel1),axis=1)
+
+    bkg = apply_JetScalingRotation(bkg_sel, bjet_sel,0)
+    sig = apply_JetScalingRotation(sig_sel, sjet_sel,0)
+
+    #plot
+    #x_sel_nz = remove_zero_padding(bkg_sel)
+    #sig_sel_nz = remove_zero_padding(sig_sel)
+    #plot_vectors(x_sel_nz,sig_sel_nz,"AEraw")
+    #x_nz = remove_zero_padding(bkg)
+    #sig_nz = remove_zero_padding(sig)
+    #plot_vectors(x_nz,sig_nz,"AErotated_avg")
+
+    x_2D,scaler = apply_StandardScaling(bkg)
+    sig_2D,_ = apply_StandardScaling(sig, scaler, False)
+    #sig_2D,_ = apply_StandardScaling(sig)
+
+    print(bkg.shape)
+    print(sig.shape)
+    x = x_2D.reshape(x_2D.shape[0],x_2D.shape[1]*4)
+    sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
+    plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
+    plot_vectors(x,sig,"AEWithZero")
+    return x, sig
 
 def get_dPhi(x1,x2):
     dPhi = x1 - x2
@@ -49,7 +109,7 @@ def apply_TrackSelection(x_raw, jets):
     print("Selected jet shape: ", jets.shape)
     return x, jets, x_nz
 
-def apply_StandardScaling(x_raw, scaler=StandardScaler(), doFit=True):
+def apply_StandardScaling(x_raw, scaler=MinMaxScaler(), doFit=True):
     x= np.zeros(x_raw.shape)
     
     x_nz = np.any(x_raw,axis=2) #find zero padded events
@@ -80,23 +140,30 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
         print("Track shape", x_raw.shape, "is incompatible with jet shape", jet.shape)
         print("Exiting...")
         return
-
+    
     x = np.copy(x_raw) #copy
     x_totals = x_raw.sum(axis=1) #get sum total pt, eta, phi, E for each event
     x[:,:,0] = (x_raw[:,:,0].T/x_totals[:,0]).T  #divide each pT entry by event pT total
     x[:,:,3] = (x_raw[:,:,3].T/x_totals[:,3]).T  #divide each E entry by event E total
-
+    
+    #jet_phi_avs = np.zeros(x.shape[0])
     for e in range(x.shape[0]):
+        jet_eta_av = (jet[e,0,0] + jet[e,1,0])/2.0 
+        jet_phi_av = (jet[e,0,1] + jet[e,1,1])/2.0 
+        #jet_phi_avs[e] = jet_phi_av
         for t in range(x.shape[1]):
             if not x[e,t,:].any():
                 #print(x[e,t,:])
                 continue
-            if not jet[e,jet_idx,:].any():
-                x[e,t,:] = 0
+            #if not jet[e,jet_idx,:].any():
+            #    x[e,t,:] = 0
             else:
-                x[e,t,1] = x_raw[e,t,1] - jet[e,jet_idx,0] # subtrack subleading jet eta from each track
-                x[e,t,2] = get_dPhi(x_raw[e,t,2],jet[e,jet_idx,1]) # subtrack subleading jet phi from each track
-
+                x[e,t,1] = x_raw[e,t,1] - jet_eta_av # subtrack subleading jet eta from each track
+                x[e,t,2] = get_dPhi(x_raw[e,t,2],jet_phi_av) # subtrack subleading jet phi from each track
+                #x[e,t,1] = x_raw[e,t,1] - jet[e,jet_idx,0] # subtrack subleading jet eta from each track
+                #x[e,t,2] = get_dPhi(x_raw[e,t,2],jet[e,jet_idx,1]) # subtrack subleading jet phi from each track
+    #plt.hist(jet_phi_avs)
+    #plt.show()
     return x
 
 

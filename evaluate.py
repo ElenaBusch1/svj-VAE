@@ -16,6 +16,7 @@ from eval_helper import *
 model = "AE"
 arch_dir = "architectures_saved/"
 
+xevents = 241845
 nevents = 10000
 
 ## ---------- CODE ----------
@@ -27,27 +28,14 @@ if model.find("PFN")>-1: jets_2D = True
 else: jets_1D = True
 
 ## Load testing data
-x_raw = read_vectors("../v8/v8SmallPartialQCDmc20e.root", nevents)
-sig_raw = read_vectors("../v8/v8_515500_mc20e.root", nevents)
-
-## apply per-event scaling
-#x_2D, sig_2D = apply_EventScaling(x_raw, sig_raw)
-x_2D = x_raw
-sig_2D = sig_raw
-
-if (jets_1D):
-    x = x_2D.reshape(nevents,100*7)
-    sig = sig_2D.reshape(nevents,100*7)
-else:
-    x = x_2D
-    sig = sig_2D
-
-
-
+x_full, sig = getTwoJetSystem(xevents,nevents)
+x_train, x, _, _ = train_test_split(x_full, x_full, test_size=sig.shape[0]) #done randomly
+#x = x[:sig.shape[0]]
+plot_vectors(x,sig,"AEtest")
 
 ## Load model
-encoder = keras.models.load_model(arch_dir+model+'_encoder_arch')
-decoder = keras.models.load_model(arch_dir+model+'_decoder_arch')
+encoder = keras.models.load_model(arch_dir+model+'5_encoder_arch')
+decoder = keras.models.load_model(arch_dir+model+'5_decoder_arch')
 if model.find("PFN") >-1:
     pfn = keras.models.load_model(arch_dir+model+'_pfn_arch')
 
@@ -60,8 +48,8 @@ elif model == "PFN_AE":
 elif model == "PFN_VAE":
     model_svj = PFN_VAE(pfn,encoder,decoder)
 
-model_svj.get_layer('encoder').load_weights(arch_dir+model+'_encoder_weights.h5')
-model_svj.get_layer('decoder').load_weights(arch_dir+model+'_decoder_weights.h5')
+model_svj.get_layer('encoder').load_weights(arch_dir+model+'5_encoder_weights.h5')
+model_svj.get_layer('decoder').load_weights(arch_dir+model+'5_decoder_weights.h5')
 if model.find("PFN") >-1:
     model_svj.get_layer('pfn').load_weights(arch_dir+model+'_pfn_weights.h5')
 
@@ -84,6 +72,7 @@ if (model.find("VAE") > -1):
 else:
     pred_bkg = model_svj.predict(x)['reconstruction']
     pred_sig = model_svj.predict(sig)['reconstruction']
+    plot_vectors(pred_bkg,pred_sig,"AEpred")
     
     bkg_loss = keras.losses.mse(x, pred_bkg)
     sig_loss = keras.losses.mse(sig, pred_sig)
@@ -91,7 +80,7 @@ else:
 
 # --- Eval plots 
 # # 1. Loss vs. epoch 
-# plot_saved_loss(h, model, "loss")
+plot_saved_loss(h, model, "loss")
 # if model.find('VAE') > -1:
 #     plot_saved_loss(h, model, "kl_loss")
 #     plot_saved_loss(h, model, "reco_loss")
@@ -105,7 +94,7 @@ if model.find('VAE') > -1:
 # score = getSignalSensitivityScore(bkg_loss, sig_loss)
 # print("score = ",score)
 # 4. ROCs/AUCs using sklearn functions imported above  
-# do_roc(bkg_loss, sig_loss, model+'_515519', True)
+do_roc(bkg_loss, sig_loss, model, True)
 # if model.find('VAE') > -1:
 #     do_roc(bkg_reco_loss, sig_reco_loss, model+'_Reco', True)
 #     do_roc(bkg_kl_loss, sig_kl_loss, model+'_KLD', True)
