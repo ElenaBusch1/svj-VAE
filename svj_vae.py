@@ -1,5 +1,6 @@
 import numpy as np
 import json
+import joblib
 from root_to_numpy import *
 from tensorflow import keras
 from tensorflow import saved_model
@@ -98,16 +99,20 @@ print("Bkg input shape: ", x.shape)
 print("Sig input shape: ", sig.shape)
 
 ## Train / Valid / Test split
-x_train, x_test, _, _ = train_test_split(x, x, test_size=sig.shape[0]) #done randomly
+x_train_1, x_test_1, _, _ = train_test_split(x, x, test_size=sig.shape[0]) #done randomly
 #x_valid, x_test, _, _ = train_test_split(x_temp, x_temp, test_size=0.5)
+x_train, scaler = apply_StandardScaling(x_train_1)
+x_test,_ = apply_StandardScaling(x_test_1,scaler,False)
+sig,_ = apply_StandardScaling(sig,scaler,False)
 plot_vectors(x_train,sig,"AEtrain")
 plot_vectors(x_test,sig,"AEtest")
 
-print("Length train :", len(x_train), ", test: ", len(x_test))
+print("Train shape:", x_train.shape, ", test shape: ", x_test.shape)
+print("scaled sig shape:", sig.shape)
 
 if (len(x_test) != len(sig)):
     print("WARNING: Testing with ", len(x_test), "background samples and ", len(sig), "signal samples")
-
+quit()
 
 ## Define the model
 if (model_name == "AE" or model_name == "VAE"):
@@ -132,7 +137,6 @@ if model_name.find('PFN') > -1:
     model_svj.get_layer('pfn').save(arch_dir+model_name+'_pfn_arch')
 with open(arch_dir+model_name+'6_history.json', 'w') as f:
     json.dump(h.history, f)
-
 print("Saved model")
 
 ## Evaluate multi Loss model

@@ -6,7 +6,7 @@ from matplotlib import colors
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = "2jAVG_MM_6"
+tag = "2jAVG_MM_7"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
