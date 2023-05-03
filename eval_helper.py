@@ -86,6 +86,12 @@ def remove_zero_padding(x):
 
     return x_out
 
+def reshape_3D(x, nTracks, nFeatures):
+    print(x[4])
+    x_out = x.reshape(x.shape[0],nTracks,nFeatures)
+    print(x_out[4])
+    return x_out
+
 def pt_sort(x, jet_idx):
     for i in range(x.shape[0]):
         ev = x[i]
@@ -114,13 +120,9 @@ def apply_TrackSelection(x_raw, jets):
 def apply_StandardScaling(x_raw, scaler=MinMaxScaler(), doFit=True):
     x= np.zeros(x_raw.shape)
     
-    x_nz = np.any(x_raw,axis=1) #find zero padded events
+    x_nz = np.any(x_raw,axis=2) #find zero padded events
     
     x_scale = x_raw[x_nz] #scale only non-zero jets
-    print(x_raw)
-    print(x_nz)
-    print(x_scale)
-    print(x_scale.shape) 
     #scaler = StandardScaler()
     if (doFit): scaler.fit(x_scale) 
     x_fit = scaler.transform(x_scale) #do the scaling
