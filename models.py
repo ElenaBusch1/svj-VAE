@@ -125,163 +125,16 @@ class VAE(keras.Model):
         }
 
 ## ------------------------------------------------------------------------------------
-class PFN_AE(keras.Model):
-    #could this be modified to inherit more from the AE class?
-    def __init__(self, pfn, encoder, decoder, **kwargs):
-        super().__init__(**kwargs)
-        self.pfn = pfn
-        self.encoder = encoder
-        self.decoder = decoder
-        self.reconstruction_loss_tracker = keras.metrics.Mean(
-            name="loss"
-        )
-
-    @property
-    def metrics(self):
-        return [
-            self.reconstruction_loss_tracker,
-        ]
-
-    def train_step(self, data):
-        with tf.GradientTape() as tape:
-            phi = self.pfn(data)
-            encoded = self.encoder(phi)
-            reconstruction = self.decoder(encoded)
-            reconstruction_loss = tf.reduce_mean(
-                    keras.losses.mse(phi, reconstruction)#, axis=(1, 2)
-            )
-        grads = tape.gradient(reconstruction_loss, self.trainable_weights)
-        self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
-        self.reconstruction_loss_tracker.update_state(reconstruction_loss)
-        return {
-            "loss": self.reconstruction_loss_tracker.result(),
-        }
-
-    def test_step(self, data): 
-        phi = self.pfn(data)
-        encoded = self.encoder(phi)
-        reconstruction = self.decoder(encoded)
-        reconstruction_loss = tf.reduce_mean(
-            keras.losses.mse(phi, reconstruction)
-        )
-        return {
-            "loss": reconstruction_loss,
-        }
-
-    def call(self, data):
-        phi = self.pfn(data)
-        encoded = self.encoder(phi)
-        reconstruction = self.decoder(encoded)
-        return {
-            "reconstruction": reconstruction
-        }
-
-## ------------------------------------------------------------------------------------
-class PFN_SVM(keras.Model):
-    #could this be modified to inherit more from the AE class?
-    def __init__(self, pfn, svm, **kwargs):
-        super().__init__(**kwargs)
-        self.pfn = pfn
-        self.svm = svm
-
-    def call(self, data):
-        phi = self.pfn(data)
-        result = self.svm(phi)
-        return {
-            "result": result
-        }
-
-
-## ------------------------------------------------------------------------------------
-class Sampling(keras.layers.Layer):
-    """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
-
-    def call(self, inputs):
-        z_mean, z_log_var = inputs
-        batch = tf.shape(z_mean)[0]
-        dim = tf.shape(z_mean)[1]
-        epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
-        return z_mean + tf.exp(0.5 * z_log_var) * epsilon
-
-## ------------------------------------------------------------------------------------
-class OneClassSVMWrapper(keras.layers.Wrapper):
-    def __init__(self, svm, **kwargs):
-        super(OneClassSVMWrapper, self).__init__(svm, **kwargs)
-
-    def build(self, input_shape=None):
-        assert len(input_shape) == 2
-        self.input_dim = input_shape[-1]
-        self.svm.build((input_shape[0],))
-        super(OneClassSVMWrapper, self).build()
-
-    def call(self, x, mask=None):
-        assert self.built, 'Layer must be built before being called'
-        y = self.svm.call(x)
-        return y
-
-## ------------------------------------------------------------------------------------
-class OneClassSVMLayer(keras.layers.Layer):
-    def __init__(self, nu=0.1, kernel='rbf', gamma='scale', **kwargs):
-        super(OneClassSVMLayer, self).__init__(**kwargs)
-        self.nu = nu
-        self.kernel = kernel
-        self.gamma = gamma
-        self.support_vectors_ = None
-        self.intercept_ = None
-        self.one_class_svm = OneClassSVM(nu=self.nu, kernel=self.kernel, gamma=self.gamma)
-
-    def build(self, input_shape):
-        assert len(input_shape) == 2
-        self.input_dim = input_shape[-1]
-        super(OneClassSVMLayer, self).build((input_shape[0],))
-
-    def call(self, inputs):
-        self.one_class_svm.fit(inputs)
-        self.support_vectors_ = self.one_class_svm.support_vectors_
-        self.intercept_ = self.one_class_svm.intercept_
-        return self.one_class_svm.decision_function(inputs)
-
-    def compute_output_shape(self, input_shape):
-        return input_shape
-
-    def get_support_vectors(self):
-        return self.support_vectors_
-
-    def get_intercept(self):
-        return self.intercept_
-
-## ------------------------------------------------------------------------------------
-class OneClassSVM_Layer(keras.layers.Layer):
-    def __init__(self, **kwargs):
-        super(OneClassSVM_Layer, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        self.model = OneClassSVM(kernel='rbf', nu=0.1, gamma='scale')
-        self.built = True
-
-    def call(self, inputs):
-        return tf.convert_to_tensor(self.model.fit(inputs))
-
-    def compute_output_shape(self, input_shape):
-        return input_shape
-
-
-## ------------------------------------------------------------------------------------
-class SVMLayer(keras.layers.Layer):
-    def __init__(self, **kwargs):
-        super(SVMLayer, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        self.svm = OneClassSVM(gamma='scale', nu=0.01)
-
-    def call(self, inputs):
-        svm_input = inputs
-        # Apply the SVM to the input
-        svm_output = self.svm.predict(svm_input)
-        return svm_output
-
-    def compute_output_shape(self, input_shape):
-        return (input_shape[0], 1)
+class supervisedPFN(keras.Model):
+  def __init__(self,graph, classifier):
+    super().__init__()
+    self.graph = graph
+    self.classifier = classifier
+  
+  def call(self, X, *args):
+    graph_rep = self.graph(X)
+    result = self.classifier(graph_rep)
+    return result
 
 ## ------------------------------------------------------------------------------------
 ## 		Functions
@@ -293,13 +146,13 @@ def pfn_mask_func(X, mask_val=0):
   return K.cast(K.any(K.not_equal(X, mask_val), axis=-1), K.dtype(X))
 
 ## ------------------------------------------------------------------------------------
-def get_pfn_svm(input_dims, phi_dim):
-  initializer = keras.initializers.HeNormal()
+def get_full_PFN(input_dim, phi_dim):
+  initializer = keras.initializers.HeUniform()
   loss = keras.losses.CategoricalCrossentropy()
-  optimizer = keras.optimizers.Adam() 
- 
-  input_dim_x = input_dims[0]
-  input_dim_y = input_dims[1]
+  optimizer = keras.optimizers.Adam(learning_rate=0.001) 
+
+  input_dim_x = input_dim[0]
+  input_dim_y = input_dim[1]
 
   #input
   pfn_inputs = keras.Input(shape=(None,input_dim_y))
@@ -318,34 +171,30 @@ def get_pfn_svm(input_dims, phi_dim):
 
   # latent space
   sum_phi = keras.layers.Dot(1, name="sum")([masked,phi_outputs])
-  print(sum_phi.shape)
-  #pfn = keras.Model(pfn_inputs, sum_phi, name="pfn")
-  #pfn.summary()
-  
-  #svm
-  svm_output = OneClassSVM_Layer()(sum_phi)
-  #svm_inputs = keras.Input(shape=(phi_dim,))
-  #svm = OneClassSVM(gamma='scale', nu=0.01).fit(sum_phi)
-  svm = keras.Model(pfn_inputs, svm_output)
-  #combine
-  #pfn_svm = PFN_SVM(pfn, svm)
-  #  pfn_svm = keras.models.Sequential()
-  #  pfn_svm.add(keras.layers.Dense(50, kernel_initializer=initializer, name="pfn1"))
-  #  pfn_svm.add(keras.layers.TimeDistributed(dense1, name="tdist_0"))
-  #  pfn_svm.add(keras.layers.Activation('relu'))
-  #  pfn_svm.add(keras.layers.Dense(50, kernel_initializer=initializer, name="pfn2"))
-  #  pfn_svm.add(keras.layers.TimeDistributed(dense2, name="tdist_1"))
-  #  pfn_svm.add(keras.layers.Activation('relu'))
-  #  pfn_svm.add(keras.layers.Dense(phi_dim, kernel_initializer=initializer, name="phi"))
-  #  pfn_svm.add(keras.layers.TimeDistributed(dense3, name="tdist_2"))
-  #  pfn_svm.add(keras.layers.Activation('relu'))
-  #  pfn_svm.add(keras.layers.Lambda(pfn_mask_func, name="mask"))
-  #  pfn_svm.add(keras.layers.Dot(1, name="sum"))
-  #pfn_svm.add(pfn)
-  #pfn_svm.add(svm_layer)
-  pfn_svm.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001))
-  return svm
+  graph = keras.Model(inputs=pfn_inputs, outputs=sum_phi, name="graph")
+  graph.summary()
+   
+  # F network
+  classifier_inputs = keras.Input(shape=(phi_dim,))
+  x = classifier_inputs
+  x = keras.layers.Dense(50, kernel_initializer=initializer, name = "F1")(classifier_inputs)
+  x = keras.layers.Activation('relu')(x)
+  x = keras.layers.Dense(50, kernel_initializer=initializer, name = "F2")(x)
+  x = keras.layers.Activation('relu')(x)
+  x = keras.layers.Dense(50, kernel_initializer=initializer, name="F3")(x)
+  x = keras.layers.Activation('relu')(x)
 
+  # output
+  x = keras.layers.Dense(2, name="output")(x)
+  output = keras.layers.Activation('softmax')(x)
+
+  classifier = keras.Model(inputs=classifier_inputs, outputs=output, name="classifier")
+  classifier.summary()
+
+  pfn = supervisedPFN(graph, classifier)
+  #pfn.summary()
+  pfn.compile(optimizer=optimizer, loss=loss)
+  return pfn, graph
 
 ## ------------------------------------------------------------------------------------
 def get_pfn(input_dims, phi_dim):
@@ -378,6 +227,7 @@ def get_pfn(input_dims, phi_dim):
   pfn.summary()
   return pfn
 
+## ------------------------------------------------------------------------------------
 def get_dnn(input_dim):
   input_vars = keras.Input ( shape =(input_dim,))
   # encode
