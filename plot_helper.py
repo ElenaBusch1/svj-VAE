@@ -6,7 +6,7 @@ from matplotlib import colors
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = "2jAVG_MM_8"
+tag = "PFN_2jAvg_MM"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -111,7 +111,7 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, extra_tag=
   if xlog and bmin == 0: bmin = 1e-9
   if xlog: bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
   else: bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
-  bins = np.linspace(0,5e-3,80)
+  #bins = np.linspace(0,5e-3,80)
   #plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg (-"+str(nb)+")", density=True)
   #plt.hist(sig_score, bins=bins, alpha=0.5, label="sig(-"+str(ns)+")", density=True)
   plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg", density=True)
@@ -180,6 +180,10 @@ def plot_nTracks(bkg, sig):
 
 def plot_vectors(train,sig,extra_tag):
   variable_array = ["pT", "eta", "phi", "E"]
+  if (len(train.shape) == 3):
+    train = train.reshape(train.shape[0], train.shape[1] * train.shape[2])
+  if (len(sig.shape) == 3):
+    sig = sig.reshape(sig.shape[0], sig.shape[1] * sig.shape[2])
   for i in range(4):
     train_v = train[:,i::4].flatten()
     #test_v = test[:,i::4].flatten()

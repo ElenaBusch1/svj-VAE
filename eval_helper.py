@@ -59,16 +59,16 @@ def getTwoJetSystem(x_events,y_events):
     #x_2D,scaler = apply_StandardScaling(bkg)
     #sig_2D,_ = apply_StandardScaling(sig, scaler, False)
     #sig_2D,_ = apply_StandardScaling(sig)
-    x_2D = bkg
-    sig_2D = sig
+    #x = bkg
+    #sig = sig
 
     print(bkg.shape)
     print(sig.shape)
-    x = x_2D.reshape(x_2D.shape[0],x_2D.shape[1]*4)
-    sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
+    #x = x_2D.reshape(bkg.shape[0],x_2D.shape[1]*4)
+    #sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
     #plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
-    plot_vectors(x,sig,"AEWithZeroRotated")
-    return x, sig
+    #plot_vectors(x,sig,"AEWithZeroRotated")
+    return bkg, sig
 
 def get_dPhi(x1,x2):
     dPhi = x1 - x2
@@ -120,8 +120,7 @@ def apply_TrackSelection(x_raw, jets):
 def apply_StandardScaling(x_raw, scaler=MinMaxScaler(), doFit=True):
     x= np.zeros(x_raw.shape)
     
-    x_nz = np.any(x_raw,axis=2) #find zero padded events
-    
+    x_nz = np.any(x_raw,axis=len(x_raw.shape)-1) #find zero padded events 
     x_scale = x_raw[x_nz] #scale only non-zero jets
     #scaler = StandardScaler()
     if (doFit): scaler.fit(x_scale) 

@@ -101,9 +101,9 @@ print("Sig input shape: ", sig.shape)
 ## Train / Valid / Test split
 x_train, x_test, _, _ = train_test_split(x, x, test_size=sig.shape[0]) #done randomly
 #x_valid, x_test, _, _ = train_test_split(x_temp, x_temp, test_size=0.5)
-x_train = reshape_3D(x_train, 16, 4)
-x_test = reshape_3D(x_test, 16, 4)
-sig = reshape_3D(sig, 16, 4)
+#x_train = reshape_3D(x_train, 16, 4)
+#x_test = reshape_3D(x_test, 16, 4)
+#sig = reshape_3D(sig, 16, 4)
 x_train, scaler = apply_StandardScaling(x_train)
 x_test,_ = apply_StandardScaling(x_test,scaler,False)
 sig,_ = apply_StandardScaling(sig,scaler,False)
@@ -114,7 +114,6 @@ x_test = x_test.reshape(x_test.shape[0], 16*4)
 sig = sig.reshape(sig.shape[0],16*4)
 plot_vectors(x_train,sig,"AEtrain")
 plot_vectors(x_test,sig,"AEtest")
-quit()
 
 print("Train shape:", x_train.shape, ", test shape: ", x_test.shape)
 print("scaled sig shape:", sig.shape)
@@ -127,6 +126,8 @@ if (model_name == "AE" or model_name == "VAE"):
     model_svj = get_model(model_name, input_dim, encoding_dim, latent_dim)
 elif (model_name == "PFN_AE"  or model_name == "PFN_VAE"):
     model_svj, pfn = get_model(model_name, input_dim, encoding_dim, latent_dim, phi_dim)
+
+quit()
 
 ## Train the model
 h = model_svj.fit(x_train,
