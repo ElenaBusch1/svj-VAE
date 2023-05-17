@@ -6,7 +6,7 @@ from matplotlib import colors
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = "PFN_2jAvg_MM"
+tag = "PFNAE_HLnTracks"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -111,7 +111,7 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, extra_tag=
   if xlog and bmin == 0: bmin = 1e-9
   if xlog: bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
   else: bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
-  #bins = np.linspace(0,5e-3,80)
+  #bins = np.linspace(0,5e-2,80)
   #plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg (-"+str(nb)+")", density=True)
   #plt.hist(sig_score, bins=bins, alpha=0.5, label="sig(-"+str(ns)+")", density=True)
   plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg", density=True)
@@ -130,20 +130,25 @@ def plot_phi(phis,name,extra_tag):
   nevents = phis.shape[0]
   idx = [i for i in range(nphis)]*nevents
 
+  print(extra_tag)
   phiT = phis.T
   print("n zeros = ", len(np.where(~phiT.any(axis=1))[0]))
   phis = phis.flatten()
   nbinsx = 10
   bin_width = max(phis)/nbinsx
+  print("max: ", max(phis))
+  print("bin_width", bin_width)
   phis[phis==0] = -bin_width 
 
   fig, ax = plt.subplots()
   h = ax.hist2d(phis,idx,bins=[nbinsx+1,nphis])
+  print("xedges", h[1])
   fig.colorbar(h[3], ax=ax)
   ax.set_xlabel('Value')
   ax.set_ylabel('Index')
   ax.set_title('PFN Set Representation - '+name)
   plt.savefig(plot_dir+'phi2D_'+name+'_'+extra_tag+'_'+tag+'.png')
+  plt.clf()
   print("Saved 2D plot of phi-rep for", extra_tag)
 
 def plot_inputs(bkg, sig):

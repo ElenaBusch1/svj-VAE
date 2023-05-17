@@ -11,13 +11,13 @@ from eval_helper import *
 
 # Example usage
 encoding_dim = 32
-latent_dim = 4
+latent_dim = 12
 phi_dim = 64
 nepochs=30
 batchsize_ae=32
 
 pfn_model = 'PFN'
-ae_model = 'PFN'
+ae_model = 'PFNAE'
 arch_dir = "architectures_saved/"
 
 ################### Train the AE ###############################
@@ -26,8 +26,8 @@ graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
 graph.compile()
 
 ## AE events
-x_events = 99570
-y_events = 9957
+x_events = 300000
+y_events = 50000
 bkg2, sig2 = getTwoJetSystem(x_events,y_events)
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
@@ -39,6 +39,7 @@ phi_sig = graph.predict(sig2)
 
 plot_phi(phi_bkg,"bkg","PFN_phi_bkg_raw")
 plot_phi(phi_sig,"sig","PFN_phi_sig_raw")
+plot_score(phi_bkg[:,11], phi_sig[:,11], False, False, "phi_11_raw")
 
 phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=sig2.shape[0])
 
@@ -46,8 +47,13 @@ phi_evalb, phi_scaler = apply_StandardScaling(phi_evalb)
 phi_testb, _ = apply_StandardScaling(phi_testb,phi_scaler,False)
 phi_sig, _ = apply_StandardScaling(phi_sig,phi_scaler,False)
 
-plot_phi(phi_bkg,"bkg","PFN_phi_bkg_scaled")
+plot_phi(phi_evalb,"train","PFN_phi_train_scaled")
+plot_phi(phi_testb,"test","PFN_phi_test_scaled")
 plot_phi(phi_sig,"sig","PFN_phi_sig_scaled")
+
+plot_score(phi_testb[:,11], phi_sig[:,11], False, False, "phi_11_scaled")
+
+quit()
 
 ae = get_ae(phi_dim,encoding_dim,latent_dim)
 
