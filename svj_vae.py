@@ -127,7 +127,7 @@ if (model_name == "AE" or model_name == "VAE"):
 elif (model_name == "PFN_AE"  or model_name == "PFN_VAE"):
     model_svj, pfn = get_model(model_name, input_dim, encoding_dim, latent_dim, phi_dim)
 
-quit()
+#quit()
 
 ## Train the model
 h = model_svj.fit(x_train,

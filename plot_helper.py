@@ -7,7 +7,8 @@ from root_to_numpy import variable_array
 from math import ceil
 
 tag = "PFN_2jAvg_MM"
-plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
+#plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
+plot_dir = "/nevis/milne/files/gpm2117/WWW/SVJ/autoencoder/"
 
 def detect_outliers(x):
   z = np.abs(stats.zscore(x))

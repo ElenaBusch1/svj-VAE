@@ -30,12 +30,17 @@ else: jets_1D = True
 ## Load testing data
 x_full, sig = getTwoJetSystem(xevents,nevents)
 x_train, x, _, _ = train_test_split(x_full, x_full, test_size=sig.shape[0]) #done randomly
+# NOTE had to reshape
+x_train = x_train.reshape(x_train.shape[0], 16*4)
+x = x.reshape(x.shape[0], 16*4)
+#x_test,_ = apply_StandardScaling(x_test_1,scaler,False)
+sig = sig.reshape(sig.shape[0],16*4)
 #x = x[:sig.shape[0]]
 plot_vectors(x,sig,"AEtest")
 
 ## Load model
-encoder = keras.models.load_model(arch_dir+model+'5_encoder_arch')
-decoder = keras.models.load_model(arch_dir+model+'5_decoder_arch')
+encoder = keras.models.load_model(arch_dir+model+'8_encoder_arch')
+decoder = keras.models.load_model(arch_dir+model+'8_decoder_arch')
 if model.find("PFN") >-1:
     pfn = keras.models.load_model(arch_dir+model+'_pfn_arch')
 
@@ -48,8 +53,8 @@ elif model == "PFN_AE":
 elif model == "PFN_VAE":
     model_svj = PFN_VAE(pfn,encoder,decoder)
 
-model_svj.get_layer('encoder').load_weights(arch_dir+model+'5_encoder_weights.h5')
-model_svj.get_layer('decoder').load_weights(arch_dir+model+'5_decoder_weights.h5')
+model_svj.get_layer('encoder').load_weights(arch_dir+model+'8_encoder_weights.h5')
+model_svj.get_layer('decoder').load_weights(arch_dir+model+'8_decoder_weights.h5')
 if model.find("PFN") >-1:
     model_svj.get_layer('pfn').load_weights(arch_dir+model+'_pfn_weights.h5')
 
@@ -57,7 +62,7 @@ model_svj.compile(optimizer=keras.optimizers.Adam())
 #model_svj.summary()
 
 ## Load history
-with open(arch_dir+model+"_history.json", 'r') as f:
+with open(arch_dir+model+"8_history.json", 'r') as f:
     h = json.load(f)
 print(h)
 print(type(h))

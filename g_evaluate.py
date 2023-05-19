@@ -53,8 +53,8 @@ classifier.compile()
 print ("Loaded model")
 
 ## Load testing data
-x_raw = read_vectors("../v8/v8SmallPartialQCDmc20e.root", nevents)
-sig_raw = read_vectors("../v8/v8SmallSIGmc20e.root", nevents)
+x_raw = read_vectors(data_dir + "v8SmallPartialQCDmc20e.root", nevents)
+sig_raw = read_vectors(data_dir + "v8SmallSIGmc20e.root", nevents)
 
 ## apply per-event scaling
 bkg = apply_EventScaling(x_raw)

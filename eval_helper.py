@@ -10,16 +10,18 @@ from sklearn.preprocessing import MinMaxScaler
 from plot_helper import *
 from models import *
 
+data_dir = "/nevis/katya01/data/users/ebusch/SVJ/autoencoder/v8/"
+
 def getTwoJetSystem(x_events,y_events):
     track_array0 = ["jet_GhostTrack_pt_0", "jet_GhostTrack_eta_0", "jet_GhostTrack_phi_0", "jet_GhostTrack_e_0"]
     track_array1 = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"]
     jet_array = ["jet_eta", "jet_phi"]
-    bkg_in0 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array0)
-    sig_in0 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array0)
-    bkg_in1 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array1)
-    sig_in1 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array1)
-    jet_bkg = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, jet_array)
-    jet_sig = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, jet_array)
+    bkg_in0 = read_vectors(data_dir + "v8SmallPartialQCDmc20e.root", x_events, track_array0)
+    sig_in0 = read_vectors(data_dir + "v8SmallSIGmc20e.root", y_events, track_array0)
+    bkg_in1 = read_vectors(data_dir + "v8SmallPartialQCDmc20e.root", x_events, track_array1)
+    sig_in1 = read_vectors(data_dir + "v8SmallSIGmc20e.root", y_events, track_array1)
+    jet_bkg = read_vectors(data_dir + "v8SmallPartialQCDmc20e.root", x_events, jet_array)
+    jet_sig = read_vectors(data_dir + "v8SmallSIGmc20e.root", y_events, jet_array)
 
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
     _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig)
