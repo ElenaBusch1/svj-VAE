@@ -25,12 +25,10 @@ ae_model = 'PFN'
 arch_dir = "architectures_saved/"
 
 ## Load leading two jets
-# Plot inputs before the jet rotation 
 bkg, sig = getTwoJetSystem(nevents,nevents)
 
-# Plot inputs after the jet rotation
-#plot_vectors(bkg,sig,"PFNrotated")
-plot_vectors(bkg,sig,"PFN_NSYR")
+# 4. Plot inputs
+plot_vectors(bkg,sig,"PFNrotated")
 
 # Create truth target
 input_data = np.concatenate((bkg,sig),axis=0)
@@ -51,9 +49,8 @@ print(input_data.shape, truth.shape)
 pfn,graph_orig = get_full_PFN([num_elements,element_size], phi_dim)
 #pfn = get_dnn(160)
 
-# Split the data 
-# ADD 5/23/23 
-x_train, x_test, y_train, y_test = train_test_split(input_data, truth, test_size=0.02, random_state=42)
+# Split the data
+x_train, x_test, y_train, y_test = train_test_split(input_data, truth, test_size=0.02)
 #X_train, X_val, Y_train, Y_val = train_test_split(x_eval, y_eval, test_size=0.2)
 
 # Fit scaler to training data, apply to testing data
@@ -61,23 +58,13 @@ x_train, scaler = apply_StandardScaling(x_train)
 dump(scaler, arch_dir+pfn_model+'_scaler.bin', compress=True) #save the scaler
 x_test,_ = apply_StandardScaling(x_test,scaler,False)
 
-
-
 # Check the scaling & test/train split
 bkg_train_scaled = x_train[y_train[:,0] == 1]
 sig_train_scaled = x_train[y_train[:,0] == 0]
 bkg_test_scaled = x_test[y_test[:,0] == 1]
 sig_test_scaled = x_test[y_test[:,0] == 0]
-
-# Plot inputs before the jet rotation 
-print('bkg_train_scaled, bkg_test_scaled',bkg_train_scaled.shape, bkg_test_scaled.shape)
-#print(bkg_test_scaled)
-bkg_scaled=np.concatenate((bkg_train_scaled, bkg_test_scaled), axis=0)
-sig_scaled=np.concatenate((sig_train_scaled, sig_test_scaled), axis=0)
-plot_vectors(bkg_scaled,sig_scaled,"PFN_YSYR")
-
 plot_vectors(bkg_train_scaled,sig_train_scaled,"PFNtrain")
-plot_vectors(bkg_test_scaled,sig_test_scaled,"PFNtest")
+plot_vectors(bkg_train_scaled,sig_train_scaled,"PFNtest")
 
 # Train
 h = pfn.fit(x_train, y_train,

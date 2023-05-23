@@ -146,20 +146,21 @@ def pfn_mask_func(X, mask_val=0):
   return K.cast(K.any(K.not_equal(X, mask_val), axis=-1), K.dtype(X))
 
 ## ------------------------------------------------------------------------------------
-def get_full_PFN(input_dim, phi_dim):
-  initializer = keras.initializers.HeUniform()
-  loss = keras.losses.CategoricalCrossentropy()
-  optimizer = keras.optimizers.Adam(learning_rate=0.001) 
+def get_full_PFN(input_dim, phi_dim): 
+# https://wandb.ai/ayush-thakur/dl-question-bank/reports/Input-Keras-Layer-Explanation-With-Code-Samples--VmlldzoyMDIzMDU
+  initializer = keras.initializers.HeUniform() # samples from uniform distribution
+  loss = keras.losses.CategoricalCrossentropy() # computes crossentropy loss btwn labels and predictions
+  optimizer = keras.optimizers.Adam(learning_rate=0.001) # a stochastic gradient descent method  
 
   input_dim_x = input_dim[0]
   input_dim_y = input_dim[1]
 
   #input
-  pfn_inputs = keras.Input(shape=(None,input_dim_y))
-  masked = keras.layers.Lambda(pfn_mask_func, name="mask")(pfn_inputs)
+  pfn_inputs = keras.Input(shape=(None,input_dim_y)) # expected input will be [batch_size, units] or N-dim with elements #  = input_dim_y; N is unknown (=None)
+  masked = keras.layers.Lambda(pfn_mask_func, name="mask")(pfn_inputs) 
 
   # Phi network
-  dense1 = keras.layers.Dense(50, kernel_initializer=initializer, name="pfn1")
+  dense1 = keras.layers.Dense(50, kernel_initializer=initializer, name="pfn1") # 1st hidden layer: the # of units = 50
   x = keras.layers.TimeDistributed(dense1, name="tdist_0")(pfn_inputs)
   x = keras.layers.Activation('relu')(x)
   dense2 = keras.layers.Dense(50, kernel_initializer=initializer, name="pfn2") 

@@ -2,6 +2,7 @@ import uproot
 import numpy as np
 import awkward as ak
 
+import os
 variable_array = ["jet1_pt", "met_met", "dphi_min", "pt_balance_12", "mT_jj", "rT", "dR_12", "deltaY_12", "deta_12", "hT", "maxphi_minphi", "n_r04_jets"]
 #jet_array = ["all_jets_pt", "all_jets_eta", "all_jets_phi", "all_jets_E"]
 ## Track array
@@ -30,12 +31,59 @@ def read_vectors(infile, nEvents, jet_array):
 
     tree = file["outTree"]
     #print("Tree Variables: ", tree.keys())
-
+    """
+    branch = "outTree"
+    h5dir="/nevis/katya01/data/users/kpark/SVJ/h5files/pfn/"
+    filename=infile.split('.')[-2]      
+    if not os.path.exists(h5dir+filename+'.h5'):
+      branches=tree.arrays(library="pd")
+      try:branches[0].to_hdf(f'{h5dir}{filename}.h5', branch)
+      except: 
+        print('failed to use branches[0] so using something different')
+        branches.to_hdf(f'{h5dir}{filename}.h5', branch)
+    else: branches=pd.read_hdf(h5dir+filename+'.h5')
+    tree_dict={}
+    tree_dict[filename]=branches
+    print(tree_dict)
+     
+    sys.exit()
+    """
     # select evenly spaced events from input distribution
     my_jet_array = tree.arrays(jet_array, library = "np")
+    print('correct weight_array')
+    weight_array=["jet_Width"]
+    my_weight_array = tree.arrays(weight_array, library = "np")
+    print('*'*30)
+    print(nEvents)
+    """
     idx = get_spaced_elements(len(my_jet_array[jet_array[0]]),nEvents)
+    print(f'{len(my_jet_array[jet_array[0]])/nEvents}th idx', idx.shape, idx)
+    print(my_jet_array[jet_array[0]])
+    
+    """
+    my_weight_array = my_weight_array[weight_array[0]]
+    my_weight_array=np.array([my_weight_array[i][0] for i in range(my_weight_array.shape[0])  ])
+    print('my_weight_array.shape',my_weight_array.shape)
+    print('*'*30)
+    idx=np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()))
+    idx = np.sort(idx)
+#    idx[0]=1
+    print('weighted sampling idx', idx, idx.shape)
     selected_jet_array = np.array([val[idx] for _,val in my_jet_array.items()]).T
-
+    j=idx[0] # REMOVE this line
+    k=j+1
+   
+    """
+    print(f'my_jet_array[jet_array[0]], {my_jet_array[jet_array[0]]}') #dict  {'jet_GhostTrack_pt_0': array([array([ 1.0182312,...
+    print(j)
+    print(my_jet_array[jet_array[0]][j],my_jet_array[jet_array[1]][j], my_jet_array[jet_array[2]][j], my_jet_array[jet_array[3]][j])
+    print('/'*15)
+    print(k)
+    print(my_jet_array[jet_array[0]][k],my_jet_array[jet_array[1]][k], my_jet_array[jet_array[2]][k], my_jet_array[jet_array[3]][k])
+    print('selected_jet_array')
+    print(selected_jet_array)
+    sys.exit()
+    """
     # create jet matrix
     padded_jet_array = np.zeros((len(selected_jet_array),max_jets,len(jet_array)))
     for jets,zeros in zip(selected_jet_array,padded_jet_array):
