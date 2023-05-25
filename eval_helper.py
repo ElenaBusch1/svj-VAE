@@ -10,17 +10,21 @@ from sklearn.preprocessing import MinMaxScaler
 from plot_helper import *
 from models import *
 
-def getTwoJetSystem(x_events,y_events):
+def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight):
+#    track_array0 = ["jet_GhostTrack_pt_0", "jet_GhostTrack_eta_0", "jet_GhostTrack_phi_0", "jet_GhostTrack_e_0","jet_GhostTrack_z0_0", "jet_GhostTrack_d0_0", "jet_GhostTrack_qOverP_0"]
     track_array0 = ["jet_GhostTrack_pt_0", "jet_GhostTrack_eta_0", "jet_GhostTrack_phi_0", "jet_GhostTrack_e_0"]
+#    track_array1 = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1","jet_GhostTrack_z0_1", "jet_GhostTrack_d0_1", "jet_GhostTrack_qOverP_1"]
     track_array1 = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"]
     jet_array = ["jet_eta", "jet_phi"]
+#    track_array2 = ["jet_GhostTrack_d0_0", "jet_GhostTrack_z0_0", "jet_GhostTrack_qOverP_0", "jet_GhostTrack_e_0"]
+
     read_dir='/nevis/katya01/data/users/ebusch/SVJ/autoencoder/'
-    bkg_in0 = read_vectors(read_dir+"v8/v8SmallPartialQCDmc20e.root", x_events, track_array0)
-    sig_in0 = read_vectors(read_dir+"v8/v8SmallSIGmc20e.root", y_events, track_array0)
-    bkg_in1 = read_vectors(read_dir+"v8/v8SmallPartialQCDmc20e.root", x_events, track_array1)
-    sig_in1 = read_vectors(read_dir+"v8/v8SmallSIGmc20e.root", y_events, track_array1)
-    jet_bkg = read_vectors(read_dir+"v8/v8SmallPartialQCDmc20e.root", x_events, jet_array)
-    jet_sig = read_vectors(read_dir+"v8/v8SmallSIGmc20e.root", y_events, jet_array)
+    bkg_in0 = read_vectors(read_dir+"v8/v8SmallPartialQCDmc20e.root", x_events, track_array0, bool_weight=bool_weight)
+    sig_in0 = read_vectors(read_dir+"v8/v8SmallSIGmc20e.root", y_events, track_array0, bool_weight=bool_weight)
+    bkg_in1 = read_vectors(read_dir+"v8/v8SmallPartialQCDmc20e.root", x_events, track_array1, bool_weight=bool_weight)
+    sig_in1 = read_vectors(read_dir+"v8/v8SmallSIGmc20e.root", y_events, track_array1, bool_weight=bool_weight)
+    jet_bkg = read_vectors(read_dir+"v8/v8SmallPartialQCDmc20e.root", x_events, jet_array, bool_weight=bool_weight)
+    jet_sig = read_vectors(read_dir+"v8/v8SmallSIGmc20e.root", y_events, jet_array, bool_weight=bool_weight)
 
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
     _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig)
@@ -47,8 +51,8 @@ def getTwoJetSystem(x_events,y_events):
     sig_sel = np.concatenate((sig_sel0,sig_sel1),axis=1)
 #    print('bkg_sel0, bkg_sel1',bkg_sel.shape, bkg_sel1.shape)
 # ADDED 5/22/23 
-    plot_vectors(bkg_sel,sig_sel,"PFN_NSNR")
 
+    plot_vectors(bkg_sel,sig_sel,tag_file=tag_file, tag_title=tag_title)
     bkg = apply_JetScalingRotation(bkg_sel, bjet_sel,0)
     sig = apply_JetScalingRotation(sig_sel, sjet_sel,0)
 
@@ -223,7 +227,7 @@ def get_single_loss(model_svj, x_test, y_test):
 
     return bkg_loss, sig_loss
 
-def transform_loss(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
+def transform_loss(bkg_loss, sig_loss, make_plot=False, tag_file="", tag_title=""):
     nevents = len(sig_loss)
     truth_sig = np.ones(nevents)
     truth_bkg = np.zeros(nevents)
@@ -235,7 +239,7 @@ def transform_loss(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
     bkg_transformed = [(x - eval_min)/eval_max for x in bkg_loss]
     sig_transformed = [(x - eval_min)/eval_max for x in sig_loss]
     if make_plot:
-        plot_score(bkg_transformed, sig_transformed, False, False, plot_tag+'_Transformed')
+        plot_score(bkg_transformed, sig_transformed, False, False, tag_file=tag_file+'_Transformed', tag_title=tag_title+'_Transformed')
     return truth_labels, eval_vals 
 
 def getSignalSensitivityScore(bkg_loss, sig_loss, percentile=95):
@@ -245,12 +249,12 @@ def getSignalSensitivityScore(bkg_loss, sig_loss, percentile=95):
 def applyScoreCut(loss,test_array,cut_val):
     return test_array[loss>cut_val] 
 
-def do_roc(bkg_loss, sig_loss, plot_tag, make_transformed_plot=False):
-    truth_labels, eval_vals = transform_loss(bkg_loss, sig_loss, make_plot=make_transformed_plot, plot_tag=plot_tag) 
+def do_roc(bkg_loss, sig_loss, tag_file, tag_title, make_transformed_plot=False):
+    truth_labels, eval_vals = transform_loss(bkg_loss, sig_loss, make_plot=make_transformed_plot, tag_file=tag_file, tag_title=tag_title) 
     fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
     auc = roc_auc_score(truth_labels, eval_vals)
-    print("AUC - "+plot_tag+": ", auc)
-    make_roc(fpr,tpr,auc,plot_tag)
-    make_sic(fpr,tpr,auc,plot_tag)
+    print("AUC - "+tag_file+": ", auc)
+    make_roc(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title)
+    make_sic(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title)
     return auc
 

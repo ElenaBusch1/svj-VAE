@@ -31,7 +31,7 @@ else: jets_1D = True
 x_full, sig = getTwoJetSystem(xevents,nevents)
 x_train, x, _, _ = train_test_split(x_full, x_full, test_size=sig.shape[0]) #done randomly
 #x = x[:sig.shape[0]]
-plot_vectors(x,sig,"AEtest")
+plot_vectors(x,sig,tag_file="AEtest", tag_title="AEtest")
 
 ## Load model
 encoder = keras.models.load_model(arch_dir+model+'5_encoder_arch')
@@ -72,7 +72,7 @@ if (model.find("VAE") > -1):
 else:
     pred_bkg = model_svj.predict(x)['reconstruction']
     pred_sig = model_svj.predict(sig)['reconstruction']
-    plot_vectors(pred_bkg,pred_sig,"AEpred")
+    plot_vectors(pred_bkg,pred_sig,tag_file="AEpred",tag_title="AEpred")
     
     bkg_loss = keras.losses.mse(x, pred_bkg)
     sig_loss = keras.losses.mse(sig, pred_sig)
@@ -80,22 +80,22 @@ else:
 
 # --- Eval plots 
 # # 1. Loss vs. epoch 
-plot_saved_loss(h, model, "loss")
+plot_saved_loss(h,  loss="loss", tag_file=model, tag_title=model)
 # if model.find('VAE') > -1:
-#     plot_saved_loss(h, model, "kl_loss")
-#     plot_saved_loss(h, model, "reco_loss")
+#    plot_saved_loss(h,  loss="kl_loss", tag_file=model, tag_title=model)
+#    plot_saved_loss(h,  loss="reco_loss", tag_file=model, tag_title=model)
 # 2. Anomaly score
-plot_score(bkg_loss, sig_loss, False, False, model)
-#plot_score(bkg_loss, sig_loss, False, True, model+"_xlog")
+plot_score(bkg_loss, sig_loss, False, False, tag_file=model, tag_title=model)
+#plot_score(bkg_loss, sig_loss, False, True, tag_file=model+"_xlog", tag_title=model+"_xlog")
 if model.find('VAE') > -1:
-    plot_score(bkg_kl_loss, sig_kl_loss, remove_outliers=False, xlog=True, extra_tag=model+"_KLD")
-    plot_score(bkg_reco_loss, sig_reco_loss, False, False, model_name+'_Reco')
+    plot_score(bkg_kl_loss, sig_kl_loss, remove_outliers=False, xlog=True, tag_file=model+"_KLD", tag_title=model+"_KLD")
+    plot_score(bkg_reco_loss, sig_reco_loss, False, False, tag_file=model_name+'_Reco', tag_title=model_name+'_Reco')
 # # 3. Signal Sensitivity Score
 # score = getSignalSensitivityScore(bkg_loss, sig_loss)
 # print("score = ",score)
 # 4. ROCs/AUCs using sklearn functions imported above  
-do_roc(bkg_loss, sig_loss, model, True)
+do_roc(bkg_loss, sig_loss, tag_file=model,tag_title=model,make_transformed_plot= True)
 # if model.find('VAE') > -1:
-#     do_roc(bkg_reco_loss, sig_reco_loss, model+'_Reco', True)
-#     do_roc(bkg_kl_loss, sig_kl_loss, model+'_KLD', True)
+#     do_roc(bkg_reco_loss, sig_reco_loss, tag_file=model+'_Reco',tag_title=model+'_Reco',make_transformed_plot= True)
+#     do_roc(bkg_kl_loss, sig_kl_loss, tag_file=model+'_KLD',tag_title=model+'_KLD',make_transformed_plot= True)
 

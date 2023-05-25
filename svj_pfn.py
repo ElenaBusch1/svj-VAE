@@ -23,14 +23,19 @@ batchsize_ae=32
 pfn_model = 'PFN'
 ae_model = 'PFN'
 arch_dir = "architectures_saved/"
-
 ## Load leading two jets
-# Plot inputs before the jet rotation 
-bkg, sig = getTwoJetSystem(nevents,nevents)
+# Plot inputs before the jet rotation
+bool_weight=True
+if bool_weight:weight_tag='weightSampled'
+else:weight_tag='notweightSampled'
+tag= f"{pfn_model}_2jAvg_MM_{weight_tag}"
+
+bkg, sig = getTwoJetSystem(nevents,nevents, tag_file=tag+"_NSNR", tag_title=weight_tag+"_NSNR", bool_weight=bool_weight)
 
 # Plot inputs after the jet rotation
 #plot_vectors(bkg,sig,"PFNrotated")
-plot_vectors(bkg,sig,"PFN_NSYR")
+#plot_vectors(bkg,sig,tag_file=tag+"_NSYR", tag_title=tag+"_NSYR")
+plot_vectors(bkg,sig,tag_file=tag+"_NSYR", tag_title=weight_tag+"_NSYR")
 
 # Create truth target
 input_data = np.concatenate((bkg,sig),axis=0)
@@ -74,10 +79,10 @@ print('bkg_train_scaled, bkg_test_scaled',bkg_train_scaled.shape, bkg_test_scale
 #print(bkg_test_scaled)
 bkg_scaled=np.concatenate((bkg_train_scaled, bkg_test_scaled), axis=0)
 sig_scaled=np.concatenate((sig_train_scaled, sig_test_scaled), axis=0)
-plot_vectors(bkg_scaled,sig_scaled,"PFN_YSYR")
+plot_vectors(bkg_scaled,sig_scaled,tag_file=tag+"_YSYR", tag_title=weight_tag+"_YSYR")
 
-plot_vectors(bkg_train_scaled,sig_train_scaled,"PFNtrain")
-plot_vectors(bkg_test_scaled,sig_test_scaled,"PFNtest")
+plot_vectors(bkg_train_scaled,sig_train_scaled,tag_file=tag+"_train", tag_title=weight_tag+"_train")
+plot_vectors(bkg_test_scaled,sig_test_scaled,tag_file=tag+"_test", tag_title=weight_tag+"_test")
 
 # Train
 h = pfn.fit(x_train, y_train,
@@ -94,15 +99,17 @@ pfn.get_layer('classifier').save(arch_dir+pfn_model+'_classifier_arch')
 
 ## PFN training plots
 # 1. Loss vs. epoch 
-plot_loss(h, pfn_model, 'loss')
+#plot_loss(h, pfn_model, 'loss')
+plot_loss(h, loss= 'loss', tag_file=tag, tag_title=tag)
 # 2. Score 
 preds = pfn.predict(x_test)
 bkg_score = preds[:,1][y_test[:,1] == 0]
 sig_score = preds[:,1][y_test[:,1] == 1]
-plot_score(bkg_score, sig_score, False, False, pfn_model)
+plot_score(bkg_score, sig_score, False, False,tag_file=tag, tag_title=tag)
+#plot_score(bkg_score, sig_score, False, False, pfn_model)
 n_test = min(len(sig_score),len(bkg_score))
 bkg_score = bkg_score[:n_test]
 sig_score = sig_score[:n_test]
-do_roc(bkg_score, sig_score, "PFN", False)
+do_roc(bkg_score, sig_score, tag_file=tag, tag_title=tag, make_transformed_plot=False)
 
 

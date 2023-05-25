@@ -23,7 +23,7 @@ def read_test_variables(infile, nEvents, variables):
         my_dict[key] = my_dict[key][idx]
     return my_dict
 
-def read_vectors(infile, nEvents, jet_array):
+def read_vectors(infile, nEvents, jet_array, bool_weight=True):
     file = uproot.open(infile)
     
     #print("File keys: ", file.keys())
@@ -48,27 +48,31 @@ def read_vectors(infile, nEvents, jet_array):
      
     sys.exit()
     """
-    # select evenly spaced events from input distribution
     my_jet_array = tree.arrays(jet_array, library = "np")
-    print('correct weight_array')
-    weight_array=["jet_Width"]
-    my_weight_array = tree.arrays(weight_array, library = "np")
-    print('*'*30)
-    print(nEvents)
-    """
-    idx = get_spaced_elements(len(my_jet_array[jet_array[0]]),nEvents)
-    print(f'{len(my_jet_array[jet_array[0]])/nEvents}th idx', idx.shape, idx)
-    print(my_jet_array[jet_array[0]])
-    
-    """
-    my_weight_array = my_weight_array[weight_array[0]]
-    my_weight_array=np.array([my_weight_array[i][0] for i in range(my_weight_array.shape[0])  ])
-    print('my_weight_array.shape',my_weight_array.shape)
-    print('*'*30)
-    idx=np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()))
-    idx = np.sort(idx)
+
+    if bool_weight:
+      print('*'*30)
+      print('correct weight_array')
+      weight_array=["jet_Width"]
+      my_weight_array = tree.arrays(weight_array, library = "np")
+      print(nEvents)
+      my_weight_array = my_weight_array[weight_array[0]]
+      my_weight_array=np.array([my_weight_array[i][0] for i in range(my_weight_array.shape[0])  ])
+      print('my_weight_array.shape',my_weight_array.shape)
+      print('*'*30)
+      idx=np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
+      idx = np.sort(idx)
 #    idx[0]=1
-    print('weighted sampling idx', idx, idx.shape)
+      print('weighted sampling idx', idx.shape, idx)
+
+    else: 
+      print('*'*30)
+    # select evenly spaced events from input distribution
+      idx = get_spaced_elements(len(my_jet_array[jet_array[0]]),nEvents)
+      print(f'{len(my_jet_array[jet_array[0]])/nEvents}th idx', idx.shape, idx)
+      print(my_jet_array[jet_array[0]])
+      print('evenly spaced sampling idx', idx.shape, idx)
+
     selected_jet_array = np.array([val[idx] for _,val in my_jet_array.items()]).T
     j=idx[0] # REMOVE this line
     k=j+1

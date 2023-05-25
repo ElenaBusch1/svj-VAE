@@ -6,7 +6,7 @@ from matplotlib import colors
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = "PFN_2jAvg_MM"
+#tag = "PFN_2jAvg_MM"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/'
 def detect_outliers(x):
@@ -17,32 +17,34 @@ def detect_outliers(x):
   print(n_removed, " outliers removed")
   return x_smooth, n_removed
 
-def plot_loss(h, model="", loss='loss'):
+def plot_loss(h, loss='loss', tag_file="", tag_title=""):
   #print(h.history)
   plt.plot(h.history[loss])
   plt.plot(h.history['val_'+loss])
-  plt.title(model+' '+loss)
+  plt.title(loss +f' {tag_title}')
   plt.ylabel('loss')
   plt.xlabel('epoch')
   plt.yscale('log')
   plt.legend(['train', 'val'], loc='upper left')
-  plt.savefig(plot_dir+loss+'VsEpoch_'+model+'_'+tag+'.png')
+#  plt.savefig(plot_dir+loss+'VsEpoch_'+model+'_'+tag+'.png')
+  plt.savefig(plot_dir+loss+'VsEpoch_'+tag_file+'.png')
   plt.clf()
-  print("Saved loss plot for ", model, loss)
+  print("Saved loss plot for ", tag_file, loss)
 
-def plot_saved_loss(h, model="", loss='loss'):
+def plot_saved_loss(h, loss='loss', tag_file="", tag_title=""):
   plt.plot(h[loss])
   plt.plot(h['val_'+loss])
-  plt.title(model+' '+loss)
+  plt.title(loss +f' {tag_title}')
   plt.ylabel('loss')
   plt.xlabel('epoch')
   plt.yscale('log')
   plt.legend(['train', 'val'], loc='upper left')
-  plt.savefig(plot_dir+loss+'VsEpoch_'+model+'_'+tag+'log.png')
+  #plt.savefig(plot_dir+loss+'VsEpoch_'+model+'_'+tag+'log.png')
+  plt.savefig(plot_dir+loss+'VsEpoch_'+tag_file+'log.png')
   plt.clf()
-  print("Saved loss plot for ", model, loss)
+  print("Saved loss plot for ", tag_file)
 
-def plot_var(x_dict, x_cut1, x_cut2, key):
+def plot_var(x_dict, x_cut1, x_cut2, key , tag_file="", tag_title=""):
   #bmax = max(max(x_orig),max(y_orig))
   #bmin = min(min(x_orig),min(y_orig))
   #bins=np.histogram(np.hstack((x_dict[key],x_cut1[key])),bins=20)[1]
@@ -54,7 +56,7 @@ def plot_var(x_dict, x_cut1, x_cut2, key):
   ax[0].set_yscale('log')
   ax[0].set_ylabel('Events')
   ax[0].legend()
-  ax[0].set_title(key + "; 50% and 2% Cuts")
+  ax[0].set_title(key + "; 50% and 2% Cuts"+f' {tag_title}')
   #plt.subplot(2,1,2)
   ax[1].plot(bins[:-1],np.ones(len(bins)-1), linestyle='dashed', color = 'dimgray')
   ax[1].plot(bins[:-1],2*h2[0]/h1[0], drawstyle='steps', color='mediumblue')
@@ -62,44 +64,44 @@ def plot_var(x_dict, x_cut1, x_cut2, key):
   ax[1].set_ylim(0,2)
   ax[1].set_xlabel('GeV')
   ax[1].set_ylabel('Ratio * (1/cut)')
-  plt.savefig(plot_dir+key+'_'+tag+'.png')
+  plt.savefig(plot_dir+key+'_'+tag_file+'.png')
   plt.clf()
   print("Saved cut distribution for", key)
 
-def make_roc(fpr,tpr,auc,model=""):
+def make_roc(fpr,tpr,auc, tag_file="", tag_title=""):
   plt.plot(fpr,tpr,label="AUC = %0.2f" % auc)
   plt.xlabel("False Positive Rate")
   plt.ylabel("True Positive Rate")
-  plt.title("SVJ "+model+" ROC")
+  plt.title("SVJ "+" ROC" +f' {tag_title}')
   plt.legend()
-  plt.savefig(plot_dir+'roc_'+model+'_'+tag+'.png')
+  plt.savefig(plot_dir+'roc_'+tag_file+'.png')
   plt.clf()
-  print("Saved ROC curve for model", model)
+  print("Saved ROC curve for ", tag_file)
 
-def make_sic(fpr,tpr,auc, model=""):
+def make_sic(fpr,tpr,auc,  tag_file="", tag_title=""):
   y = tpr[1:]/np.sqrt(fpr[1:])
   plt.plot(tpr[1:],y,label="AUC = %0.2f" % auc)
   plt.axhline(y=1, color='0.8', linestyle='--')
   plt.xlabel("Signal Efficiency (TPR)")
   plt.ylabel("Signal Sensitivity ($TPR/\sqrt{FPR}$)")
-  plt.title("Significance Improvement Characteristic: "+model )
+  plt.title("Significance Improvement Characteristic: " +f' {tag_title}')
   plt.legend()
-  plt.savefig(plot_dir+'sic_'+model+'_'+tag+'.png')
+  plt.savefig(plot_dir+'sic_'+tag_file+'.png')
   plt.clf()
-  print("Saved SIC for", model)
+  print("Saved SIC for", tag_file)
 
 
-def make_single_roc(rocs,aucs,ylabel):
+def make_single_roc(rocs,aucs,ylabel, tag_file="", tag_title=""):
   plt.plot(rocs[0],rocs[1],label=str(np.round(r,4))+", $\sigma$="+str(sigs)+": AUC="+str(np.round(aucs,3)))
   plt.xlabel('fpr')
   plt.ylabel(Ylabel)
-  plt.title('ROC: '+saveTag)
+  plt.title('ROC: '+saveTag+f' {tag_title}')
   plt.figtext(0.7,0.95,"size="+str(sizeeach)+", nvars="+str(nInputs))
   plt.legend()
-  plt.savefig(saveTag+'_roc_aucs_'+Ylabel.replace("/","")+'.pdf')
+  plt.savefig(saveTag+'_roc_aucs_'+Ylabel.replace("/","")+tag_file+'.pdf')
   plt.clf()
 
-def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, extra_tag=""):
+def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="", tag_title=""):
   if remove_outliers:
     bkg_score,nb = detect_outliers(bkg_score)
     sig_score,ns = detect_outliers(sig_score)
@@ -119,13 +121,13 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, extra_tag=
   if xlog: plt.xscale('log')
   plt.yscale('log')
   plt.legend()
-  plt.title("Anomaly Score " + extra_tag)
+  plt.title(f'Anomaly Score {tag_title}')
   plt.xlabel('Loss')
-  plt.savefig(plot_dir+'score_'+extra_tag+'_'+tag+'.png')
+  plt.savefig(plot_dir+'score_'+tag_file+'.png')
   plt.clf()
-  print("Saved score distribution for", extra_tag)
+  print("Saved score distribution for", tag_file)
 
-def plot_phi(phis,name,extra_tag):
+def plot_phi(phis,name,extra_tag, tag_file="", tag_title=""):
   nphis = phis.shape[1]
   nevents = phis.shape[0]
   idx = [i for i in range(nphis)]*nevents
@@ -142,19 +144,19 @@ def plot_phi(phis,name,extra_tag):
   fig.colorbar(h[3], ax=ax)
   ax.set_xlabel('Value')
   ax.set_ylabel('Index')
-  ax.set_title('PFN Set Representation - '+name)
-  plt.savefig(plot_dir+'phi2D_'+name+'_'+extra_tag+'_'+tag+'.png')
-  print("Saved 2D plot of phi-rep for", extra_tag)
+  ax.set_title('PFN Set Representation - '+name +f' {tag_title}')
+  plt.savefig(plot_dir+'phi2D_'+name+'_'+tag_file+'.png')
+  print("Saved 2D plot of phi-rep for", tag_file)
 
-def plot_inputs(bkg, sig):
+def plot_inputs(bkg, sig, tag_file="", tag_title=""):
   for i in range(len(variable_array)):
     plt.subplot(2,2,i%4+1)
     plt.tight_layout(h_pad=1, w_pad=1)
     plt.hist(bkg[:,i], bins=30, alpha=0.5, density=True)  
     plt.hist(sig[:,i], bins=30, alpha=0.5, density=True)
-    plt.title(variable_array[i])
+    plt.title(variable_array[i]+f' {tag_title}')
     if (i%4 == 3):
-      plt.savefig(plot_dir+'input_vars_'+str(i)+tag+'.png')
+      plt.savefig(plot_dir+'input_vars_'+str(i)+tag_file+'.png')
       plt.clf()
 
 def get_nTracks(x):
@@ -165,20 +167,20 @@ def get_nTracks(x):
     n_tracks.append(len(tracks))
   return n_tracks
  
-def plot_nTracks(bkg, sig):
+def plot_nTracks(bkg, sig, tag_file="", tag_title=""):
   bkg_tracks = get_nTracks(bkg)
   sig_tracks = get_nTracks(sig)
   #bins=np.histogram(np.hstack((bkg_tracks,sig_tracks)),bins=60)[1]
   bins = np.arange(0,50,1)
   plt.hist(bkg_tracks,alpha=0.5, label="bkg", bins=bins, density=False)
   plt.hist(sig_tracks,alpha=0.5, label="sig", bins=bins, density=False)
-  plt.title("nTracks (after pT>10) - Tertiary")
+  plt.title("nTracks (after pT>10) - Tertiary"+f' {tag_title}')
   plt.legend()
-  plt.savefig(plot_dir+'nTracks_'+tag+'.png')
+  plt.savefig(plot_dir+'nTracks_'+'_'+tag_file+'.png')
   plt.clf()
   print("Saved plot of nTracks")
 
-def plot_vectors(train,sig,extra_tag):
+def plot_vectors(train,sig, tag_file="", tag_title=""):
   variable_array = ["pT", "eta", "phi", "E"]
   print('before reshaping, train and sig', train.shape, sig.shape)
  
@@ -200,11 +202,11 @@ def plot_vectors(train,sig,extra_tag):
     #plt.hist(test_v, alpha=0.5, label="test", bins=bins, density=True, color='lightskyblue')
     plt.hist(sig_v, alpha=0.5, label=f"sig ({len(sig_v)})", bins=bins, density=False)
     plt.yscale('log')
-    plt.title(variable_array[i])
+    plt.title(f'{variable_array[i]} {tag_title}')
     if i == 1: plt.legend()
-  plt.savefig(plot_dir+'inputs_'+extra_tag+'_'+tag+'.png')
+  plt.savefig(plot_dir+'inputs_'+tag_file+'.png')
   plt.clf()
-  print("Saved inputs plot (", extra_tag, ")")
+  print("Saved inputs plot (", tag_file, ")")
 
 
 
