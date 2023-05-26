@@ -12,7 +12,9 @@ from eval_helper import *
 # Example usage
 nevents = 50000
 num_elements = 100
-element_size = 4
+element_size = 7 # change here
+#element_size = 4 # change here
+
 encoding_dim = 32
 latent_dim = 4
 phi_dim = 64
@@ -28,7 +30,7 @@ arch_dir = "architectures_saved/"
 bool_weight=True
 if bool_weight:weight_tag='weightSampled'
 else:weight_tag='notweightSampled'
-tag= f"{pfn_model}_2jAvg_MM_{weight_tag}"
+tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 
 bkg, sig = getTwoJetSystem(nevents,nevents, tag_file=tag+"_NSNR", tag_title=weight_tag+"_NSNR", bool_weight=bool_weight)
 

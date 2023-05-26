@@ -7,6 +7,7 @@ variable_array = ["jet1_pt", "met_met", "dphi_min", "pt_balance_12", "mT_jj", "r
 #jet_array = ["all_jets_pt", "all_jets_eta", "all_jets_phi", "all_jets_E"]
 ## Track array
 #jet_array = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"] #"jet_GhostTrack_d0_0", "jet_GhostTrack_z0_0", "jet_GhostTrack_qOverP_0"]
+#jet_array = ["all_jets_pt", "all_jets_eta", "all_jets_phi", "all_jets_E"]
 
 def get_spaced_elements(arr_len,nElements):
     return np.round(np.linspace(0,arr_len-1, nElements)).astype(int)
@@ -23,13 +24,50 @@ def read_test_variables(infile, nEvents, variables):
         my_dict[key] = my_dict[key][idx]
     return my_dict
 
-def read_vectors(infile, nEvents, jet_array, bool_weight=True):
+def read_hlvs(infile, nEvents, variable_array): # different from variable_array on the top of this file
+    file = uproot.open(infile)
+	
+	
+    tree = file["PostSel"]
+
+	# A random 6 variables	
+    my_array = tree.arrays(variable_array, library="np")
+    idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
+    selected_array = np.array([val[idx] for _,val in my_array.items()]).T
+	#print("My array:")
+	#print(selected_array)
+	#print(type(selected_array))
+    
+
+#    print('before-'*50)
+#    print(f'{infile}\n{selected_array.shape}\n{selected_array}')
+    max_jets=15 
+    unique_variable_array=list(set([x.split("_")[-1] for x in variable_array])) # unique variable name without 'jetx_' 
+    padded_array= np.zeros((len(selected_array),max_jets,len(unique_variable_array)))
+    for e in range(selected_array.shape[0]):
+      padded_array[e, 0,0]=selected_array[e,0]
+      padded_array[e, 1,0]=selected_array[e,1]
+      padded_array[e, 0,1]=selected_array[e,2]
+      padded_array[e, 1,1]=selected_array[e,3]
+      
+ 
+    print('-'*50)
+#    print(f'{infile}\n{padded_array.shape}\n{padded_array}')
+    #return selected_array
+    return padded_array
+ 
+
+
+#def read_vectors(infile, nEvents, jet_array, bool_weight=True):
+#def read_vectors(infile, nEvents, bool_weight=True, flatten=True):
+def read_vectors(infile, nEvents,jet_array, bool_weight=True):
     file = uproot.open(infile)
     
     #print("File keys: ", file.keys())
-    max_jets = 100
+    max_jets = 15
 
-    tree = file["outTree"]
+    try:tree = file["PostSel"]
+    except:   tree = file["outTree"]
     #print("Tree Variables: ", tree.keys())
     """
     branch = "outTree"
@@ -49,29 +87,29 @@ def read_vectors(infile, nEvents, jet_array, bool_weight=True):
     sys.exit()
     """
     my_jet_array = tree.arrays(jet_array, library = "np")
-
     if bool_weight:
-      print('*'*30)
-      print('correct weight_array')
-      weight_array=["jet_Width"]
+#      print('*'*30)
+#      print('correct weight_array')
+      #weight_array=["jet_Width"]
+      weight_array=["weight"]
       my_weight_array = tree.arrays(weight_array, library = "np")
-      print(nEvents)
+#      print(nEvents)
       my_weight_array = my_weight_array[weight_array[0]]
-      my_weight_array=np.array([my_weight_array[i][0] for i in range(my_weight_array.shape[0])  ])
-      print('my_weight_array.shape',my_weight_array.shape)
-      print('*'*30)
+      #my_weight_array=np.array([my_weight_array[i][0] for i in range(my_weight_array.shape[0])  ])
+#      print('my_weight_array.shape',my_weight_array.shape)
+#      print('*'*30)
       idx=np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
       idx = np.sort(idx)
 #    idx[0]=1
-      print('weighted sampling idx', idx.shape, idx)
+#      print('weighted sampling idx', idx.shape, idx)
 
     else: 
-      print('*'*30)
+#      print('*'*30)
     # select evenly spaced events from input distribution
       idx = get_spaced_elements(len(my_jet_array[jet_array[0]]),nEvents)
-      print(f'{len(my_jet_array[jet_array[0]])/nEvents}th idx', idx.shape, idx)
-      print(my_jet_array[jet_array[0]])
-      print('evenly spaced sampling idx', idx.shape, idx)
+#      print(f'{len(my_jet_array[jet_array[0]])/nEvents}th idx', idx.shape, idx)
+#      print(my_jet_array[jet_array[0]])
+#      print('evenly spaced sampling idx', idx.shape, idx)
 
     selected_jet_array = np.array([val[idx] for _,val in my_jet_array.items()]).T
     j=idx[0] # REMOVE this line
@@ -94,6 +132,8 @@ def read_vectors(infile, nEvents, jet_array, bool_weight=True):
         jet_ar = np.stack(jets, axis=1)[:max_jets,:]
         zeros[:jet_ar.shape[0], :jet_ar.shape[1]] = jet_ar
 
+#    print('-'*50)
+#    print(f'{infile}\n{padded_jet_array.shape}\n{padded_jet_array}')
     return padded_jet_array
 
 def read_vectors_MET(infile, nEvents, flatten=True):

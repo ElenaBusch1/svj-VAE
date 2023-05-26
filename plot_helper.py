@@ -8,7 +8,7 @@ from math import ceil
 
 #tag = "PFN_2jAvg_MM"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
-plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/'
+plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/may26/'
 def detect_outliers(x):
   z = np.abs(stats.zscore(x))
   print(max(z))
@@ -181,7 +181,8 @@ def plot_nTracks(bkg, sig, tag_file="", tag_title=""):
   print("Saved plot of nTracks")
 
 def plot_vectors(train,sig, tag_file="", tag_title=""):
-  variable_array = ["pT", "eta", "phi", "E"]
+  #variable_array = ["pT", "eta", "phi", "E"]
+  variable_array = ["pT", "eta", "phi", "E", "z0", "d0", "qOverP"]
   print('before reshaping, train and sig', train.shape, sig.shape)
  
   if (len(train.shape) == 3):
@@ -189,14 +190,16 @@ def plot_vectors(train,sig, tag_file="", tag_title=""):
   if (len(sig.shape) == 3):
     sig = sig.reshape(sig.shape[0], sig.shape[1] * sig.shape[2])
   print('after reshaping, train and sig', train.shape, sig.shape)
-  for i in range(4):
-    train_v = train[:,i::4].flatten()
-    #test_v = test[:,i::4].flatten()
-    sig_v = sig[:,i::4].flatten()
-    print(f'variable_array[i], after reshaping and flattening, train and sig', train_v.shape, sig_v.shape)
+#  size=4
+  size=7
+  for i in range(size):
+    train_v = train[:,i::size].flatten()
+    #test_v = test[:,i::size].flatten()
+    sig_v = sig[:,i::size].flatten()
+    print(f'{variable_array[i]}, after reshaping and flattening, train and sig', train_v.shape, sig_v.shape)
     bins=np.histogram(np.hstack((train_v,sig_v)),bins=60)[1]
     if(bins[-1] > 3000): bins = np.arange(0,3000,50)
-    plt.subplot(2,2,i+1)
+    plt.subplot(4,2,i+1)
     plt.tight_layout(h_pad=1, w_pad=1)
     plt.hist(train_v, alpha=0.5, label=f"bkg ({len(train_v)})", bins=bins, density=False)
     #plt.hist(test_v, alpha=0.5, label="test", bins=bins, density=True, color='lightskyblue')
