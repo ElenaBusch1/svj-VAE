@@ -54,7 +54,7 @@ def getTwoJetSystem(x_events,y_events):
     #plot
     #x_sel_nz = remove_zero_padding(bkg_sel)
     #sig_sel_nz = remove_zero_padding(sig_sel)
-    #plot_vectors(x_sel_nz,sig_sel_nz,"AEraw")
+    #plot_vectors(bkg_sel,sig_sel,"PFNraw")
     #x_nz = remove_zero_padding(bkg)
     #sig_nz = remove_zero_padding(sig)
     #plot_vectors(x_nz,sig_nz,"AErotated_avg")

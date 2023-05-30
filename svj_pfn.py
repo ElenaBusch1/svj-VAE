@@ -10,7 +10,7 @@ from plot_helper import *
 from eval_helper import *
 
 # Example usage
-nevents = 50000
+nevents = 500000
 num_elements = 100
 element_size = 4
 encoding_dim = 32
@@ -26,6 +26,7 @@ arch_dir = "architectures_saved/"
 
 ## Load leading two jets
 bkg, sig = getTwoJetSystem(nevents,nevents)
+quit()
 
 # 4. Plot inputs
 plot_vectors(bkg,sig,"PFNrotated")
