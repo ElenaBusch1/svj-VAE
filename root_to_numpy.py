@@ -22,13 +22,25 @@ def read_test_variables(infile, nEvents, variables):
         my_dict[key] = my_dict[key][idx]
     return my_dict
 
+def read_flat_vars(infile, nEvents, variable_array):
+    file = uproot.open(infile)
+    
+    tree = file["PostSel"]
+    
+    # A random 6 variables	
+    my_array = tree.arrays(variable_array, library="np")
+    idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
+    selected_array = np.array([val[idx] for _,val in my_array.items()]).T
+
+    return selected_array
+
 def read_vectors(infile, nEvents, jet_array):
     file = uproot.open(infile)
     
     #print("File keys: ", file.keys())
     max_jets = 100
 
-    tree = file["outTree"]
+    tree = file["PostSel"]
     #print("Tree Variables: ", tree.keys())
 
     # select evenly spaced events from input distribution
@@ -43,39 +55,6 @@ def read_vectors(infile, nEvents, jet_array):
         zeros[:jet_ar.shape[0], :jet_ar.shape[1]] = jet_ar
 
     return padded_jet_array
-
-def read_vectors_MET(infile, nEvents, flatten=True):
-    file = uproot.open(infile)
-    
-    #print("File keys: ", file.keys())
-    max_jets = 15    
-
-    tree = file["PostSel"]
-    #print("Tree Variables: ", tree.keys())
-
-    # select evenly spaced events from input distribution
-    my_jet_array = tree.arrays(jet_array, library = "np")
-    my_eventNumber_array = tree.arrays(["eventNumber"], library = "np")
-    idx = get_spaced_elements(len(my_jet_array[jet_array[0]]),nEvents)
-    my_met_array = tree.arrays(["met_met", "met_phi"], library = "np")
-    selected_met_array = np.array([val[idx] for _,val in my_met_array.items()]).T
-    selected_jet_array = np.array([val[idx] for _,val in my_jet_array.items()]).T
-
-    # create jet matrix
-    padded_jet_array = np.zeros((len(selected_jet_array),max_jets+1,4))
-    for jets,zeros,met in zip(selected_jet_array,padded_jet_array,selected_met_array):
-        jet_ar = np.stack(jets, axis=1)[:max_jets,:]
-        zeros[0,0] = met[0] #pt energy
-        zeros[0,2] = met[1] #phi
-        zeros[0,3] = met[0] #total energy = pt
-        zeros[1:jet_ar.shape[0]+1, :jet_ar.shape[1]] = jet_ar
-
-    if (flatten):
-        padded_jet_array = padded_jet_array.reshape(len(selected_jet_array),(max_jets+1)*4)
-    #print(padded_jet_array)
-
-    return padded_jet_array
-
 
 def main():
     read_test_variables("../v6.4/v6p4smallQCD.root", 100, ['mT_jj', 'met_met'])

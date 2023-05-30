@@ -65,6 +65,7 @@ plot_phi(phi_testb,"test","PFN_phi_test_scaled")
 plot_phi(phi_sig,"sig","PFN_phi_sig_scaled")
 
 ae = get_ae(phi_dim,encoding_dim,latent_dim)
+quit()
 
 h2 = ae.fit(phi_evalb, 
     epochs=nepochs,
