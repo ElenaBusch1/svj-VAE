@@ -20,7 +20,8 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight):
 #    track_array1 = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1","jet_GhostTrack_z0_1", "jet_GhostTrack_d0_1", "jet_GhostTrack_qOverP_1"]
     #track_array1 = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"]
 #    jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi", "jet1_pt", "jet2_pt"]
-    jet_array = ["jet1_eta", "jet2_eta", "jet1_phi", "jet2_phi"] # order is important in apply_JetScalingRotation
+    jet_array = ["jet1_pt", "jet2_pt", "jet1_phi", "jet2_phi"] # order is important in apply_JetScalingRotation
+    #jet_array = ["jet1_eta", "jet2_eta", "jet1_phi", "jet2_phi"] # order is important in apply_JetScalingRotation
 #    jet_array_old = ["jet_eta", "jet_phi"]
 #    track_array2 = ["jet_GhostTrack_d0_0", "jet_GhostTrack_z0_0", "jet_GhostTrack_qOverP_0", "jet_GhostTrack_e_0"]
 
@@ -44,18 +45,16 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight):
 
     """
     read_dir='/nevis/katya01/data/users/ebusch/SVJ/autoencoder/v8.1/'
+#    jet_bkg = read_hlvs(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, jet_array)  # select with weight??
+    jet_bkg = read_hlvs(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, jet_array, bool_weight=bool_weight)  # select with weight??
     bkg_in0 = read_vectors(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, track_array0, bool_weight=bool_weight)
-    #bkg_in0 = read_vectors(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events,  bool_weight=bool_weight)
     sig_in0 = read_vectors(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events,track_array0, bool_weight=bool_weight)
-    #sig_in0 = read_vectors(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events, bool_weight=bool_weight)
     bkg_in1 = read_vectors(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, track_array1, bool_weight=bool_weight)
-    #bkg_in1 = read_vectors(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events,  bool_weight=bool_weight)
     sig_in1 = read_vectors(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events,track_array1, bool_weight=bool_weight)
-    #sig_in1 = read_vectors(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events, bool_weight=bool_weight)
-    jet_bkg = read_hlvs(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, jet_array)  # select with weight??
-    #jet_bkg = read_hlvs(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events,  bool_weight=bool_weight)
-    jet_sig = read_hlvs(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events, jet_array)
-    #jet_sig = read_hlvs(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events,  bool_weight=bool_weight)
+#    jet_sig = read_hlvs(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events, jet_array)
+    jet_sig = read_hlvs(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events, jet_array, bool_weight=bool_weight)
+
+    plot_vectors_jet(jet_bkg,jet_sig,tag_file=tag_file, tag_title=tag_title)
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
     _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig)
     _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
@@ -75,6 +74,8 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight):
     sig_pt1 = sig_in1[sig_nz]
     bjet_sel = jet_bkg[bkg_nz]
     sjet_sel = jet_sig[sig_nz]
+    
+    print('bkg_pt0',bkg_pt0)
 
     bkg_sel0 = pt_sort(bkg_pt0, 0)
     bkg_sel1 = pt_sort(bkg_pt1, 1)
@@ -83,9 +84,12 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight):
  
     bkg_sel = np.concatenate((bkg_sel0,bkg_sel1),axis=1)
     sig_sel = np.concatenate((sig_sel0,sig_sel1),axis=1)
+
+    
 #    print('bkg_sel0, bkg_sel1',bkg_sel.shape, bkg_sel1.shape)
 # ADDED 5/22/23 
 
+    sys.exit()
     plot_vectors(bkg_sel,sig_sel,tag_file=tag_file, tag_title=tag_title)
     bkg = apply_JetScalingRotation(bkg_sel, bjet_sel,0)
     sig = apply_JetScalingRotation(sig_sel, sjet_sel,0)
@@ -138,7 +142,7 @@ def pt_sort(x, jet_idx):
     for i in range(x.shape[0]):
         ev = x[i]
         x[i] = ev[ev[:,0].argsort()]
-    if (jet_idx == 0):
+    if (jet_idx == 0): # if leading jet
         y = x[:,-9:,:]
     elif (jet_idx == 1):
         y = x[:,-7:,:]

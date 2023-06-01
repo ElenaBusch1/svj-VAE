@@ -27,9 +27,10 @@ ae_model = 'PFN'
 arch_dir = "architectures_saved/"
 ## Load leading two jets
 # Plot inputs before the jet rotation
-bool_weight=True
-if bool_weight:weight_tag='weightSampled'
-else:weight_tag='notweightSampled'
+bool_weight=False
+#bool_weight=True
+if bool_weight:weight_tag='ws'
+else:weight_tag='nws'
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 
 bkg, sig = getTwoJetSystem(nevents,nevents, tag_file=tag+"_NSNR", tag_title=weight_tag+"_NSNR", bool_weight=bool_weight)

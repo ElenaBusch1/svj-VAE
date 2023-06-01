@@ -24,7 +24,7 @@ def read_test_variables(infile, nEvents, variables):
         my_dict[key] = my_dict[key][idx]
     return my_dict
 
-def read_hlvs(infile, nEvents, variable_array): # different from variable_array on the top of this file
+def read_hlvs(infile, nEvents, variable_array, bool_weight=False): # different from variable_array on the top of this file
     file = uproot.open(infile)
 	
 	
@@ -32,28 +32,64 @@ def read_hlvs(infile, nEvents, variable_array): # different from variable_array 
 
 	# A random 6 variables	
     my_array = tree.arrays(variable_array, library="np")
-    idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
+    
+    if bool_weight:
+      weight_array=["weight"]
+      my_weight_array = tree.arrays(weight_array, library = "np")
+      my_weight_array = my_weight_array[weight_array[0]]
+      idx=np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
+      idx = np.sort(idx)
+#      print('weighted sampling idx', idx.shape, idx)
+
+    else: 
+    # select evenly spaced events from input distribution
+      idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
+#      print(f'{len(my_jet_array[jet_array[0]])/nEvents}th idx', idx.shape, idx)
+#      print(my_jet_array[jet_array[0]])
+#      print('evenly spaced sampling idx', idx.shape, idx)
+
+    #padded_array=selected_jet_array
+
+
     selected_array = np.array([val[idx] for _,val in my_array.items()]).T
 	#print("My array:")
 	#print(selected_array)
 	#print(type(selected_array))
     
+    print('SEL',selected_array.shape,selected_array)   
 
 #    print('before-'*50)
 #    print(f'{infile}\n{selected_array.shape}\n{selected_array}')
     max_jets=15 
     unique_variable_array=list(set([x.split("_")[-1] for x in variable_array])) # unique variable name without 'jetx_' 
+ #   print('&'*50)
+ #   print( f'{infile}\n{selected_array.shape}\n{selected_array}')
+    """
+    
+    ### Two different ways to reshape the 2D to 3D array of shape (5000, max_jets, 2) where 2 is for 2 hlvs
+    # 1st method: loop -> less efficient, but more intuitive
     padded_array= np.zeros((len(selected_array),max_jets,len(unique_variable_array)))
     for e in range(selected_array.shape[0]):
       padded_array[e, 0,0]=selected_array[e,0]
       padded_array[e, 1,0]=selected_array[e,1]
       padded_array[e, 0,1]=selected_array[e,2]
       padded_array[e, 1,1]=selected_array[e,3]
-      
- 
     print('-'*50)
+    print(f'{infile}\n{padded_array.shape}\n{padded_array}')
+    #"""
+ 
+    # 2nd method: use reshape, transpose and pad functions -> more efficient, but less intuitive 
+    size=2  # b/c jet1_pt and jet2_pt
+    length=2 # b/c eta and phi
+    padded_array=selected_array.reshape(selected_array.shape[0],size, length).transpose(0,2,1)
+    pad_width =((0,0),(0, max_jets-size), (0,0))
+    padded_array=np.pad(padded_array,pad_width=pad_width, constant_values= 0)
+#    print('!'*50)
 #    print(f'{infile}\n{padded_array.shape}\n{padded_array}')
     #return selected_array
+
+    ##############
+
     return padded_array
  
 
