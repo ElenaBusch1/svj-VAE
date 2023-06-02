@@ -3,7 +3,6 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 from matplotlib import colors
-from root_to_numpy import variable_array
 from math import ceil
 
 tag = "PFNAE_scaling_tests"
@@ -24,7 +23,7 @@ def plot_loss(h, model="", loss='loss'):
   plt.title(model+' '+loss)
   plt.ylabel('loss')
   plt.xlabel('epoch')
-  plt.yscale('log')
+  #plt.yscale('log')
   plt.legend(['train', 'val'], loc='upper left')
   plt.savefig(plot_dir+loss+'VsEpoch_'+model+'_'+tag+'.png')
   plt.clf()
@@ -151,7 +150,7 @@ def plot_phi(phis,name,extra_tag):
   plt.clf()
   print("Saved 2D plot of phi-rep for", extra_tag)
 
-def plot_inputs(bkg, sig):
+def plot_inputs(bkg, sig, variable_array):
   for i in range(len(variable_array)):
     plt.subplot(2,2,i%4+1)
     plt.tight_layout(h_pad=1, w_pad=1)
@@ -161,6 +160,16 @@ def plot_inputs(bkg, sig):
     if (i%4 == 3):
       plt.savefig(plot_dir+'input_vars_'+str(i)+tag+'.png')
       plt.clf()
+
+def plot_single_variable(hists, h_names, title, logy=False):
+  for data,name, in zip(hists,h_names):
+    plt.hist(data, bins=50, alpha=0.5, label=name)
+  plt.legend()
+  if (logy): plt.yscale("log")
+  plt.title(title)
+  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
+  plt.clf()
+  print("Saved plot",title)
 
 def get_nTracks(x):
   n_tracks = []
@@ -174,28 +183,28 @@ def plot_nTracks(bkg, sig):
   bkg_tracks = get_nTracks(bkg)
   sig_tracks = get_nTracks(sig)
   #bins=np.histogram(np.hstack((bkg_tracks,sig_tracks)),bins=60)[1]
-  bins = np.arange(0,50,1)
+  bins = np.arange(0,100,2)
   plt.hist(bkg_tracks,alpha=0.5, label="bkg", bins=bins, density=False)
   plt.hist(sig_tracks,alpha=0.5, label="sig", bins=bins, density=False)
-  plt.title("nTracks (after pT>10) - Tertiary")
+  plt.title("nTracks (after pT>10)")
   plt.legend()
   plt.savefig(plot_dir+'nTracks_'+tag+'.png')
   plt.clf()
   print("Saved plot of nTracks")
 
 def plot_vectors(train,sig,extra_tag):
-  variable_array = ["pT", "eta", "phi", "E"]
+  variable_array = ["pT", "eta", "phi", "E", "z0", "d0", "qOverP"]
   if (len(train.shape) == 3):
     train = train.reshape(train.shape[0], train.shape[1] * train.shape[2])
   if (len(sig.shape) == 3):
     sig = sig.reshape(sig.shape[0], sig.shape[1] * sig.shape[2])
-  for i in range(4):
-    train_v = train[:,i::4].flatten()
+  for i in range(7):
+    train_v = train[:,i::7].flatten()
     #test_v = test[:,i::4].flatten()
-    sig_v = sig[:,i::4].flatten()
+    sig_v = sig[:,i::7].flatten()
     bins=np.histogram(np.hstack((train_v,sig_v)),bins=60)[1]
     if(bins[-1] > 3000): bins = np.arange(0,3000,50)
-    plt.subplot(2,2,i+1)
+    plt.subplot(4,2,i+1)
     plt.tight_layout(h_pad=1, w_pad=1)
     plt.hist(train_v, alpha=0.5, label="bkg", bins=bins, density=False)
     #plt.hist(test_v, alpha=0.5, label="test", bins=bins, density=True, color='lightskyblue')

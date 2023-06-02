@@ -2,50 +2,49 @@ import uproot
 import numpy as np
 import awkward as ak
 
-variable_array = ["jet1_pt", "met_met", "dphi_min", "pt_balance_12", "mT_jj", "rT", "dR_12", "deltaY_12", "deta_12", "hT", "maxphi_minphi", "n_r04_jets"]
-#jet_array = ["all_jets_pt", "all_jets_eta", "all_jets_phi", "all_jets_E"]
-## Track array
-#jet_array = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"] #"jet_GhostTrack_d0_0", "jet_GhostTrack_z0_0", "jet_GhostTrack_qOverP_0"]
-
 def get_spaced_elements(arr_len,nElements):
     return np.round(np.linspace(0,arr_len-1, nElements)).astype(int)
 
-def read_test_variables(infile, nEvents, variables):
-    file = uproot.open(infile)
+def get_weighted_elements(tree, nEvents):
+    weight_array=["weight"]
+    my_weight_array = tree.arrays(weight_array, library = "np")
+    my_weight_array = my_weight_array[weight_array[0]]
+    np.random.seed(0)
+    idx = np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
+    return idx
 
-    tree = file["PostSel"]
-
-    # Select nEvent for each requested variable
-    my_dict = tree.arrays(variables, library="np") 
-    idx = get_spaced_elements(len(my_dict[variables[0]]),nEvents)
-    for key in my_dict.keys():
-        my_dict[key] = my_dict[key][idx]
-    return my_dict
-
-def read_flat_vars(infile, nEvents, variable_array):
+def read_flat_vars(infile, nEvents, variable_array, use_weight=True):
     file = uproot.open(infile)
     
     tree = file["PostSel"]
     
-    # A random 6 variables	
+    # Read flat branches from nTuple
     my_array = tree.arrays(variable_array, library="np")
-    idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
+    if (use_weight):
+        idx = get_weighted_elements(tree, nEvents)
+    else:
+        idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
+
+    #print('Flat variable index:', idx.shape, idx)
     selected_array = np.array([val[idx] for _,val in my_array.items()]).T
 
     return selected_array
 
-def read_vectors(infile, nEvents, jet_array):
+def read_vectors(infile, nEvents, jet_array, use_weight=True):
     file = uproot.open(infile)
     
-    #print("File keys: ", file.keys())
     max_jets = 100
 
     tree = file["PostSel"]
-    #print("Tree Variables: ", tree.keys())
 
-    # select evenly spaced events from input distribution
+    # Read vector branches from nTuple
     my_jet_array = tree.arrays(jet_array, library = "np")
-    idx = get_spaced_elements(len(my_jet_array[jet_array[0]]),nEvents)
+    if (use_weight):
+        idx = get_weighted_elements(tree, nEvents)
+    else:
+        idx = get_spaced_elements(len(my_jet_array[jet_array[0]]),nEvents)
+
+    #print('Vector variable index:', idx.shape, idx)
     selected_jet_array = np.array([val[idx] for _,val in my_jet_array.items()]).T
 
     # create jet matrix
@@ -57,7 +56,9 @@ def read_vectors(infile, nEvents, jet_array):
     return padded_jet_array
 
 def main():
-    read_test_variables("../v6.4/v6p4smallQCD.root", 100, ['mT_jj', 'met_met'])
+    read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 100, ['mT_jj', 'met_met'])
+    read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 200, ['mT_jj', 'met_met'])
+    read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", 100, ['jet0_GhostTrack_pt'])
 
 if __name__ == '__main__':
     main()

@@ -11,20 +11,20 @@ from plot_helper import *
 from models import *
 
 def getTwoJetSystem(x_events,y_events):
-    track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e"]
-    track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e"]
+    track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e", "jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
+    track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e", "jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
     jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"]
-    bkg_in0 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array0)
-    sig_in0 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array0)
-    bkg_in1 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array1)
-    sig_in1 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array1)
-    jet_bkg = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, jet_array)
-    jet_sig = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, jet_array)
+    bkg_in0 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array0, use_weight=True)
+    sig_in0 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array0, use_weight=False)
+    bkg_in1 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array1, use_weight=True)
+    sig_in1 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array1, use_weight=False)
+    jet_bkg = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, jet_array, use_weight=True)
+    jet_sig = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, jet_array, use_weight=False)
 
-    _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg, True)
-    _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig, False)
-    _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg, True)
-    _, _, sig_nz1 = apply_TrackSelection(sig_in1, jet_sig, False)
+    _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
+    _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig)
+    _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
+    _, _, sig_nz1 = apply_TrackSelection(sig_in1, jet_sig)
     
     bkg_nz = bkg_nz0 & bkg_nz1
     sig_nz = sig_nz0 & sig_nz1
@@ -70,6 +70,12 @@ def getTwoJetSystem(x_events,y_events):
     #plot_vectors(x,sig,"AEWithZeroRotated")
     return bkg, sig
 
+def check_weights(x_events):
+    bkg_nw = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, ["jet1_pt"], use_weight=False)
+    bkg_w = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, ["jet1_pt"], use_weight=True)
+    sig_nw = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", x_events, ["jet1_pt"], use_weight=False)
+    plot_single_variable([bkg_nw,bkg_w, sig_nw], ["QCD No Weights", "QCD Weights", "SIG No Weights"], "QCD Weight Check", logy=True) 
+
 def get_dPhi(x1,x2):
     dPhi = x1 - x2
     if(dPhi > 3.14):
@@ -98,20 +104,17 @@ def pt_sort(x, jet_idx):
         x[i] = ev[ev[:,0].argsort()]
     return x
 
-def apply_TrackSelection(x_raw, jets, highTrackMult=False):
+def apply_TrackSelection(x_raw, jets):
     x = np.copy(x_raw)
     x[x[:,:,0] < 10] = 0 # apply pT requirement
     print("Input track shape: ", x.shape)
     # require at least 3 tracks
-    if highTrackMult:
-        x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 10 for jet in x])
-    else:
-        x_nz = np.array([3 <= len(jet.any(axis=1)[jet.any(axis=1)==True]) < 10 for jet in x])
+    x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 3 for jet in x])
     x = x[x_nz]
     jets = jets[x_nz]
     print("Selected track shape: ", x.shape)
     print("Selected jet shape: ", jets.shape)
-    print("/n")
+    print()
     return x, jets, x_nz
 
 def apply_StandardScaling(x_raw, scaler=MinMaxScaler(), doFit=True):
