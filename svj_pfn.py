@@ -25,8 +25,7 @@ ae_model = 'PFN'
 arch_dir = "architectures_saved/"
 
 ## Load leading two jets
-bkg, sig = getTwoJetSystem(nevents,nevents)
-quit()
+bkg, sig = getTwoJetSystem(3*nevents,nevents)
 
 # 4. Plot inputs
 plot_vectors(bkg,sig,"PFNrotated")

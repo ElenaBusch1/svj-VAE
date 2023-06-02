@@ -6,6 +6,7 @@ from tensorflow import saved_model
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from joblib import dump, load
 from plot_helper import *
 from models import *
 from models_archive import *
@@ -14,35 +15,30 @@ from eval_helper import *
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-ae_model = "trackPFN_AE"
-pfn_model = 'trackPFN'
+pfn_model = 'PFN'
+ae_model = 'ANTELOPE'
 arch_dir = "architectures_saved/"
 
-nevents = 10000
-
-## ---------- CODE ----------
-
-
-# Load graph model
+## ---------- Load graph model ----------
 graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
 graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
 graph.compile()
 
-## Load classifier model
-classifier = keras.models.load_model(arch_dir+pfn_model+'_classifier_arch')
-classifier.load_weights(arch_dir+pfn_model+'_classifier_weights.h5')
-classifier.compile()
+# ## Load classifier model
+# classifier = keras.models.load_model(arch_dir+pfn_model+'_classifier_arch')
+# classifier.load_weights(arch_dir+pfn_model+'_classifier_weights.h5')
+# classifier.compile()
 
-# ## Load ae model
-# encoder = keras.models.load_model(arch_dir+ae_model+'_encoder_arch')
-# decoder = keras.models.load_model(arch_dir+ae_model+'_decoder_arch')
-# ae = AE(encoder,decoder)
 
-# ae.get_layer('encoder').load_weights(arch_dir+ae_model+'_encoder_weights.h5')
-# ae.get_layer('decoder').load_weights(arch_dir+ae_model+'_decoder_weights.h5')
-# 
-# ae.compile(optimizer=keras.optimizers.Adam())
-#ae.summary()
+## ---------- Load AE model ----------
+encoder = keras.models.load_model(arch_dir+ae_model+'_encoder_arch')
+decoder = keras.models.load_model(arch_dir+ae_model+'_decoder_arch')
+ae = AE(encoder,decoder)
+
+ae.get_layer('encoder').load_weights(arch_dir+ae_model+'_encoder_weights.h5')
+ae.get_layer('decoder').load_weights(arch_dir+ae_model+'_decoder_weights.h5')
+
+ae.compile(optimizer=keras.optimizers.Adam())
 
 ## Load history
 # with open(arch_dir+ae_model+"_history.json", 'r') as f:
@@ -53,24 +49,33 @@ classifier.compile()
 print ("Loaded model")
 
 ## Load testing data
-x_raw = read_vectors("../v8/v8SmallPartialQCDmc20e.root", nevents)
-sig_raw = read_vectors("../v8/v8SmallSIGmc20e.root", nevents)
+x_events = 95000
+y_events = 35000
+bkg2, sig2, mT = getTwoJetSystem(x_events,y_events)
+scaler = load(arch_dir+pfn_model+'_scaler.bin')
+bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
+sig2,_ = apply_StandardScaling(sig2,scaler,False)
+plot_vectors(bkg2,sig2,"ANTELOPE")
 
-## apply per-event scaling
-bkg = apply_EventScaling(x_raw)
-sig = apply_EventScaling(sig_raw)
+phi_bkg = graph.predict(bkg2)
+phi_sig = graph.predict(sig2)
 
-## Make graph representation
-phi_bkg = graph.predict(bkg)
-phi_sig = graph.predict(sig)
-pred_phi_bkg = classifier.predict(phi_bkg)
-pred_phi_sig = classifier.predict(phi_sig)
+## Scale phis - for now by hand
+eval_min = 0.0
+eval_max = 29.119692 
+phi_bkg = (phi_bkg - eval_min)/(eval_max-eval_min)
+phi_sig = (phi_sig - eval_min)/(eval_max-eval_min)
 
-bkg_loss = pred_phi_bkg[:,1]
-sig_loss = pred_phi_sig[:,1]
+pred_phi_bkg = ae.predict(phi_bkg)['reconstruction']
+pred_phi_sig = ae.predict(phi_sig)['reconstruction']
 
-#bkg_loss = keras.losses.mse(phi_bkg, pred_phi_bkg)
-#sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
+# ## Classifier loss
+# bkg_loss = pred_phi_bkg[:,1]
+# sig_loss = pred_phi_sig[:,1]
+
+# ## AE loss
+bkg_loss = keras.losses.mse(phi_bkg, pred_phi_bkg)
+sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
 
 ##  #--- Grid test
 ##  scores = np.zeros((10,4))
@@ -103,7 +108,19 @@ sig_loss = pred_phi_sig[:,1]
 ##      plot_saved_loss(h, ae_model, "kl_loss")
 ##      plot_saved_loss(h, ae_model, "reco_loss")
 # 2. Anomaly score
-plot_score(bkg_loss, sig_loss, False, False, pfn_model)
+#plot_score(bkg_loss, sig_loss, False, False, ae_model)
+bkg_loss = np.log(bkg_loss)
+sig_loss = np.log(sig_loss)
+#plot_score(bkg_loss, sig_loss, False, False, ae_model+'logx')
+
+print(mT)
+print(bkg_loss > -11)
+mT_in = mT[bkg_loss > -11]
+print(mT_in)
+plot_score(mT, mT_in, False, False, "mTSel")
+quit()
+
+#transform_loss_ex(bkg_loss, sig_loss, True)
 ##  #plot_score(bkg_loss, sig_loss, False, True, ae_model+"_xlog")
 ##  if ae_model.find('VAE') > -1:
 ##      plot_score(bkg_kl_loss, sig_kl_loss, remove_outliers=False, xlog=True, extra_tag=model+"_KLD")
@@ -112,7 +129,14 @@ plot_score(bkg_loss, sig_loss, False, False, pfn_model)
 ##  score = getSignalSensitivityScore(bkg_loss, sig_loss)
 ##  print("95 percentile score = ",score)
 # 4. ROCs/AUCs using sklearn functions imported above  
-do_roc(bkg_loss, sig_loss, ae_model, False)
+if (len(bkg_loss) > len(sig_loss)):
+   bkg_loss = bkg_loss[:len(sig_loss)]
+else:
+   sig_loss = sig_loss[:len(bkg_loss)]
+
+#bkg_loss, sig_loss = vrnn_transform(bkg_loss, sig_loss, True)
+
+do_roc(bkg_loss, sig_loss, ae_model, True)
 if ae_model.find('VAE') > -1:
     do_roc(bkg_reco_loss, sig_reco_loss, ae_model+'_Reco', True)
     do_roc(bkg_kl_loss, sig_kl_loss, ae_model+'_KLD', True)

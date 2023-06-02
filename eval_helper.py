@@ -20,6 +20,7 @@ def getTwoJetSystem(x_events,y_events):
     sig_in1 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array1)
     jet_bkg = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, jet_array)
     jet_sig = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, jet_array)
+    mT_bkg = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", x_events, ["mT_jj"])
 
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg, True)
     _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig, False)
@@ -36,6 +37,7 @@ def getTwoJetSystem(x_events,y_events):
     sig_pt1 = sig_in1[sig_nz]
     bjet_sel = jet_bkg[bkg_nz]
     sjet_sel = jet_sig[sig_nz]
+    mT_sel = mT_bkg[bkg_nz]
 
     bkg_sel0 = pt_sort(bkg_pt0, 0)
     bkg_sel1 = pt_sort(bkg_pt1, 1)
@@ -64,11 +66,12 @@ def getTwoJetSystem(x_events,y_events):
 
     print(bkg.shape)
     print(sig.shape)
+    print(mT_sel.shape)
     #x = x_2D.reshape(bkg.shape[0],x_2D.shape[1]*4)
     #sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
     #plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
     #plot_vectors(x,sig,"AEWithZeroRotated")
-    return bkg, sig
+    return bkg, sig, mT_sel
 
 def get_dPhi(x1,x2):
     dPhi = x1 - x2
@@ -111,7 +114,7 @@ def apply_TrackSelection(x_raw, jets, highTrackMult=False):
     jets = jets[x_nz]
     print("Selected track shape: ", x.shape)
     print("Selected jet shape: ", jets.shape)
-    print("/n")
+    print("")
     return x, jets, x_nz
 
 def apply_StandardScaling(x_raw, scaler=MinMaxScaler(), doFit=True):
@@ -229,6 +232,24 @@ def transform_loss(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
     if make_plot:
         plot_score(bkg_transformed, sig_transformed, False, False, plot_tag+'_Transformed')
     return truth_labels, eval_vals 
+
+def transform_loss_ex(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
+    nevents = len(sig_loss)
+    eval_vals = np.concatenate((bkg_loss,sig_loss))
+    eval_transformed = [1 - np.exp(-x) for x in eval_vals]
+    bkg_transformed = [1 - np.exp(-x) for x in bkg_loss]
+    sig_transformed = [1 - np.exp(-x) for x in sig_loss]
+    if make_plot:
+        plot_score(bkg_transformed, sig_transformed, False, False, plot_tag+'_TransformedEx')
+    return eval_vals 
+
+def vrnn_transform(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
+    train_mean = np.mean(bkg_loss)
+    bkg_loss_p = [1-x/(2*train_mean) for x in bkg_loss]
+    sig_loss_p = [1-x/(2*train_mean) for x in sig_loss]
+    if make_plot:
+        plot_score(bkg_loss_p, sig_loss_p, False, False, plot_tag+'_MeanShift')
+    return bkg_loss_p, sig_loss_p    
 
 def getSignalSensitivityScore(bkg_loss, sig_loss, percentile=95):
     nSigAboveThreshold = np.sum(sig_loss > np.percentile(bkg_loss, percentile))

@@ -17,7 +17,7 @@ nepochs=30
 batchsize_ae=32
 
 pfn_model = 'PFN'
-ae_model = 'AFLOW'
+ae_model = 'ANTELOPE'
 arch_dir = "architectures_saved/"
 
 ################### Train the AE ###############################
@@ -26,13 +26,13 @@ graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
 graph.compile()
 
 ## AE events
-x_events = 600000
-y_events = 100000
+x_events = 950000
+y_events = 35000
 bkg2, sig2 = getTwoJetSystem(x_events,y_events)
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
 sig2,_ = apply_StandardScaling(sig2,scaler,False)
-plot_vectors(bkg2,sig2,"PFN_AE")
+plot_vectors(bkg2,sig2,"ANTELOPE")
 
 phi_bkg = graph.predict(bkg2)
 phi_sig = graph.predict(sig2)
@@ -65,7 +65,6 @@ plot_phi(phi_testb,"test","PFN_phi_test_scaled")
 plot_phi(phi_sig,"sig","PFN_phi_sig_scaled")
 
 ae = get_ae(phi_dim,encoding_dim,latent_dim)
-quit()
 
 h2 = ae.fit(phi_evalb, 
     epochs=nepochs,
