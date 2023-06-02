@@ -10,7 +10,7 @@ from plot_helper import *
 from eval_helper import *
 
 # Example usage
-nevents = 50000
+nevents = 500000
 num_elements = 100
 element_size = 7 # change here
 #element_size = 4 # change here
@@ -28,7 +28,7 @@ arch_dir = "architectures_saved/"
 ## Load leading two jets
 # Plot inputs before the jet rotation
 #bool_weight=True
-bool_weight=True
+bool_weight=False
 if bool_weight:weight_tag='ws'
 else:weight_tag='nws'
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'

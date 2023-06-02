@@ -8,7 +8,7 @@ from math import ceil
 
 #tag = "PFN_2jAvg_MM"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
-plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun1_1/'
+plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun2_500000/'
 def detect_outliers(x):
   z = np.abs(stats.zscore(x))
   print(max(z))

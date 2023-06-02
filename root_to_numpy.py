@@ -37,6 +37,7 @@ def read_hlvs(infile, nEvents, variable_array, bool_weight=False): # different f
       weight_array=["weight"]
       my_weight_array = tree.arrays(weight_array, library = "np")
       my_weight_array = my_weight_array[weight_array[0]]
+      np.random.seed(0)
       idx=np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
       idx = np.sort(idx)
 #      print('weighted sampling idx', idx.shape, idx)
@@ -56,7 +57,7 @@ def read_hlvs(infile, nEvents, variable_array, bool_weight=False): # different f
 	#print(selected_array)
 	#print(type(selected_array))
     
-    print('SEL',selected_array.shape,selected_array)   
+    #print('SEL',selected_array.shape,selected_array)   
 
 #    print('before-'*50)
 #    print(f'{infile}\n{selected_array.shape}\n{selected_array}')
@@ -134,6 +135,7 @@ def read_vectors(infile, nEvents,jet_array, bool_weight=True):
       #my_weight_array=np.array([my_weight_array[i][0] for i in range(my_weight_array.shape[0])  ])
 #      print('my_weight_array.shape',my_weight_array.shape)
 #      print('*'*30)
+      np.random.seed(0)
       idx=np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
       idx = np.sort(idx)
 #    idx[0]=1

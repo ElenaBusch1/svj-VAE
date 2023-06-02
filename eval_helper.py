@@ -43,9 +43,9 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight):
 #    jet_bkg = read_hlvs(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, jet_array)  # select with weight??
     jet_bkg = read_hlvs(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, jet_array, bool_weight=bool_weight)  # select with weight??
     bkg_in0 = read_vectors(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, track_array0, bool_weight=bool_weight)
-    sig_in0 = read_vectors(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events,track_array0, bool_weight=bool_weight)
+    sig_in0 = read_vectors(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events,track_array0, bool_weight=False)
     bkg_in1 = read_vectors(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, track_array1, bool_weight=bool_weight)
-    sig_in1 = read_vectors(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events,track_array1, bool_weight=bool_weight)
+    sig_in1 = read_vectors(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events,track_array1, bool_weight=False)
 #    jet_sig = read_hlvs(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events, jet_array)
     jet_sig = read_hlvs(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events, jet_array, bool_weight=False) # evenly spaced sampling for signal
 
@@ -54,10 +54,6 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight):
     _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig)
     _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
     _, _, sig_nz1 = apply_TrackSelection(sig_in1, jet_sig)
-    print(bkg_in0)
-    print(bkg_in0.shape)
-    print(jet_bkg)
-    print(jet_bkg.shape)
     
     bkg_nz = bkg_nz0 & bkg_nz1
     sig_nz = sig_nz0 & sig_nz1
@@ -70,7 +66,6 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight):
     bjet_sel = jet_bkg[bkg_nz]
     sjet_sel = jet_sig[sig_nz]
     
-    print('bkg_pt0',bkg_pt0)
 
     bkg_sel0 = pt_sort(bkg_pt0, 0)
     bkg_sel1 = pt_sort(bkg_pt1, 1)
@@ -194,10 +189,10 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
     x[:,:,3] = (x_raw[:,:,3].T/x_totals[:,3]).T  #divide each E entry by event E total
     
     #jet_phi_avs = np.zeros(x.shape[0])
-    print('*'*30)
-    print('jet',jet.shape, jet)
-    print('x_raw', x_raw.shape, x_raw)
-    print('jet_idx',  jet_idx)
+#    print('*'*30)
+#    print('jet',jet.shape, jet)
+#    print('x_raw', x_raw.shape, x_raw)
+#    print('jet_idx',  jet_idx)
     for e in range(x.shape[0]):
         jet_eta_av = (jet[e,0,0] + jet[e,1,0])/2.0 
         jet_phi_av = (jet[e,0,1] + jet[e,1,1])/2.0 
