@@ -8,7 +8,7 @@ from math import ceil
 
 #tag = "PFN_2jAvg_MM"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
-plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun1/'
+plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun1_1/'
 def detect_outliers(x):
   z = np.abs(stats.zscore(x))
   print(max(z))
@@ -180,27 +180,32 @@ def plot_nTracks(bkg, sig, tag_file="", tag_title=""):
   plt.clf()
   print("Saved plot of nTracks")
 
-def plot_vectors_jet(train,sig, tag_file="", tag_title="", bool_jet=False):
-  variable_array=["pt"]
+def plot_vectors_jet(train,sig,jet_array, tag_file="", tag_title="", bool_jet=False):
+#  variable_array=["pt"]
   print('before reshaping, train and sig', train.shape, sig.shape)
-  size=2 # different than size in plot_vectors
+#  size=2 # different than size in plot_vectors
+  size=len(jet_array) # different than size in plot_vectors
+  n=2
   for i in range(size):
-    train_v= train[:,i,0]
-    sig_v= sig[:,i,0]
+    #train_v= train[:,i,0]
+    train_v= train[:,i%n,i//n]
+    sig_v= sig[:,i%n,i//n]
     bins=np.histogram(np.hstack((train_v,sig_v)),bins=60)[1] 
     plt.hist(train_v, alpha=0.5, label=f"bkg ({len(train_v)})", bins=bins, density=False)
     plt.hist(sig_v, alpha=0.5, label=f"sig ({len(sig_v)})", bins=bins, density=False)
-    plt.title(f'jet{i+1}_{variable_array[0]} {tag_title}')
+    plt.title(f'{jet_array[i]} {tag_title}')
+    #plt.title(f'jet{i+1}_{variable_array[0]} {tag_title}')
     plt.tight_layout(h_pad=1, w_pad=1)
     plt.yscale('log')
     plt.legend()
-    plt.savefig(plot_dir+f'inputs_jet{i+1}_{variable_array[0]}'+tag_file+'.png')
+    plt.savefig(plot_dir+f'inputs_{jet_array[i]}'+tag_file+'.png')
+    #plt.savefig(plot_dir+f'inputs_jet{i+1}_{variable_array[0]}'+tag_file+'.png')
     plt.cla()
     plt.clf()
     plt.close()
     print("Saved inputs plot (", plot_dir+'inputs_jet_'+tag_file+'.png')
 
-def plot_vectors(train,sig, tag_file="", tag_title=""):
+def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True):
   #variable_array = ["pT", "eta", "phi", "E"]
   variable_array = ["pT", "eta", "phi", "E", "z0", "d0", "qOverP"]
   print('before reshaping, train and sig', train.shape, sig.shape)
@@ -221,7 +226,7 @@ def plot_vectors(train,sig, tag_file="", tag_title=""):
     bins=np.histogram(np.hstack((train_v,sig_v)),bins=60)[1]
     if(bins[-1] > 3000): bins = np.arange(0,3000,50)
     #plt.subplot(4,1,i+1)
-    plt.subplot(4,2,i+1)
+    if bool_one:    plt.subplot(4,2,i+1)
     #plt.subplot(2,2,(i%4)+1)
 #    fig,ax= plt.subplots(2,2)
 #    plt.subplot(2,2,1)
@@ -241,13 +246,19 @@ def plot_vectors(train,sig, tag_file="", tag_title=""):
 #      print('selected',i, i%4, i//4)
     plt.tight_layout(h_pad=1, w_pad=1)
     plt.yscale('log')
-    #fig.savefig(plot_dir+'inputs_'+tag_file+str(i//4)+'.png')
-  
-  plt.savefig(plot_dir+'inputs_'+tag_file+'.png')
-  print("Saved inputs plot (", plot_dir+'inputs_'+tag_file+'.png')
+    if bool_one:
+      if i==size-1:
+        filepath=plot_dir+'inputs_'+tag_file+str(i//4)+'.png'
+        plt.savefig(filepath)
+        print("Saved inputs plot (", filepath)
+        plt.close()
+    else: 
+      filepath=plot_dir+'inputs_'+variable_array[i]+'_'+tag_file+'.png' 
+      plt.savefig(filepath)
+      print("Saved inputs plot (", filepath)
+      plt.close()
   #print("Saved inputs plot (", plot_dir+'inputs_'+tag_file+str(i//4)+'.png')
     
-  plt.close()
 #  plt.savefig(plot_dir+'inputs_'+tag_file+'.png')
 
 

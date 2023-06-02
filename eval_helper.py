@@ -13,15 +13,10 @@ from models import *
 def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight):
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e","jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
 #    track_array0_old = ["jet_GhostTrack_pt_0", "jet_GhostTrack_eta_0", "jet_GhostTrack_phi_0", "jet_GhostTrack_e_0","jet_GhostTrack_z0_0", "jet_GhostTrack_d0_0", "jet_GhostTrack_qOverP_0"]
-#    track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e"]
-    #track_array0 = ["jet_GhostTrack_pt_0", "jet_GhostTrack_eta_0", "jet_GhostTrack_phi_0", "jet_GhostTrack_e_0"]
     track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e","jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
-#    track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e"]
-#    track_array1 = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1","jet_GhostTrack_z0_1", "jet_GhostTrack_d0_1", "jet_GhostTrack_qOverP_1"]
     #track_array1 = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"]
-#    jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi", "jet1_pt", "jet2_pt"]
-    jet_array = ["jet1_pt", "jet2_pt", "jet1_phi", "jet2_phi"] # order is important in apply_JetScalingRotation
-    #jet_array = ["jet1_eta", "jet2_eta", "jet1_phi", "jet2_phi"] # order is important in apply_JetScalingRotation
+#    jet_array = ["jet1_pt", "jet2_pt", "jet1_phi", "jet2_phi"] # order is important in apply_JetScalingRotation
+    jet_array = ["jet1_eta", "jet2_eta", "jet1_phi", "jet2_phi"] # order is important in apply_JetScalingRotation
 #    jet_array_old = ["jet_eta", "jet_phi"]
 #    track_array2 = ["jet_GhostTrack_d0_0", "jet_GhostTrack_z0_0", "jet_GhostTrack_qOverP_0", "jet_GhostTrack_e_0"]
 
@@ -52,9 +47,9 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight):
     bkg_in1 = read_vectors(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, track_array1, bool_weight=bool_weight)
     sig_in1 = read_vectors(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events,track_array1, bool_weight=bool_weight)
 #    jet_sig = read_hlvs(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events, jet_array)
-    jet_sig = read_hlvs(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events, jet_array, bool_weight=bool_weight)
+    jet_sig = read_hlvs(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events, jet_array, bool_weight=False) # evenly spaced sampling for signal
 
-    plot_vectors_jet(jet_bkg,jet_sig,tag_file=tag_file, tag_title=tag_title)
+    plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=tag_file, tag_title=tag_title)
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
     _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig)
     _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
@@ -89,7 +84,6 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight):
 #    print('bkg_sel0, bkg_sel1',bkg_sel.shape, bkg_sel1.shape)
 # ADDED 5/22/23 
 
-    sys.exit()
     plot_vectors(bkg_sel,sig_sel,tag_file=tag_file, tag_title=tag_title)
     bkg = apply_JetScalingRotation(bkg_sel, bjet_sel,0)
     sig = apply_JetScalingRotation(sig_sel, sjet_sel,0)
@@ -201,11 +195,13 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
     
     #jet_phi_avs = np.zeros(x.shape[0])
     print('*'*30)
-    print(jet)
+    print('jet',jet.shape, jet)
+    print('x_raw', x_raw.shape, x_raw)
+    print('jet_idx',  jet_idx)
     for e in range(x.shape[0]):
         jet_eta_av = (jet[e,0,0] + jet[e,1,0])/2.0 
         jet_phi_av = (jet[e,0,1] + jet[e,1,1])/2.0 
-
+#        print('jet_eta_av',jet[e,0,0],jet[e,1,0], jet_eta_av)
 # change
 #        jet_eta_av = (jet[e,0] + jet[e,1])/2.0 
 #        jet_phi_av = (jet[e,2] + jet[e,3])/2.0 
