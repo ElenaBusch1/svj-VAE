@@ -10,7 +10,7 @@ from plot_helper import *
 from eval_helper import *
 
 # Example usage
-nevents = 500000
+nevents = 50000
 num_elements = 100
 element_size = 7 # change here
 #element_size = 4 # change here
