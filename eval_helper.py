@@ -10,6 +10,65 @@ from sklearn.preprocessing import MinMaxScaler
 from plot_helper import *
 from models import *
 
+def compare_v8_v8p1(x_events,y_events):
+    track0_array = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e", "jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
+    track1_array = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e", "jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
+    flat_jet_array = ["jet1_pt", "jet1_eta", "jet1_phi", "jet2_pt", "jet2_eta", "jet2_phi"]
+    track_array0 = ["jet_GhostTrack_pt_0", "jet_GhostTrack_eta_0", "jet_GhostTrack_phi_0", "jet_GhostTrack_e_0", "jet_GhostTrack_z0_0", "jet_GhostTrack_d0_0", "jet_GhostTrack_qOverP_0"]
+    track_array1 = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1", "jet_GhostTrack_z0_1", "jet_GhostTrack_d0_1", "jet_GhostTrack_qOverP_1"]
+    jet_array = ["jet_pt", "jet_eta", "jet_phi"] 
+    bkg_in0 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track0_array, use_weight=False)
+    sig_in0 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track0_array, use_weight=False)
+    bkg_in1 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track1_array, use_weight=False)
+    sig_in1 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track1_array, use_weight=False)
+    jet_bkg = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, flat_jet_array, use_weight=False)
+    jet_sig = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, flat_jet_array, use_weight=False)
+    bkg_in08 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array0, use_weight=False)
+    sig_in08 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array0, use_weight=False)
+    bkg_in18 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array1, use_weight=False)
+    sig_in18 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array1, use_weight=False)
+    jet_bkg8 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, jet_array, use_weight=False)
+    jet_sig8 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, jet_array, use_weight=False)
+
+    _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
+    _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig)
+    _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
+    _, _, sig_nz1 = apply_TrackSelection(sig_in1, jet_sig)
+    _, _, bkg_nz08 = apply_TrackSelection(bkg_in08, jet_bkg8)
+    _, _, sig_nz08 = apply_TrackSelection(sig_in08, jet_sig8)
+    _, _, bkg_nz18 = apply_TrackSelection(bkg_in18, jet_bkg8)
+    _, _, sig_nz18 = apply_TrackSelection(sig_in18, jet_sig8)
+
+    bkg_nz = bkg_nz0 & bkg_nz1
+    sig_nz = sig_nz0 & sig_nz1
+    bkg_nz8 = bkg_nz08 & bkg_nz18
+    sig_nz8 = sig_nz08 & sig_nz18
+
+    bkg_pt0 = bkg_in0[bkg_nz]
+    bkg_pt1 = bkg_in1[bkg_nz]
+    sig_pt0 = sig_in0[sig_nz]
+    sig_pt1 = sig_in1[sig_nz]
+    bjet_sel = jet_bkg[bkg_nz]
+    sjet_sel = jet_sig[sig_nz]
+    bkg_pt08 = bkg_in08[bkg_nz8]
+    bkg_pt18 = bkg_in18[bkg_nz8]
+    sig_pt08 = sig_in08[sig_nz8]
+    sig_pt18 = sig_in18[sig_nz8]
+    bjet_sel8 = jet_bkg8[bkg_nz8]
+    sjet_sel8 = jet_sig8[sig_nz8]
+
+    bkg_sel = np.concatenate((bkg_pt0,bkg_pt1),axis=1)
+    sig_sel = np.concatenate((sig_pt0,sig_pt1),axis=1)
+    bkg_sel8 = np.concatenate((bkg_pt08,bkg_pt18),axis=1)
+    sig_sel8 = np.concatenate((sig_pt08,sig_pt18),axis=1)
+
+    plot_vectors(bkg_sel8,bkg_sel,"bkgCompare")
+    plot_vectors(sig_sel8,sig_sel,"sigCompare")
+    plot_single_variable([bjet_sel8[:,0,0],bjet_sel[:,0]], ["v8", "v8.1"], "Jet 1 pT- QCD", logy=True)
+    plot_single_variable([bjet_sel8[:,1,0],bjet_sel[:,3]], ["v8", "v8.1"], "Jet 2 pT- QCD", logy=True)
+    plot_single_variable([sjet_sel8[:,0,0],sjet_sel[:,0]], ["v8", "v8.1"], "Jet 1 pT- Sig", logy=True)
+    plot_single_variable([sjet_sel8[:,1,0],sjet_sel[:,3]], ["v8", "v8.1"], "Jet 2 pT- Sig", logy=True)
+
 def getTwoJetSystem(x_events,y_events):
     
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e", "jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]

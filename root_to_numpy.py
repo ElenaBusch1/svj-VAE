@@ -35,7 +35,9 @@ def read_vectors(infile, nEvents, jet_array, use_weight=True):
     
     max_jets = 100
 
-    tree = file["PostSel"]
+    if(infile.find("Small") != -1): myTree = "outTree"
+    else: myTree = "PostSel"
+    tree = file[myTree]
 
     # Read vector branches from nTuple
     my_jet_array = tree.arrays(jet_array, library = "np")

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "v8p1"
+tag = "v8_v8p1_compare"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -206,9 +206,9 @@ def plot_vectors(train,sig,extra_tag):
     if(bins[-1] > 3000): bins = np.arange(0,3000,50)
     plt.subplot(4,2,i+1)
     plt.tight_layout(h_pad=1, w_pad=1)
-    plt.hist(train_v, alpha=0.5, label="bkg", bins=bins, density=False)
+    plt.hist(train_v, alpha=0.5, label="v8", bins=bins, density=False)
     #plt.hist(test_v, alpha=0.5, label="test", bins=bins, density=True, color='lightskyblue')
-    plt.hist(sig_v, alpha=0.5, label="sig", bins=bins, density=False)
+    plt.hist(sig_v, alpha=0.5, label="v8.1", bins=bins, density=False)
     plt.yscale('log')
     plt.title(variable_array[i])
     if i == 1: plt.legend()

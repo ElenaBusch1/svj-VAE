@@ -24,6 +24,8 @@ pfn_model = 'PFN'
 arch_dir = "architectures_saved/"
 
 ## Load leading two jets
+compare_v8_v8p1(nevents,nevents)
+quit()
 bkg, sig = getTwoJetSystem(nevents,nevents)
 
 # Plot inputs
