@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "PFNAE_scaling_tests"
+tag = "v8p1"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -179,7 +179,7 @@ def get_nTracks(x):
     n_tracks.append(len(tracks))
   return n_tracks
  
-def plot_nTracks(bkg, sig):
+def plot_nTracks(bkg, sig, extra_tag=""):
   bkg_tracks = get_nTracks(bkg)
   sig_tracks = get_nTracks(sig)
   #bins=np.histogram(np.hstack((bkg_tracks,sig_tracks)),bins=60)[1]
@@ -188,7 +188,7 @@ def plot_nTracks(bkg, sig):
   plt.hist(sig_tracks,alpha=0.5, label="sig", bins=bins, density=False)
   plt.title("nTracks (after pT>10)")
   plt.legend()
-  plt.savefig(plot_dir+'nTracks_'+tag+'.png')
+  plt.savefig(plot_dir+'nTracks_'+extra_tag+tag+'.png')
   plt.clf()
   print("Saved plot of nTracks")
 

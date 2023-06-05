@@ -21,7 +21,6 @@ batchsize_pfn=500
 batchsize_ae=32
 
 pfn_model = 'PFN'
-ae_model = 'PFN'
 arch_dir = "architectures_saved/"
 
 ## Load leading two jets
@@ -29,8 +28,8 @@ bkg, sig = getTwoJetSystem(nevents,nevents)
 
 # Plot inputs
 plot_vectors(bkg,sig,"PFNrotated")
-check_weights(nevents)
-plot_nTracks(bkg, sig)
+#check_weights(nevents)
+plot_nTracks(bkg, sig, "jAll")
 
 # Create truth target
 input_data = np.concatenate((bkg,sig),axis=0)

@@ -14,11 +14,11 @@ def getTwoJetSystem(x_events,y_events):
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e", "jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
     track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e", "jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
     jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"]
-    bkg_in0 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array0, use_weight=True)
+    bkg_in0 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array0, use_weight=False)
     sig_in0 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array0, use_weight=False)
-    bkg_in1 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array1, use_weight=True)
+    bkg_in1 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array1, use_weight=False)
     sig_in1 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array1, use_weight=False)
-    jet_bkg = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, jet_array, use_weight=True)
+    jet_bkg = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, jet_array, use_weight=False)
     jet_sig = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, jet_array, use_weight=False)
     mT_bkg = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", x_events, ["mT_jj"], use_weight=False)
 
@@ -43,6 +43,8 @@ def getTwoJetSystem(x_events,y_events):
     bkg_sel1 = pt_sort(bkg_pt1, 1)
     sig_sel0 = pt_sort(sig_pt0, 0)
     sig_sel1 = pt_sort(sig_pt1, 1)
+    plot_nTracks(bkg_sel0, sig_sel0, "j1")
+    plot_nTracks(bkg_sel1, sig_sel1, "j2")
 
     bkg_sel = np.concatenate((bkg_sel0,bkg_sel1),axis=1)
     sig_sel = np.concatenate((sig_sel0,sig_sel1),axis=1)
@@ -71,7 +73,7 @@ def getTwoJetSystem(x_events,y_events):
     #sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
     #plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
     #plot_vectors(x,sig,"AEWithZeroRotated")
-    return bkg, sig, mT_sel
+    return bkg, sig
 
 def check_weights(x_events):
     bkg_nw = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, ["jet1_pt"], use_weight=False)
