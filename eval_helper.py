@@ -12,26 +12,16 @@ from models import *
 
 def getTwoJetSystem(x_events,y_events):
     
-    track_array0 = ["jet_GhostTrack_pt_0", "jet_GhostTrack_eta_0", "jet_GhostTrack_phi_0", "jet_GhostTrack_e_0", "jet_GhostTrack_z0_0", "jet_GhostTrack_d0_0", "jet_GhostTrack_qOverP_0"]
-    track_array1 = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1", "jet_GhostTrack_z0_1", "jet_GhostTrack_d0_1", "jet_GhostTrack_qOverP_1"]
-    jet_array = ["jet_eta", "jet_phi"] 
-    #track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e", "jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
-    #track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e", "jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
-    #jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"]
-    #bkg_in0 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array0, use_weight=False)
-    #sig_in0 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array0, use_weight=False)
-    #bkg_in1 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array1, use_weight=False)
-    #sig_in1 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array1, use_weight=False)
-    #jet_bkg = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, jet_array, use_weight=False)
-    #jet_sig = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, jet_array, use_weight=False)
+    track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e", "jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
+    track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e", "jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
+    jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"]
+    bkg_in0 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array0, use_weight=False)
+    sig_in0 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array0, use_weight=False)
+    bkg_in1 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array1, use_weight=False)
+    sig_in1 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array1, use_weight=False)
+    jet_bkg = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, jet_array, use_weight=False)
+    jet_sig = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, jet_array, use_weight=False)
     #mT_bkg = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", x_events, ["mT_jj"], use_weight=False)
-
-    bkg_in0 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array0, use_weight=False)
-    sig_in0 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array0, use_weight=False)
-    bkg_in1 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array1, use_weight=False)
-    sig_in1 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array1, use_weight=False)
-    jet_bkg = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, jet_array, use_weight=False)
-    jet_sig = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, jet_array, use_weight=False)
 
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
     _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig)
@@ -170,8 +160,8 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
     
     #jet_phi_avs = np.zeros(x.shape[0])
     for e in range(x.shape[0]):
-        jet_eta_av = (jet[e,0,0] + jet[e,1,0])/2.0 
-        jet_phi_av = (jet[e,0,1] + jet[e,1,1])/2.0 
+        jet_eta_av = (jet[e,0] + jet[e,2])/2.0 
+        jet_phi_av = (jet[e,1] + jet[e,3])/2.0 
         #jet_phi_avs[e] = jet_phi_av
         for t in range(x.shape[1]):
             if not x[e,t,:].any():
