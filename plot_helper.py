@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "v8p1"
+tag = "v8"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -109,12 +109,12 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, extra_tag=
   bmin = min(min(bkg_score),min(sig_score))
   if xlog and bmin == 0: bmin = 1e-9
   if xlog: bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
-  #else: bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
-  bins = np.linspace(500,4000,80)
+  else: bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
+  #bins = np.linspace(500,4000,80)
   #plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg (-"+str(nb)+")", density=True)
   #plt.hist(sig_score, bins=bins, alpha=0.5, label="sig(-"+str(ns)+")", density=True)
-  plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg", density=False)
-  plt.hist(sig_score, bins=bins, alpha=0.5, label="sig", density=False)
+  plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg", density=True)
+  plt.hist(sig_score, bins=bins, alpha=0.5, label="sig", density=True)
   if xlog: plt.xscale('log')
   plt.yscale('log')
   plt.legend()
