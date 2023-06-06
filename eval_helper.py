@@ -10,7 +10,11 @@ from sklearn.preprocessing import MinMaxScaler
 from plot_helper import *
 from models import *
 
-def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight):
+def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, extraVars=[]):
+###################
+    getExtraVars = len(extraVars) > 0
+
+
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e","jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
 #    track_array0_old = ["jet_GhostTrack_pt_0", "jet_GhostTrack_eta_0", "jet_GhostTrack_phi_0", "jet_GhostTrack_e_0","jet_GhostTrack_z0_0", "jet_GhostTrack_d0_0", "jet_GhostTrack_qOverP_0"]
     track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e","jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
@@ -42,12 +46,19 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight):
     read_dir='/nevis/katya01/data/users/ebusch/SVJ/autoencoder/v8.1/'
 #    jet_bkg = read_hlvs(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, jet_array)  # select with weight??
     jet_bkg = read_hlvs(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, jet_array, bool_weight=bool_weight)  # select with weight??
+    jet_sig = read_hlvs(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events, jet_array, bool_weight=False) # evenly spaced sampling for signal
     bkg_in0 = read_vectors(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, track_array0, bool_weight=bool_weight)
     sig_in0 = read_vectors(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events,track_array0, bool_weight=False)
     bkg_in1 = read_vectors(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, track_array1, bool_weight=bool_weight)
     sig_in1 = read_vectors(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events,track_array1, bool_weight=False)
 #    jet_sig = read_hlvs(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events, jet_array)
-    jet_sig = read_hlvs(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events, jet_array, bool_weight=False) # evenly spaced sampling for signal
+
+###################
+    if getExtraVars: 
+      vars_bkg = read_flat_vars(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, extraVars, bool_weight=bool_weight)
+      vars_sig = read_flat_vars(read_dir+"user.ebusch.SIGskim.mc20e.root", y_events, extraVars, bool_weight=False)
+
+
 
     plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=tag_file, tag_title=tag_title)
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
@@ -103,7 +114,10 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight):
     #sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
     #plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
     #plot_vectors(x,sig,"AEWithZeroRotated")
-    return bkg, sig
+
+###################
+    if getExtraVars: return bkg, sig, vars_bkg, vars_sig
+    else: return bkg, sig
 
 def get_dPhi(x1,x2):
     dPhi = x1 - x2

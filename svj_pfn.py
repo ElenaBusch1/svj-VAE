@@ -27,8 +27,8 @@ ae_model = 'PFN'
 arch_dir = "architectures_saved/"
 ## Load leading two jets
 # Plot inputs before the jet rotation
-#bool_weight=True
-bool_weight=False
+bool_weight=True
+#bool_weight=False
 if bool_weight:weight_tag='ws'
 else:weight_tag='nws'
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'

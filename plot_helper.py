@@ -8,7 +8,8 @@ from math import ceil
 
 #tag = "PFN_2jAvg_MM"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
-plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun5_500000_nep100_nl100/'
+#plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun5_500000_nep100_nl100/'
+plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun6_mT/'
 def detect_outliers(x):
   z = np.abs(stats.zscore(x))
   print(max(z))
@@ -158,6 +159,60 @@ def plot_inputs(bkg, sig, tag_file="", tag_title=""):
     if (i%4 == 3):
       plt.savefig(plot_dir+'input_vars_'+str(i)+tag_file+'.png')
       plt.clf()
+
+def zero_div(a,b, bool_print=False): # this avoid zero division error
+    a= np.array(a, dtype='float') # necessary to avoid "TypeError: No loop matching the specified signature and casting was found for ufunc add"
+    b= np.array(b, dtype='float')
+    if bool_print: print(a,b)
+    mask=(b!=0) # where b is not zero, do the division, if it's zero, spit out the corresponding b element 
+    #e.g. a= [2 2 4], b= [1 0 3], result [2 0 1.333]
+    return np.divide(a, b, out=np.zeros_like(a), where=mask) 
+
+def plot_single_variable(hists, h_names, title, logy=False):
+  f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
+  nbins=50
+  print(hists) 
+  hists_flat=np.concatenate(hists)
+  print(hists_flat) 
+  bin_min=np.min(hists_flat)
+  bin_max=np.max(hists_flat)
+  gap=(bin_max-bin_min)*0.05
+  bins=np.linspace(bin_min-gap,bin_max+gap,nbins)
+  x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
+  hists=list(hists)
+  for data,name,i in zip(hists,h_names, range(len(hists))):
+    y,_, _=axs[0].hist(data, bins=bins, alpha=0.6, label=f'cut on {name}, #={len(data)}')
+#    print(i, len(bins), len(y), bins, y) 
+    #if i ==len(hists)-1:
+    if i ==0: # make sure the first of hists list has the most number of events
+      print(i, len(hists))
+      y0=y
+    else: 
+      print('no', i, len(hists))
+   
+    print(y)
+    print(y0) 
+    axs[1].scatter(x_bins,y/y0)
+    #axs[1].scatter(x_bins,zero_div(y,y0))
+
+  print('x_bins', x_bins)
+  axs[1].set_ylim(-.2,1.2)  
+  axs[1].set_ylabel('Ratio')
+  axs[1].legend(loc='upper right')
+  plt.tick_params(axis='y', which='minor') 
+  plt.grid()
+ 
+  axs[0].set_ylabel('Event Number')
+  if (logy): axs[0].set_yscale("log")
+  axs[0].legend(loc='upper right')
+  axs[1].legend(loc='upper right')
+  axs[0].set_title(title)
+  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
+  plt.clf()
+  print("Saved plot",title)
+
+
+
 
 def get_nTracks(x):
   n_tracks = []

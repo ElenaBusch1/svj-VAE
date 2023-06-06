@@ -12,6 +12,16 @@ variable_array = ["jet1_pt", "met_met", "dphi_min", "pt_balance_12", "mT_jj", "r
 def get_spaced_elements(arr_len,nElements):
     return np.round(np.linspace(0,arr_len-1, nElements)).astype(int)
 
+def get_weighted_elements(tree, nEvents):
+    weight_array=["weight"]
+    my_weight_array = tree.arrays(weight_array, library = "np")
+    my_weight_array = my_weight_array[weight_array[0]]
+    np.random.seed(0)
+    idx = np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
+    idx = np.sort(idx)
+    return idx
+
+
 def read_test_variables(infile, nEvents, variables):
     file = uproot.open(infile)
 
@@ -34,12 +44,7 @@ def read_hlvs(infile, nEvents, variable_array, bool_weight=False): # different f
     my_array = tree.arrays(variable_array, library="np")
     
     if bool_weight:
-      weight_array=["weight"]
-      my_weight_array = tree.arrays(weight_array, library = "np")
-      my_weight_array = my_weight_array[weight_array[0]]
-      np.random.seed(0)
-      idx=np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
-      idx = np.sort(idx)
+      idx=get_weighted_elements(tree, nEvents)
 #      print('weighted sampling idx', idx.shape, idx)
 
     else: 
@@ -93,6 +98,22 @@ def read_hlvs(infile, nEvents, variable_array, bool_weight=False): # different f
 
     return padded_array
  
+def read_flat_vars(infile, nEvents, variable_array, bool_weight=True):
+    file = uproot.open(infile)
+    
+    tree = file["PostSel"]
+    
+    # Read flat branches from nTuple
+    my_array = tree.arrays(variable_array, library="np")
+    if (bool_weight):
+        idx = get_weighted_elements(tree, nEvents)
+    else:
+        idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
+
+    #print('Flat variable index:', idx.shape, idx)
+    selected_array = np.array([val[idx] for _,val in my_array.items()]).T
+
+    return selected_array
 
 
 #def read_vectors(infile, nEvents, jet_array, bool_weight=True):
@@ -128,16 +149,8 @@ def read_vectors(infile, nEvents,jet_array, bool_weight=True):
 #      print('*'*30)
 #      print('correct weight_array')
       #weight_array=["jet_Width"]
-      weight_array=["weight"]
-      my_weight_array = tree.arrays(weight_array, library = "np")
-#      print(nEvents)
-      my_weight_array = my_weight_array[weight_array[0]]
-      #my_weight_array=np.array([my_weight_array[i][0] for i in range(my_weight_array.shape[0])  ])
-#      print('my_weight_array.shape',my_weight_array.shape)
-#      print('*'*30)
-      np.random.seed(0)
-      idx=np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
-      idx = np.sort(idx)
+
+      idx = get_weighted_elements(tree, nEvents)
 #    idx[0]=1
 #      print('weighted sampling idx', idx.shape, idx)
 
