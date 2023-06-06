@@ -43,8 +43,10 @@ ae.compile(optimizer=keras.optimizers.Adam())
 print ("Loaded model")
 
 ## Load testing data
-x_events = 95000
-y_events = 35000
+#x_events = 95000
+#y_events = 35000
+x_events = 50000
+y_events = 18000
 bkg2, sig2 = getTwoJetSystem(x_events, y_events)
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
@@ -56,7 +58,8 @@ phi_sig = graph.predict(sig2)
 
 ## Scale phis - for now by hand
 eval_min = 0.0
-eval_max = 29.119692 
+#eval_max = 29.119692 
+eval_max = 167.20311
 phi_bkg = (phi_bkg - eval_min)/(eval_max-eval_min)
 phi_sig = (phi_sig - eval_min)/(eval_max-eval_min)
 
