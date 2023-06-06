@@ -146,7 +146,8 @@ def pfn_mask_func(X, mask_val=0):
   return K.cast(K.any(K.not_equal(X, mask_val), axis=-1), K.dtype(X))
 
 ## ------------------------------------------------------------------------------------
-def get_full_PFN(input_dim, phi_dim): 
+def get_full_PFN(input_dim, phi_dim):
+  nlayer=100 # 50 
 # https://wandb.ai/ayush-thakur/dl-question-bank/reports/Input-Keras-Layer-Explanation-With-Code-Samples--VmlldzoyMDIzMDU
   initializer = keras.initializers.HeUniform() # samples from uniform distribution
   loss = keras.losses.CategoricalCrossentropy() # computes crossentropy loss btwn labels and predictions
@@ -160,10 +161,10 @@ def get_full_PFN(input_dim, phi_dim):
   masked = keras.layers.Lambda(pfn_mask_func, name="mask")(pfn_inputs) 
 
   # Phi network
-  dense1 = keras.layers.Dense(50, kernel_initializer=initializer, name="pfn1") # 1st hidden layer: the # of units = 50
+  dense1 = keras.layers.Dense(nlayer, kernel_initializer=initializer, name="pfn1") # 1st hidden layer: the # of units = 50
   x = keras.layers.TimeDistributed(dense1, name="tdist_0")(pfn_inputs)
   x = keras.layers.Activation('relu')(x)
-  dense2 = keras.layers.Dense(50, kernel_initializer=initializer, name="pfn2") 
+  dense2 = keras.layers.Dense(nlayer, kernel_initializer=initializer, name="pfn2") 
   x = keras.layers.TimeDistributed(dense2, name="tdist_1")(x)
   x = keras.layers.Activation('relu')(x)
   dense3 = keras.layers.Dense(phi_dim, kernel_initializer=initializer, name="phi") 
@@ -178,63 +179,11 @@ def get_full_PFN(input_dim, phi_dim):
   # F network
   classifier_inputs = keras.Input(shape=(phi_dim,))
   x = classifier_inputs
-  x = keras.layers.Dense(50, kernel_initializer=initializer, name = "F1")(classifier_inputs)
+  x = keras.layers.Dense(nlayer, kernel_initializer=initializer, name = "F1")(classifier_inputs)
   x = keras.layers.Activation('relu')(x)
-  x = keras.layers.Dense(50, kernel_initializer=initializer, name = "F2")(x)
+  x = keras.layers.Dense(nlayer, kernel_initializer=initializer, name = "F2")(x)
   x = keras.layers.Activation('relu')(x)
-  x = keras.layers.Dense(50, kernel_initializer=initializer, name="F3")(x)
-  x = keras.layers.Activation('relu')(x)
-
-  # output
-  x = keras.layers.Dense(2, name="output")(x)
-  output = keras.layers.Activation('softmax')(x)
-
-  classifier = keras.Model(inputs=classifier_inputs, outputs=output, name="classifier")
-  classifier.summary()
-
-  pfn = supervisedPFN(graph, classifier)
-  #pfn.summary()
-  pfn.compile(optimizer=optimizer, loss=loss)
-  return pfn, graph
-
-## ------------------------------------------------------------------------------------
-def get_full_PFN_new(input_dim, phi_dim): 
-# https://wandb.ai/ayush-thakur/dl-question-bank/reports/Input-Keras-Layer-Explanation-With-Code-Samples--VmlldzoyMDIzMDU
-  initializer = keras.initializers.HeUniform() # samples from uniform distribution
-  loss = keras.losses.CategoricalCrossentropy() # computes crossentropy loss btwn labels and predictions
-  optimizer = keras.optimizers.Adam(learning_rate=0.001) # a stochastic gradient descent method  
-
-  input_dim_x = input_dim[0]
-  input_dim_y = input_dim[1]
-
-  #input
-  pfn_inputs = keras.Input(shape=(None,input_dim_y)) # expected input will be [batch_size, units] or N-dim with elements #  = input_dim_y; N is unknown (=None)
-  masked = keras.layers.Lambda(pfn_mask_func, name="mask")(pfn_inputs) 
-
-  # Phi network
-  dense1 = keras.layers.Dense(50, kernel_initializer=initializer, name="pfn1") # 1st hidden layer: the # of units = 50
-  x = keras.layers.TimeDistributed(dense1, name="tdist_0")(pfn_inputs)
-  x = keras.layers.Activation('relu')(x)
-  dense2 = keras.layers.Dense(50, kernel_initializer=initializer, name="pfn2") 
-  x = keras.layers.TimeDistributed(dense2, name="tdist_1")(x)
-  x = keras.layers.Activation('relu')(x)
-  dense3 = keras.layers.Dense(phi_dim, kernel_initializer=initializer, name="phi") 
-  x = keras.layers.TimeDistributed(dense3, name="tdist_2")(x)
-  phi_outputs = keras.layers.Activation('relu')(x)
-
-  # latent space
-  sum_phi = keras.layers.Dot(1, name="sum")([masked,phi_outputs])
-  graph = keras.Model(inputs=pfn_inputs, outputs=sum_phi, name="graph")
-  graph.summary()
-   
-  # F network
-  classifier_inputs = keras.Input(shape=(phi_dim,))
-  x = classifier_inputs
-  x = keras.layers.Dense(50, kernel_initializer=initializer, name = "F1")(classifier_inputs)
-  x = keras.layers.Activation('relu')(x)
-  x = keras.layers.Dense(50, kernel_initializer=initializer, name = "F2")(x)
-  x = keras.layers.Activation('relu')(x)
-  x = keras.layers.Dense(50, kernel_initializer=initializer, name="F3")(x)
+  x = keras.layers.Dense(nlayer, kernel_initializer=initializer, name="F3")(x)
   x = keras.layers.Activation('relu')(x)
 
   # output
@@ -248,6 +197,7 @@ def get_full_PFN_new(input_dim, phi_dim):
   #pfn.summary()
   pfn.compile(optimizer=optimizer, loss=loss)
   return pfn, graph
+
 ## ------------------------------------------------------------------------------------
 def get_pfn(input_dims, phi_dim):
   initializer = keras.initializers.HeNormal()
