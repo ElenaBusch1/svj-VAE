@@ -59,28 +59,32 @@ pred_phi_bkg = classifier.predict(phi_bkg)
 pred_phi_sig = classifier.predict(phi_sig)
 
 # write on html
-"""
 print('*'*30)
 print(phi_bkg)
 print('-'*30)
 print(pred_phi_bkg)
 #print(np.min(pred_phi_sig[:,1]))
 #arr=pred_phi_bkg
-for arr, add in zip([pred_phi_bkg, pred_phi_sig], ['bkg', 'sig']):
-  print(arr, add)
-  h5dir='h5dir'
-  filename=f'{tag}_{add}'
-  h5path=h5dir+filename+'.h5'
-  if not os.path.exists(h5path):
-    print(h5dir+filename+'.h5')
-    with h5py.File(h5path, 'w') as f:
-      data = f.create_dataset("default", data = arr)
-  else:
-    with h5py.File(h5path, 'r') as f:
-      data = f["default"]
+"""
+arr=pred_phi_bkg
+add='bkg'
+print(arr, add)
+h5dir='h5dir'
+filename=f'{tag}_{add}'
+h5path=h5dir+filename+'.h5'
+if not os.path.exists(h5path):
+  pred_phi_bkg = classifier.predict(phi_bkg)
+  print(h5dir+filename+'.h5')
+  with h5py.File(h5path, 'w') as f:
+    data = f.create_dataset("default", data = arr)
+else:
+  with h5py.File(h5path, 'r') as f:
+    data = f["default"]
+  pred_phi_bkg=data
+
+"""
 
 print(np.min(data[:,1]))
-"""
 ## Classifier loss
 bkg_loss = pred_phi_bkg[:,1]
 sig_loss = pred_phi_sig[:,1]
