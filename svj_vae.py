@@ -32,7 +32,7 @@ y_events = 10000
 ## Model architecture
 latent_dim = 12
 encoding_dim = 32
-phi_dim = 64
+phi_dim = 64 #Should we be changing this? Originally 64
 
 # Hyper parameters
 nepochs = 30
@@ -57,7 +57,8 @@ if (hlvs):
     input_dim = 12
     scale = False
 if (jets_1D):
-    input_dim = 64
+    #input_dim = 64
+    input_dim = 400
     scale = True
 if (jets_2D):
     input_dim = [16, 4]
@@ -108,10 +109,10 @@ x_train, scaler = apply_StandardScaling(x_train)
 x_test,_ = apply_StandardScaling(x_test,scaler,False)
 sig,_ = apply_StandardScaling(sig,scaler,False)
 
-x_train = x_train.reshape(x_train.shape[0], 16*4)
-x_test = x_test.reshape(x_test.shape[0], 16*4)
+x_train = x_train.reshape(x_train.shape[0], 100*4)
+x_test = x_test.reshape(x_test.shape[0], 100*4)
 #x_test,_ = apply_StandardScaling(x_test_1,scaler,False)
-sig = sig.reshape(sig.shape[0],16*4)
+sig = sig.reshape(sig.shape[0],100*4)
 plot_vectors(x_train,sig,"AEtrain")
 plot_vectors(x_test,sig,"AEtest")
 

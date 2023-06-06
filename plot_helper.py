@@ -170,14 +170,28 @@ def plot_nTracks(bkg, sig):
   bkg_tracks = get_nTracks(bkg)
   sig_tracks = get_nTracks(sig)
   #bins=np.histogram(np.hstack((bkg_tracks,sig_tracks)),bins=60)[1]
-  bins = np.arange(0,50,1)
+  bins = np.arange(0,100,1)
   plt.hist(bkg_tracks,alpha=0.5, label="bkg", bins=bins, density=False)
   plt.hist(sig_tracks,alpha=0.5, label="sig", bins=bins, density=False)
   plt.title("nTracks (after pT>10) - Tertiary")
   plt.legend()
+  plt.tight_layout()
   plt.savefig(plot_dir+'nTracks_'+tag+'.png')
   plt.clf()
   print("Saved plot of nTracks")
+
+def plot_nTracks_2d_hist(leadingJetTracks, subleadingJetTracks):
+  leading_nTracks = get_nTracks(leadingJetTracks)
+  subleading_nTracks = get_nTracks(subleadingJetTracks)
+  bins = np.arange(0, 75, 1)
+  plt.hist2d(leading_nTracks, subleading_nTracks, bins=bins)
+  plt.title("nTracks (after pT > 10)")
+  plt.xlabel("Leading Jet Number of Tracks")
+  plt.ylabel("Subleading Jet Number of Tracks")
+  plt.tight_layout()
+  plt.savefig(plot_dir+'nTracks_2d_'+tag+'.png')
+  plt.clf()
+  print("Saved plot of nTracks 2D")
 
 def plot_vectors(train,sig,extra_tag):
   variable_array = ["pT", "eta", "phi", "E"]

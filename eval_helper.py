@@ -39,6 +39,8 @@ def getTwoJetSystem(x_events,y_events):
     bjet_sel = jet_bkg[bkg_nz]
     sjet_sel = jet_sig[sig_nz]
 
+    plot_nTracks_2d_hist(bkg_pt0, bkg_pt1)
+
     bkg_sel0 = pt_sort(bkg_pt0, 0)
     bkg_sel1 = pt_sort(bkg_pt1, 1)
     sig_sel0 = pt_sort(sig_pt0, 0)
@@ -63,14 +65,42 @@ def getTwoJetSystem(x_events,y_events):
     #sig_2D,_ = apply_StandardScaling(sig)
     #x = bkg
     #sig = sig
-
     print(bkg.shape)
     print(sig.shape)
+
+    plot_nTracks(bkg, sig)
+
     #x = x_2D.reshape(bkg.shape[0],x_2D.shape[1]*4)
     #sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
     #plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
     #plot_vectors(x,sig,"AEWithZeroRotated")
     return bkg, sig
+
+def get_multiplicity_signals(bkg):
+    # Sort events by number of tracks
+    nTracks = get_nTracks(bkg)
+    print(bkg)
+    print(nTracks)
+    sorted_indices = np.argsort(nTracks)
+    bkg = bkg[sorted_indices, :, :]
+
+    # Gets top and bottom 10% of jets
+    nEvents = bkg.shape[0]
+    ten_pct = round(0.1*nEvents)
+    high_multiplicity = bkg[-ten_pct:, :, :]
+    low_multiplicity = bkg[:ten_pct, :, :]
+
+    # Sanity checks
+    print("High multiplicity min", get_nTracks(high_multiplicity)[0])
+    print("High multiplicity max", get_nTracks(high_multiplicity)[-1])
+    print("Low multiplicity min", get_nTracks(low_multiplicity)[0])
+    print("Low multiplicity max", get_nTracks(low_multiplicity)[-1])
+
+    # Puts these events in random order (does this matter?)
+    np.random.shuffle(high_multiplicity)
+    np.random.shuffle(low_multiplicity)
+
+    return high_multiplicity, low_multiplicity
 
 def get_dPhi(x1,x2):
     dPhi = x1 - x2
@@ -99,9 +129,9 @@ def pt_sort(x, jet_idx):
         ev = x[i]
         x[i] = ev[ev[:,0].argsort()]
     if (jet_idx == 0):
-        y = x[:,-9:,:]
+        y = x[:,-50:,:] #Changing from 9 to 40
     elif (jet_idx == 1):
-        y = x[:,-7:,:]
+        y = x[:,-50:,:] #Changing from 7 to 40
     else:
         y = x[:,-3:,:]
     return y
@@ -250,4 +280,3 @@ def do_roc(bkg_loss, sig_loss, plot_tag, make_transformed_plot=False):
     make_roc(fpr,tpr,auc,plot_tag)
     make_sic(fpr,tpr,auc,plot_tag)
     return auc
-
