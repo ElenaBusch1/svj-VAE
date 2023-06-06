@@ -24,12 +24,6 @@ graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
 graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
 graph.compile()
 
-# ## Load classifier model
-# classifier = keras.models.load_model(arch_dir+pfn_model+'_classifier_arch')
-# classifier.load_weights(arch_dir+pfn_model+'_classifier_weights.h5')
-# classifier.compile()
-
-
 ## ---------- Load AE model ----------
 encoder = keras.models.load_model(arch_dir+ae_model+'_encoder_arch')
 decoder = keras.models.load_model(arch_dir+ae_model+'_decoder_arch')
@@ -51,7 +45,7 @@ print ("Loaded model")
 ## Load testing data
 x_events = 95000
 y_events = 35000
-bkg2, sig2, mT = getTwoJetSystem(x_events,y_events)
+bkg2, sig2, mT = getTwoJetSystem(x_events,y_events, extraVars=["mT_jj"])
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
 sig2,_ = apply_StandardScaling(sig2,scaler,False)

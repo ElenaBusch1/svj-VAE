@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "no_sort"
+tag = "pfnEvalTest"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -23,7 +23,7 @@ def plot_loss(h, model="", loss='loss'):
   plt.title(model+' '+loss)
   plt.ylabel('loss')
   plt.xlabel('epoch')
-  #plt.yscale('log')
+  plt.yscale('log')
   plt.legend(['train', 'val'], loc='upper left')
   plt.savefig(plot_dir+loss+'VsEpoch_'+model+'_'+tag+'.png')
   plt.clf()

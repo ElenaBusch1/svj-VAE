@@ -13,10 +13,10 @@ from eval_helper import *
 encoding_dim = 32
 latent_dim = 12
 phi_dim = 64
-nepochs=30
+nepochs=50
 batchsize_ae=32
 
-pfn_model = 'PFN'
+pfn_model = 'PFNv1'
 ae_model = 'ANTELOPE'
 arch_dir = "architectures_saved/"
 
@@ -26,8 +26,8 @@ graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
 graph.compile()
 
 ## AE events
-x_events = 950000
-y_events = 35000
+x_events = 200000
+y_events = 20000
 bkg2, sig2 = getTwoJetSystem(x_events,y_events)
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
@@ -94,13 +94,22 @@ pred_phi_sig = ae.predict(phi_sig)['reconstruction']
 bkg_loss = keras.losses.mse(phi_testb, pred_phi_bkg)
 sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
 
-plot_score(bkg_loss, sig_loss, False, False, ae_model)
+plot_score(bkg_loss, sig_loss, False, True, ae_model)
 
 # # 3. Signal Sensitivity Score
 score = getSignalSensitivityScore(bkg_loss, sig_loss)
 print("95 percentile score = ",score)
 # # 4. ROCs/AUCs using sklearn functions imported above  
 do_roc(bkg_loss, sig_loss, ae_model, True)
+
+print("Taking log of score...")
+bkg_loss = np.log(bkg_loss)
+sig_loss = np.log(sig_loss)
+score = getSignalSensitivityScore(bkg_loss, sig_loss)
+print("95 percentile score = ",score)
+# # 4. ROCs/AUCs using sklearn functions imported above  
+do_roc(bkg_loss, sig_loss, ae_model+'log', True)
+
 
 # ## get predictions on test data
 # preds = pfn.predict(x_test)
