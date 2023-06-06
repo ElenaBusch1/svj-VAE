@@ -10,6 +10,7 @@ from sklearn.preprocessing import MinMaxScaler
 from plot_helper import *
 from models import *
 
+<<<<<<< HEAD
 data_dir = "/nevis/katya01/data/users/ebusch/SVJ/autoencoder/v8/"
 
 def getTwoJetSystem(x_events,y_events):
@@ -22,6 +23,23 @@ def getTwoJetSystem(x_events,y_events):
     sig_in1 = read_vectors(data_dir + "v8SmallSIGmc20e.root", y_events, track_array1)
     jet_bkg = read_vectors(data_dir + "v8SmallPartialQCDmc20e.root", x_events, jet_array)
     jet_sig = read_vectors(data_dir + "v8SmallSIGmc20e.root", y_events, jet_array)
+=======
+def getTwoJetSystem(x_events,y_events, extraVars=[]):
+    getExtraVars = len(extraVars) > 0
+    
+    track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e", "jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
+    track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e", "jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
+    jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"]
+    bkg_in0 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array0, use_weight=True)
+    sig_in0 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array0, use_weight=False)
+    bkg_in1 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array1, use_weight=True)
+    sig_in1 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array1, use_weight=False)
+    jet_bkg = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, jet_array, use_weight=True)
+    jet_sig = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, jet_array, use_weight=False)
+    if getExtraVars: 
+        vars_bkg = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, extraVars, use_weight=True)
+        vars_sig = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, extraVars, use_weight=False)
+>>>>>>> master
 
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
     _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig)
@@ -38,16 +56,28 @@ def getTwoJetSystem(x_events,y_events):
     sig_pt1 = sig_in1[sig_nz]
     bjet_sel = jet_bkg[bkg_nz]
     sjet_sel = jet_sig[sig_nz]
+    if getExtraVars:
+        vars_bkg = vars_bkg[bkg_nz]    
+        vars_sig = vars_sig[sig_nz]    
 
+    #plot_nTracks(bkg_pt0, sig_pt0, "j1")
+    #plot_nTracks(bkg_pt1, sig_pt1, "j2")
+
+<<<<<<< HEAD
     plot_nTracks_2d_hist(bkg_pt0, bkg_pt1)
 
     bkg_sel0 = pt_sort(bkg_pt0, 0)
     bkg_sel1 = pt_sort(bkg_pt1, 1)
     sig_sel0 = pt_sort(sig_pt0, 0)
     sig_sel1 = pt_sort(sig_pt1, 1)
+=======
+    bkg_sel = np.concatenate((bkg_pt0,bkg_pt1),axis=1)
+    sig_sel = np.concatenate((sig_pt0,sig_pt1),axis=1)
+>>>>>>> master
 
-    bkg_sel = np.concatenate((bkg_sel0,bkg_sel1),axis=1)
-    sig_sel = np.concatenate((sig_sel0,sig_sel1),axis=1)
+    #bkg_sel = pt_sort(bkg_sel)
+    #sig_sel = pt_sort(sig_sel)
+    #plot_nTracks(bkg_sel, sig_sel, "jAll")
 
     bkg = apply_JetScalingRotation(bkg_sel, bjet_sel,0)
     sig = apply_JetScalingRotation(sig_sel, sjet_sel,0)
@@ -55,7 +85,7 @@ def getTwoJetSystem(x_events,y_events):
     #plot
     #x_sel_nz = remove_zero_padding(bkg_sel)
     #sig_sel_nz = remove_zero_padding(sig_sel)
-    #plot_vectors(x_sel_nz,sig_sel_nz,"AEraw")
+    #plot_vectors(bkg_sel,sig_sel,"PFNraw")
     #x_nz = remove_zero_padding(bkg)
     #sig_nz = remove_zero_padding(sig)
     #plot_vectors(x_nz,sig_nz,"AErotated_avg")
@@ -67,14 +97,25 @@ def getTwoJetSystem(x_events,y_events):
     #sig = sig
     print(bkg.shape)
     print(sig.shape)
+<<<<<<< HEAD
 
     plot_nTracks(bkg, sig)
 
+=======
+    #print(mT_sel.shape)
+>>>>>>> master
     #x = x_2D.reshape(bkg.shape[0],x_2D.shape[1]*4)
     #sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
     #plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
     #plot_vectors(x,sig,"AEWithZeroRotated")
-    return bkg, sig
+    if getExtraVars: return bkg, sig, vars_bkg, vars_sig
+    else: return bkg, sig
+
+def check_weights(x_events):
+    bkg_nw = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, ["jet1_pt"], use_weight=False)
+    bkg_w = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, ["jet1_pt"], use_weight=True)
+    sig_nw = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", x_events, ["jet1_pt"], use_weight=False)
+    plot_single_variable([bkg_nw,bkg_w, sig_nw], ["QCD No Weights", "QCD Weights", "SIG No Weights"], "QCD Weight Check", logy=True) 
 
 def get_multiplicity_signals(bkg):
     # Sort events by number of tracks
@@ -124,10 +165,11 @@ def reshape_3D(x, nTracks, nFeatures):
     print(x_out[4])
     return x_out
 
-def pt_sort(x, jet_idx):
+def pt_sort(x):
     for i in range(x.shape[0]):
         ev = x[i]
         x[i] = ev[ev[:,0].argsort()]
+<<<<<<< HEAD
     if (jet_idx == 0):
         y = x[:,-50:,:] #Changing from 9 to 40
     elif (jet_idx == 1):
@@ -135,18 +177,22 @@ def pt_sort(x, jet_idx):
     else:
         y = x[:,-3:,:]
     return y
+=======
+    #y = x[:,-60:,:]
+    return x
+>>>>>>> master
 
 def apply_TrackSelection(x_raw, jets):
     x = np.copy(x_raw)
-    x[x[:,:,0] < 10] = 0
+    x[x[:,:,0] < 10] = 0 # apply pT requirement
     print("Input track shape: ", x.shape)
     # require at least 3 tracks
     x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 3 for jet in x])
     x = x[x_nz]
     jets = jets[x_nz]
-    print("Track selections")
     print("Selected track shape: ", x.shape)
     print("Selected jet shape: ", jets.shape)
+    print()
     return x, jets, x_nz
 
 def apply_StandardScaling(x_raw, scaler=MinMaxScaler(), doFit=True):
@@ -186,8 +232,8 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
     
     #jet_phi_avs = np.zeros(x.shape[0])
     for e in range(x.shape[0]):
-        jet_eta_av = (jet[e,0,0] + jet[e,1,0])/2.0 
-        jet_phi_av = (jet[e,0,1] + jet[e,1,1])/2.0 
+        jet_eta_av = (jet[e,0] + jet[e,2])/2.0 
+        jet_phi_av = (jet[e,1] + jet[e,3])/2.0 
         #jet_phi_avs[e] = jet_phi_av
         for t in range(x.shape[1]):
             if not x[e,t,:].any():
@@ -264,6 +310,24 @@ def transform_loss(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
     if make_plot:
         plot_score(bkg_transformed, sig_transformed, False, False, plot_tag+'_Transformed')
     return truth_labels, eval_vals 
+
+def transform_loss_ex(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
+    nevents = len(sig_loss)
+    eval_vals = np.concatenate((bkg_loss,sig_loss))
+    eval_transformed = [1 - np.exp(-x) for x in eval_vals]
+    bkg_transformed = [1 - np.exp(-x) for x in bkg_loss]
+    sig_transformed = [1 - np.exp(-x) for x in sig_loss]
+    if make_plot:
+        plot_score(bkg_transformed, sig_transformed, False, False, plot_tag+'_TransformedEx')
+    return eval_vals 
+
+def vrnn_transform(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
+    train_mean = np.mean(bkg_loss)
+    bkg_loss_p = [1-x/(2*train_mean) for x in bkg_loss]
+    sig_loss_p = [1-x/(2*train_mean) for x in sig_loss]
+    if make_plot:
+        plot_score(bkg_loss_p, sig_loss_p, False, False, plot_tag+'_MeanShift')
+    return bkg_loss_p, sig_loss_p    
 
 def getSignalSensitivityScore(bkg_loss, sig_loss, percentile=95):
     nSigAboveThreshold = np.sum(sig_loss > np.percentile(bkg_loss, percentile))

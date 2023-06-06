@@ -1,6 +1,6 @@
 import numpy as np
 import json
-import joblib
+from joblib import dump
 from root_to_numpy import *
 from tensorflow import keras
 from tensorflow import saved_model
@@ -57,8 +57,12 @@ if (hlvs):
     input_dim = 12
     scale = False
 if (jets_1D):
+<<<<<<< HEAD
     #input_dim = 64
     input_dim = 400
+=======
+    input_dim = 160
+>>>>>>> master
     scale = True
 if (jets_2D):
     input_dim = [16, 4]
@@ -106,13 +110,21 @@ x_train, x_test, _, _ = train_test_split(x, x, test_size=sig.shape[0]) #done ran
 #x_test = reshape_3D(x_test, 16, 4)
 #sig = reshape_3D(sig, 16, 4)
 x_train, scaler = apply_StandardScaling(x_train)
+dump(scaler, arch_dir+model_name+'_scaler.bin', compress=True) #save the scaler
 x_test,_ = apply_StandardScaling(x_test,scaler,False)
 sig,_ = apply_StandardScaling(sig,scaler,False)
 
+<<<<<<< HEAD
 x_train = x_train.reshape(x_train.shape[0], 100*4)
 x_test = x_test.reshape(x_test.shape[0], 100*4)
 #x_test,_ = apply_StandardScaling(x_test_1,scaler,False)
 sig = sig.reshape(sig.shape[0],100*4)
+=======
+x_train = x_train.reshape(x_train.shape[0], x_train.shape[1]*x_train.shape[2])
+x_test = x_test.reshape(x_test.shape[0], x_test.shape[1]*x_test.shape[2])
+#x_test,_ = apply_StandardScaling(x_test_1,scaler,False)
+sig = sig.reshape(sig.shape[0],sig.shape[1]*sig.shape[2])
+>>>>>>> master
 plot_vectors(x_train,sig,"AEtrain")
 plot_vectors(x_test,sig,"AEtest")
 
@@ -128,8 +140,11 @@ if (model_name == "AE" or model_name == "VAE"):
 elif (model_name == "PFN_AE"  or model_name == "PFN_VAE"):
     model_svj, pfn = get_model(model_name, input_dim, encoding_dim, latent_dim, phi_dim)
 
+<<<<<<< HEAD
 #quit()
 
+=======
+>>>>>>> master
 ## Train the model
 h = model_svj.fit(x_train,
                 epochs=nepochs,

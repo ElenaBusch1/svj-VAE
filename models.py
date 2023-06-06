@@ -159,10 +159,10 @@ def get_full_PFN(input_dim, phi_dim):
   masked = keras.layers.Lambda(pfn_mask_func, name="mask")(pfn_inputs)
 
   # Phi network
-  dense1 = keras.layers.Dense(50, kernel_initializer=initializer, name="pfn1")
+  dense1 = keras.layers.Dense(75, kernel_initializer=initializer, name="pfn1")
   x = keras.layers.TimeDistributed(dense1, name="tdist_0")(pfn_inputs)
   x = keras.layers.Activation('relu')(x)
-  dense2 = keras.layers.Dense(50, kernel_initializer=initializer, name="pfn2") 
+  dense2 = keras.layers.Dense(75, kernel_initializer=initializer, name="pfn2") 
   x = keras.layers.TimeDistributed(dense2, name="tdist_1")(x)
   x = keras.layers.Activation('relu')(x)
   dense3 = keras.layers.Dense(phi_dim, kernel_initializer=initializer, name="phi") 
@@ -177,11 +177,11 @@ def get_full_PFN(input_dim, phi_dim):
   # F network
   classifier_inputs = keras.Input(shape=(phi_dim,))
   x = classifier_inputs
-  x = keras.layers.Dense(50, kernel_initializer=initializer, name = "F1")(classifier_inputs)
+  x = keras.layers.Dense(75, kernel_initializer=initializer, name = "F1")(classifier_inputs)
   x = keras.layers.Activation('relu')(x)
-  x = keras.layers.Dense(50, kernel_initializer=initializer, name = "F2")(x)
+  x = keras.layers.Dense(75, kernel_initializer=initializer, name = "F2")(x)
   x = keras.layers.Activation('relu')(x)
-  x = keras.layers.Dense(50, kernel_initializer=initializer, name="F3")(x)
+  x = keras.layers.Dense(75, kernel_initializer=initializer, name="F3")(x)
   x = keras.layers.Activation('relu')(x)
 
   # output

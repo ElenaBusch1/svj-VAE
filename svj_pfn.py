@@ -10,25 +10,26 @@ from plot_helper import *
 from eval_helper import *
 
 # Example usage
-nevents = 50000
-num_elements = 100
-element_size = 4
+nevents = 500000
+num_elements = 80
+element_size = 7
 encoding_dim = 32
 latent_dim = 4
 phi_dim = 64
-nepochs=30
+nepochs= 100
 batchsize_pfn=500
 batchsize_ae=32
 
 pfn_model = 'PFN'
-ae_model = 'PFN'
 arch_dir = "architectures_saved/"
 
 ## Load leading two jets
 bkg, sig = getTwoJetSystem(nevents,nevents)
 
-# 4. Plot inputs
+# Plot inputs
 plot_vectors(bkg,sig,"PFNrotated")
+#check_weights(nevents)
+plot_nTracks(bkg, sig, "jAll")
 
 # Create truth target
 input_data = np.concatenate((bkg,sig),axis=0)
@@ -38,9 +39,6 @@ truth_sig = np.ones(sig.shape[0])
 
 truth_1D = np.concatenate((truth_bkg,truth_sig))
 truth = tf.keras.utils.to_categorical(truth_1D, num_classes=2)
-
-## MAKE 1D DATA - DNN only
-#input_data = input_data.reshape(input_data.shape[0],40*4)
 
 print("Training shape, truth shape")
 print(input_data.shape, truth.shape)

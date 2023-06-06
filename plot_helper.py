@@ -3,10 +3,10 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 from matplotlib import colors
-from root_to_numpy import variable_array
 from math import ceil
 
-tag = "PFN_2jAvg_MM"
+#tag = "PFN_2jAvg_MM"
+tag = "pfnEvalTest"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 plot_dir = "/nevis/milne/files/gpm2117/WWW/SVJ/autoencoder/"
 
@@ -112,7 +112,7 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, extra_tag=
   if xlog and bmin == 0: bmin = 1e-9
   if xlog: bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
   else: bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
-  #bins = np.linspace(0,5e-3,80)
+  #bins = np.linspace(500,4000,80)
   #plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg (-"+str(nb)+")", density=True)
   #plt.hist(sig_score, bins=bins, alpha=0.5, label="sig(-"+str(ns)+")", density=True)
   plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg", density=True)
@@ -131,23 +131,28 @@ def plot_phi(phis,name,extra_tag):
   nevents = phis.shape[0]
   idx = [i for i in range(nphis)]*nevents
 
+  print(extra_tag)
   phiT = phis.T
   print("n zeros = ", len(np.where(~phiT.any(axis=1))[0]))
   phis = phis.flatten()
   nbinsx = 10
   bin_width = max(phis)/nbinsx
+  print("max: ", max(phis))
+  print("bin_width", bin_width)
   phis[phis==0] = -bin_width 
 
   fig, ax = plt.subplots()
-  h = ax.hist2d(phis,idx,bins=[nbinsx+1,nphis])
+  h = ax.hist2d(phis,idx,bins=[nbinsx+1,nphis],norm=colors.LogNorm())
+  print("xedges", h[1])
   fig.colorbar(h[3], ax=ax)
   ax.set_xlabel('Value')
   ax.set_ylabel('Index')
   ax.set_title('PFN Set Representation - '+name)
   plt.savefig(plot_dir+'phi2D_'+name+'_'+extra_tag+'_'+tag+'.png')
+  plt.clf()
   print("Saved 2D plot of phi-rep for", extra_tag)
 
-def plot_inputs(bkg, sig):
+def plot_inputs(bkg, sig, variable_array):
   for i in range(len(variable_array)):
     plt.subplot(2,2,i%4+1)
     plt.tight_layout(h_pad=1, w_pad=1)
@@ -158,6 +163,16 @@ def plot_inputs(bkg, sig):
       plt.savefig(plot_dir+'input_vars_'+str(i)+tag+'.png')
       plt.clf()
 
+def plot_single_variable(hists, h_names, title, logy=False):
+  for data,name, in zip(hists,h_names):
+    plt.hist(data, bins=50, alpha=0.5, label=name)
+  plt.legend()
+  if (logy): plt.yscale("log")
+  plt.title(title)
+  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
+  plt.clf()
+  print("Saved plot",title)
+
 def get_nTracks(x):
   n_tracks = []
   for i in range(x.shape[0]):
@@ -166,17 +181,25 @@ def get_nTracks(x):
     n_tracks.append(len(tracks))
   return n_tracks
  
-def plot_nTracks(bkg, sig):
+def plot_nTracks(bkg, sig, extra_tag=""):
   bkg_tracks = get_nTracks(bkg)
   sig_tracks = get_nTracks(sig)
   #bins=np.histogram(np.hstack((bkg_tracks,sig_tracks)),bins=60)[1]
+<<<<<<< HEAD
   bins = np.arange(0,100,1)
+=======
+  bins = np.arange(0,100,2)
+>>>>>>> master
   plt.hist(bkg_tracks,alpha=0.5, label="bkg", bins=bins, density=False)
   plt.hist(sig_tracks,alpha=0.5, label="sig", bins=bins, density=False)
-  plt.title("nTracks (after pT>10) - Tertiary")
+  plt.title("nTracks (after pT>10)")
   plt.legend()
+<<<<<<< HEAD
   plt.tight_layout()
   plt.savefig(plot_dir+'nTracks_'+tag+'.png')
+=======
+  plt.savefig(plot_dir+'nTracks_'+extra_tag+tag+'.png')
+>>>>>>> master
   plt.clf()
   print("Saved plot of nTracks")
 
@@ -194,22 +217,22 @@ def plot_nTracks_2d_hist(leadingJetTracks, subleadingJetTracks):
   print("Saved plot of nTracks 2D")
 
 def plot_vectors(train,sig,extra_tag):
-  variable_array = ["pT", "eta", "phi", "E"]
+  variable_array = ["pT", "eta", "phi", "E", "z0", "d0", "qOverP"]
   if (len(train.shape) == 3):
     train = train.reshape(train.shape[0], train.shape[1] * train.shape[2])
   if (len(sig.shape) == 3):
     sig = sig.reshape(sig.shape[0], sig.shape[1] * sig.shape[2])
-  for i in range(4):
-    train_v = train[:,i::4].flatten()
+  for i in range(7):
+    train_v = train[:,i::7].flatten()
     #test_v = test[:,i::4].flatten()
-    sig_v = sig[:,i::4].flatten()
+    sig_v = sig[:,i::7].flatten()
     bins=np.histogram(np.hstack((train_v,sig_v)),bins=60)[1]
     if(bins[-1] > 3000): bins = np.arange(0,3000,50)
-    plt.subplot(2,2,i+1)
+    plt.subplot(4,2,i+1)
     plt.tight_layout(h_pad=1, w_pad=1)
-    plt.hist(train_v, alpha=0.5, label="bkg", bins=bins, density=False)
+    plt.hist(train_v, alpha=0.5, label="v8", bins=bins, density=False)
     #plt.hist(test_v, alpha=0.5, label="test", bins=bins, density=True, color='lightskyblue')
-    plt.hist(sig_v, alpha=0.5, label="sig", bins=bins, density=False)
+    plt.hist(sig_v, alpha=0.5, label="v8.1", bins=bins, density=False)
     plt.yscale('log')
     plt.title(variable_array[i])
     if i == 1: plt.legend()

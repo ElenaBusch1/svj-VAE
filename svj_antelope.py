@@ -11,13 +11,13 @@ from eval_helper import *
 
 # Example usage
 encoding_dim = 32
-latent_dim = 4
+latent_dim = 12
 phi_dim = 64
-nepochs=30
+nepochs=50
 batchsize_ae=32
 
-pfn_model = 'PFN'
-ae_model = 'PFN'
+pfn_model = 'PFNv1'
+ae_model = 'ANTELOPE'
 arch_dir = "architectures_saved/"
 
 ################### Train the AE ###############################
@@ -26,27 +26,42 @@ graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
 graph.compile()
 
 ## AE events
-x_events = 99570
-y_events = 9957
+x_events = 200000
+y_events = 20000
 bkg2, sig2 = getTwoJetSystem(x_events,y_events)
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
 sig2,_ = apply_StandardScaling(sig2,scaler,False)
-plot_vectors(bkg2,sig2,"PFN_AE")
+plot_vectors(bkg2,sig2,"ANTELOPE")
 
 phi_bkg = graph.predict(bkg2)
 phi_sig = graph.predict(sig2)
 
-plot_phi(phi_bkg,"bkg","PFN_phi_bkg_raw")
-plot_phi(phi_sig,"sig","PFN_phi_sig_raw")
+#plot_score(phi_bkg[:,11], phi_sig[:,11], False, False, "phi_11_raw")
 
 phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=sig2.shape[0])
+plot_phi(phi_evalb,"Train","PFN_phi_train_raw")
+plot_phi(phi_testb,"Test","PFN_phi_test_raw")
+plot_phi(phi_sig,"Signal","PFN_phi_sig_raw")
 
-phi_evalb, phi_scaler = apply_StandardScaling(phi_evalb)
-phi_testb, _ = apply_StandardScaling(phi_testb,phi_scaler,False)
-phi_sig, _ = apply_StandardScaling(phi_sig,phi_scaler,False)
+eval_max = np.amax(phi_evalb)
+eval_min = np.amin(phi_evalb)
+sig_max = np.amax(phi_sig)
+print("Min: ", eval_min)
+print("Max: ", eval_max)
+if (sig_max > eval_max): eval_max = sig_max
+print("Final Max: ", eval_max)
 
-plot_phi(phi_bkg,"bkg","PFN_phi_bkg_scaled")
+phi_evalb = (phi_evalb - eval_min)/(eval_max-eval_min)
+phi_testb = (phi_testb - eval_min)/(eval_max-eval_min)
+phi_sig = (phi_sig - eval_min)/(eval_max-eval_min)
+
+#phi_evalb, phi_scaler = apply_StandardScaling(phi_evalb)
+#phi_testb, _ = apply_StandardScaling(phi_testb,phi_scaler,False)
+#phi_sig, _ = apply_StandardScaling(phi_sig,phi_scaler,False)
+
+plot_phi(phi_evalb,"train","PFN_phi_train_scaled")
+plot_phi(phi_testb,"test","PFN_phi_test_scaled")
 plot_phi(phi_sig,"sig","PFN_phi_sig_scaled")
 
 ae = get_ae(phi_dim,encoding_dim,latent_dim)
@@ -79,13 +94,22 @@ pred_phi_sig = ae.predict(phi_sig)['reconstruction']
 bkg_loss = keras.losses.mse(phi_testb, pred_phi_bkg)
 sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
 
-plot_score(bkg_loss, sig_loss, False, False, ae_model)
+plot_score(bkg_loss, sig_loss, False, True, ae_model)
 
 # # 3. Signal Sensitivity Score
 score = getSignalSensitivityScore(bkg_loss, sig_loss)
 print("95 percentile score = ",score)
 # # 4. ROCs/AUCs using sklearn functions imported above  
 do_roc(bkg_loss, sig_loss, ae_model, True)
+
+print("Taking log of score...")
+bkg_loss = np.log(bkg_loss)
+sig_loss = np.log(sig_loss)
+score = getSignalSensitivityScore(bkg_loss, sig_loss)
+print("95 percentile score = ",score)
+# # 4. ROCs/AUCs using sklearn functions imported above  
+do_roc(bkg_loss, sig_loss, ae_model+'log', True)
+
 
 # ## get predictions on test data
 # preds = pfn.predict(x_test)
