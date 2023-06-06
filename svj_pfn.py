@@ -10,13 +10,13 @@ from plot_helper import *
 from eval_helper import *
 
 # Example usage
-nevents = 50000
-num_elements = 100
+nevents = 500000
+num_elements = 80
 element_size = 7
 encoding_dim = 32
 latent_dim = 4
 phi_dim = 64
-nepochs=30
+nepochs= 100
 batchsize_pfn=500
 batchsize_ae=32
 

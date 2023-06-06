@@ -33,7 +33,7 @@ def read_flat_vars(infile, nEvents, variable_array, use_weight=True):
 def read_vectors(infile, nEvents, jet_array, use_weight=True):
     file = uproot.open(infile)
     
-    max_jets = 100
+    max_jets = 80
 
     if(infile.find("Small") != -1): myTree = "outTree"
     else: myTree = "PostSel"

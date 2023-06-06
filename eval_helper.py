@@ -15,11 +15,11 @@ def getTwoJetSystem(x_events,y_events):
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e", "jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
     track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e", "jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
     jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"]
-    bkg_in0 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array0, use_weight=False)
+    bkg_in0 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array0, use_weight=True)
     sig_in0 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array0, use_weight=False)
-    bkg_in1 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array1, use_weight=False)
+    bkg_in1 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array1, use_weight=True)
     sig_in1 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array1, use_weight=False)
-    jet_bkg = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, jet_array, use_weight=False)
+    jet_bkg = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, jet_array, use_weight=True)
     jet_sig = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, jet_array, use_weight=False)
     #mT_bkg = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", x_events, ["mT_jj"], use_weight=False)
 
@@ -46,8 +46,8 @@ def getTwoJetSystem(x_events,y_events):
     bkg_sel = np.concatenate((bkg_pt0,bkg_pt1),axis=1)
     sig_sel = np.concatenate((sig_pt0,sig_pt1),axis=1)
 
-    bkg_sel = pt_sort(bkg_sel)
-    sig_sel = pt_sort(sig_sel)
+    #bkg_sel = pt_sort(bkg_sel)
+    #sig_sel = pt_sort(sig_sel)
     plot_nTracks(bkg_sel, sig_sel, "jAll")
 
     bkg = apply_JetScalingRotation(bkg_sel, bjet_sel,0)
