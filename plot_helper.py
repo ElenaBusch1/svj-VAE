@@ -185,21 +185,13 @@ def plot_nTracks(bkg, sig, extra_tag=""):
   bkg_tracks = get_nTracks(bkg)
   sig_tracks = get_nTracks(sig)
   #bins=np.histogram(np.hstack((bkg_tracks,sig_tracks)),bins=60)[1]
-<<<<<<< HEAD
-  bins = np.arange(0,100,1)
-=======
   bins = np.arange(0,100,2)
->>>>>>> master
   plt.hist(bkg_tracks,alpha=0.5, label="bkg", bins=bins, density=False)
   plt.hist(sig_tracks,alpha=0.5, label="sig", bins=bins, density=False)
   plt.title("nTracks (after pT>10)")
   plt.legend()
-<<<<<<< HEAD
   plt.tight_layout()
-  plt.savefig(plot_dir+'nTracks_'+tag+'.png')
-=======
   plt.savefig(plot_dir+'nTracks_'+extra_tag+tag+'.png')
->>>>>>> master
   plt.clf()
   print("Saved plot of nTracks")
 

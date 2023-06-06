@@ -15,8 +15,8 @@ from eval_helper import *
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-pfn_model = 'PFN'
-ae_model = 'ANTELOPE'
+pfn_model = 'PFNv1'
+ae_model = 'ANTELOPEv1'
 arch_dir = "architectures_saved/"
 
 ## ---------- Load graph model ----------
@@ -45,7 +45,7 @@ print ("Loaded model")
 ## Load testing data
 x_events = 95000
 y_events = 35000
-bkg2, sig2, mT = getTwoJetSystem(x_events,y_events, extraVars=["mT_jj"])
+bkg2, sig2 = getTwoJetSystem(x_events, y_events)
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
 sig2,_ = apply_StandardScaling(sig2,scaler,False)
@@ -107,12 +107,12 @@ bkg_loss = np.log(bkg_loss)
 sig_loss = np.log(sig_loss)
 #plot_score(bkg_loss, sig_loss, False, False, ae_model+'logx')
 
-print(mT)
-print(bkg_loss > -11)
-mT_in = mT[bkg_loss > -11]
-print(mT_in)
-plot_score(mT, mT_in, False, False, "mTSel")
-quit()
+#print(mT)
+#print(bkg_loss > -11)
+#mT_in = mT[bkg_loss > -11]
+#print(mT_in)
+#plot_score(mT, mT_in, False, False, "mTSel")
+#quit()
 
 #transform_loss_ex(bkg_loss, sig_loss, True)
 ##  #plot_score(bkg_loss, sig_loss, False, True, ae_model+"_xlog")

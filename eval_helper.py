@@ -10,9 +10,9 @@ from sklearn.preprocessing import MinMaxScaler
 from plot_helper import *
 from models import *
 
-<<<<<<< HEAD
-data_dir = "/nevis/katya01/data/users/ebusch/SVJ/autoencoder/v8/"
+data_dir = "/nevis/katya01/data/users/ebusch/SVJ/autoencoder/"
 
+"""
 def getTwoJetSystem(x_events,y_events):
     track_array0 = ["jet_GhostTrack_pt_0", "jet_GhostTrack_eta_0", "jet_GhostTrack_phi_0", "jet_GhostTrack_e_0"]
     track_array1 = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"]
@@ -23,23 +23,23 @@ def getTwoJetSystem(x_events,y_events):
     sig_in1 = read_vectors(data_dir + "v8SmallSIGmc20e.root", y_events, track_array1)
     jet_bkg = read_vectors(data_dir + "v8SmallPartialQCDmc20e.root", x_events, jet_array)
     jet_sig = read_vectors(data_dir + "v8SmallSIGmc20e.root", y_events, jet_array)
-=======
-def getTwoJetSystem(x_events,y_events, extraVars=[]):
+"""
+
+def getTwoJetSystem(x_events, y_events, extraVars=[]):
     getExtraVars = len(extraVars) > 0
     
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e", "jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
     track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e", "jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
     jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"]
-    bkg_in0 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array0, use_weight=True)
-    sig_in0 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array0, use_weight=False)
-    bkg_in1 = read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array1, use_weight=True)
-    sig_in1 = read_vectors("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array1, use_weight=False)
-    jet_bkg = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, jet_array, use_weight=True)
-    jet_sig = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, jet_array, use_weight=False)
+    bkg_in0 = read_vectors(data_dir + "v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array0, use_weight=True)
+    sig_in0 = read_vectors(data_dir + "v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array0, use_weight=False)
+    bkg_in1 = read_vectors(data_dir + "v8.1/user.ebusch.QCDskim.mc20e.root", x_events, track_array1, use_weight=True)
+    sig_in1 = read_vectors(data_dir + "v8.1/user.ebusch.SIGskim.mc20e.root", y_events, track_array1, use_weight=False)
+    jet_bkg = read_flat_vars(data_dir + "v8.1/user.ebusch.QCDskim.mc20e.root", x_events, jet_array, use_weight=True)
+    jet_sig = read_flat_vars(data_dir + "v8.1/user.ebusch.SIGskim.mc20e.root", y_events, jet_array, use_weight=False)
     if getExtraVars: 
-        vars_bkg = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, extraVars, use_weight=True)
-        vars_sig = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", y_events, extraVars, use_weight=False)
->>>>>>> master
+        vars_bkg = read_flat_vars(data_dir + "v8.1/user.ebusch.QCDskim.mc20e.root", x_events, extraVars, use_weight=True)
+        vars_sig = read_flat_vars(data_dir + "v8.1/user.ebusch.SIGskim.mc20e.root", y_events, extraVars, use_weight=False)
 
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
     _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig)
@@ -63,17 +63,17 @@ def getTwoJetSystem(x_events,y_events, extraVars=[]):
     #plot_nTracks(bkg_pt0, sig_pt0, "j1")
     #plot_nTracks(bkg_pt1, sig_pt1, "j2")
 
-<<<<<<< HEAD
-    plot_nTracks_2d_hist(bkg_pt0, bkg_pt1)
-
+    #plot_nTracks_2d_hist(bkg_pt0, bkg_pt1)
+    """
+    # NOTE no need to sort for ANTELOPE
     bkg_sel0 = pt_sort(bkg_pt0, 0)
     bkg_sel1 = pt_sort(bkg_pt1, 1)
     sig_sel0 = pt_sort(sig_pt0, 0)
     sig_sel1 = pt_sort(sig_pt1, 1)
-=======
+    """
+
     bkg_sel = np.concatenate((bkg_pt0,bkg_pt1),axis=1)
     sig_sel = np.concatenate((sig_pt0,sig_pt1),axis=1)
->>>>>>> master
 
     #bkg_sel = pt_sort(bkg_sel)
     #sig_sel = pt_sort(sig_sel)
@@ -97,13 +97,10 @@ def getTwoJetSystem(x_events,y_events, extraVars=[]):
     #sig = sig
     print(bkg.shape)
     print(sig.shape)
-<<<<<<< HEAD
 
-    plot_nTracks(bkg, sig)
+    #plot_nTracks(bkg, sig)
 
-=======
     #print(mT_sel.shape)
->>>>>>> master
     #x = x_2D.reshape(bkg.shape[0],x_2D.shape[1]*4)
     #sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
     #plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
@@ -169,18 +166,8 @@ def pt_sort(x):
     for i in range(x.shape[0]):
         ev = x[i]
         x[i] = ev[ev[:,0].argsort()]
-<<<<<<< HEAD
-    if (jet_idx == 0):
-        y = x[:,-50:,:] #Changing from 9 to 40
-    elif (jet_idx == 1):
-        y = x[:,-50:,:] #Changing from 7 to 40
-    else:
-        y = x[:,-3:,:]
-    return y
-=======
     #y = x[:,-60:,:]
     return x
->>>>>>> master
 
 def apply_TrackSelection(x_raw, jets):
     x = np.copy(x_raw)
