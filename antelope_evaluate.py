@@ -15,8 +15,8 @@ from eval_helper import *
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-pfn_model = 'PFN'
-ae_model = 'ANTELOPE'
+pfn_model = 'PFNv1'
+ae_model = 'ANTELOPEv1'
 arch_dir = "architectures_saved/"
 
 ## ---------- Load graph model ----------
@@ -43,29 +43,25 @@ ae.compile(optimizer=keras.optimizers.Adam())
 print ("Loaded model")
 
 ## Load testing data
-x_events = 95000
-y_events = 35000
-bkg2, sig2, mT = getTwoJetSystem(x_events,y_events, extraVars=["mT_jj"])
+x_events = 250000
+y_events = 250000
+bkg2, sig2, mT_bkg, mT_sig = getTwoJetSystem(x_events,y_events, ["mT_jj"])
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
 sig2,_ = apply_StandardScaling(sig2,scaler,False)
-plot_vectors(bkg2,sig2,"ANTELOPE")
+#plot_vectors(bkg2,sig2,"ANTELOPE")
 
 phi_bkg = graph.predict(bkg2)
 phi_sig = graph.predict(sig2)
 
-## Scale phis - for now by hand
+## Scale phis - values from v1 training
 eval_min = 0.0
-eval_max = 29.119692 
+eval_max = 167.20311
 phi_bkg = (phi_bkg - eval_min)/(eval_max-eval_min)
 phi_sig = (phi_sig - eval_min)/(eval_max-eval_min)
 
 pred_phi_bkg = ae.predict(phi_bkg)['reconstruction']
 pred_phi_sig = ae.predict(phi_sig)['reconstruction']
-
-# ## Classifier loss
-# bkg_loss = pred_phi_bkg[:,1]
-# sig_loss = pred_phi_sig[:,1]
 
 # ## AE loss
 bkg_loss = keras.losses.mse(phi_bkg, pred_phi_bkg)
@@ -103,16 +99,28 @@ sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
 ##      plot_saved_loss(h, ae_model, "reco_loss")
 # 2. Anomaly score
 #plot_score(bkg_loss, sig_loss, False, False, ae_model)
-bkg_loss = np.log(bkg_loss)
-sig_loss = np.log(sig_loss)
-#plot_score(bkg_loss, sig_loss, False, False, ae_model+'logx')
+#bkg_loss = np.log(bkg_loss)
+#sig_loss = np.log(sig_loss)
+plot_score(bkg_loss, sig_loss, False, True, ae_model)
+bkg20 = np.percentile(bkg_loss, 80)
+bkg10 = np.percentile(bkg_loss, 90)
+bkg05 = np.percentile(bkg_loss, 95)
+bkg01 = np.percentile(bkg_loss, 99)
 
-print(mT)
-print(bkg_loss > -11)
-mT_in = mT[bkg_loss > -11]
-print(mT_in)
-plot_score(mT, mT_in, False, False, "mTSel")
-quit()
+print("Cuts: ", bkg20, bkg10, bkg05,bkg01)
+
+mT_jj20 = mT_bkg[bkg_loss > bkg20]
+mT_jj10 = mT_bkg[bkg_loss > bkg10]
+mT_jj05 = mT_bkg[bkg_loss > bkg05]
+mT_jj01 = mT_bkg[bkg_loss > bkg01]
+print(len(mT_jj20), len(mT_jj10), len(mT_jj05), len(mT_jj01))
+plot_single_variable([mT_bkg, mT_jj20,mT_jj10,mT_jj05,mT_jj01], ["100% QCD", "20% QCD", "10% QCD", "5% QCD", "1% QCD"], "mT Shape Check", logy=True) 
+
+if (len(bkg_loss) > len(sig_loss)):
+   bkg_loss = bkg_loss[:len(sig_loss)]
+else:
+   sig_loss = sig_loss[:len(bkg_loss)]
+do_roc(bkg_loss, sig_loss, ae_model, False)
 
 #transform_loss_ex(bkg_loss, sig_loss, True)
 ##  #plot_score(bkg_loss, sig_loss, False, True, ae_model+"_xlog")
@@ -123,17 +131,9 @@ quit()
 ##  score = getSignalSensitivityScore(bkg_loss, sig_loss)
 ##  print("95 percentile score = ",score)
 # 4. ROCs/AUCs using sklearn functions imported above  
-if (len(bkg_loss) > len(sig_loss)):
-   bkg_loss = bkg_loss[:len(sig_loss)]
-else:
-   sig_loss = sig_loss[:len(bkg_loss)]
 
 #bkg_loss, sig_loss = vrnn_transform(bkg_loss, sig_loss, True)
 
-do_roc(bkg_loss, sig_loss, ae_model, True)
-if ae_model.find('VAE') > -1:
-    do_roc(bkg_reco_loss, sig_reco_loss, ae_model+'_Reco', True)
-    do_roc(bkg_kl_loss, sig_kl_loss, ae_model+'_KLD', True)
 ## 5. Plot Phi's
 ## plot_phi(phi_bkg, 'QCD', pfn_model)
 

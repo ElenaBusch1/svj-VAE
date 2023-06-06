@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "pfnEvalTest"
+tag = "checkmaxVal"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -163,7 +163,7 @@ def plot_inputs(bkg, sig, variable_array):
 
 def plot_single_variable(hists, h_names, title, logy=False):
   for data,name, in zip(hists,h_names):
-    plt.hist(data, bins=50, alpha=0.5, label=name)
+    plt.hist(data, bins=50, alpha=0.5, label=name, density=False)
   plt.legend()
   if (logy): plt.yscale("log")
   plt.title(title)

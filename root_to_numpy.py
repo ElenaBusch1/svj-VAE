@@ -9,7 +9,7 @@ def get_weighted_elements(tree, nEvents):
     weight_array=["weight"]
     my_weight_array = tree.arrays(weight_array, library = "np")
     my_weight_array = my_weight_array[weight_array[0]]
-    np.random.seed(0)
+    np.random.seed(1)
     idx = np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
     return idx
 

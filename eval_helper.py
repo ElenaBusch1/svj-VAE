@@ -83,10 +83,12 @@ def getTwoJetSystem(x_events,y_events, extraVars=[]):
     else: return bkg, sig
 
 def check_weights(x_events):
-    bkg_nw = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, ["jet1_pt"], use_weight=False)
-    bkg_w = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", x_events, ["jet1_pt"], use_weight=True)
-    sig_nw = read_flat_vars("../v8.1/user.ebusch.SIGskim.mc20e.root", x_events, ["jet1_pt"], use_weight=False)
-    plot_single_variable([bkg_nw,bkg_w, sig_nw], ["QCD No Weights", "QCD Weights", "SIG No Weights"], "QCD Weight Check", logy=True) 
+    #bkg_nw1 = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 10000, ["jet1_pt"], use_weight=False)
+    bkg_nw = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 500000, ["mT_jj"], use_weight=True)
+    bkg_w = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 100000, ["mT_jj"], use_weight=True)
+    sig_nw = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 10000, ["mT_jj"], use_weight=True)
+    #sig_nw2 = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 5000, ["jet1_pt"], use_weight=True)
+    plot_single_variable([bkg_nw,bkg_w, sig_nw], ["QCD - 500k", "QCD - 100k", "QCD - 10k"], "mT Stat Check", logy=True) 
 
 def get_dPhi(x1,x2):
     dPhi = x1 - x2

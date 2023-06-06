@@ -51,6 +51,7 @@ print("Min: ", eval_min)
 print("Max: ", eval_max)
 if (sig_max > eval_max): eval_max = sig_max
 print("Final Max: ", eval_max)
+quit()
 
 phi_evalb = (phi_evalb - eval_min)/(eval_max-eval_min)
 phi_testb = (phi_testb - eval_min)/(eval_max-eval_min)
