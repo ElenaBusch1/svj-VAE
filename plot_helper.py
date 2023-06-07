@@ -162,14 +162,26 @@ def plot_inputs(bkg, sig, variable_array):
       plt.clf()
 
 def plot_single_variable(hists, h_names, title, logy=False):
+  hists = []
+  bins = np.linspace(0,6000,50)
   for data,name, in zip(hists,h_names):
-    plt.hist(data, bins=50, alpha=0.5, label=name, density=False)
+    h, bins = plt.hist(data, bins=bins, alpha=0.5, label=name, density=False)
+    hists.append(h)
   plt.legend()
   if (logy): plt.yscale("log")
   plt.title(title)
-  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
+  #plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
   plt.clf()
   print("Saved plot",title)
+
+  ratios = []
+  for i in range(len(hists)):
+    ratios.append(hists[i]/hists[0])
+    print(ratios[i])
+    plt.plot(ratios[i], bins)
+  plt.title("Ratio")
+  plt.savefig(plot_dir+'ratio_'+title.replace(" ","")+'.png')
+  plt.clf()
 
 def get_nTracks(x):
   n_tracks = []
