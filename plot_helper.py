@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "checkmaxVal"
+tag = "jdm"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -162,10 +162,15 @@ def plot_inputs(bkg, sig, variable_array):
       plt.clf()
 
 def plot_single_variable(hists, weights, h_names, title, logy=False):
-  bins = np.linspace(1000,6000,50)
+  nbins=50
+  hists_flat=np.concatenate(hists)
+  bin_min=np.min(hists_flat)
+  bin_max=np.max(hists_flat)
+  bins=np.linspace(bin_min,bin_max,nbins)
+  if(title=="mT_jj"): bins=np.linspace(500,6500, 80)
   for data,weight,name in zip(hists,weights,h_names):
-    plt.hist(data, bins=bins, alpha=0.5, label=name, density=False, weights=weight)
-  plt.legend()
+    plt.hist(data, bins=bins, histtype='step', label=name, density=True, weights=weight)
+  plt.legend(loc='best', fontsize='x-small')
   if (logy): plt.yscale("log")
   plt.title(title)
   plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')

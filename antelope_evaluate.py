@@ -44,10 +44,12 @@ ae.compile(optimizer=keras.optimizers.Adam())
 print ("Loaded model")
 
 ## Load testing data
-x_events = 38352
-y_events = 15813
-my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
-bkg2, sig2, mT_bkg, mT_sig = getTwoJetSystem(x_events,y_events, my_variables)
+x_events = 50000
+y_events = 50000
+#my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
+#bkg2, sig2, mT_bkg, mT_sig = getTwoJetSystem(x_events,y_events, my_variables)
+bkg2, sig2 = getTwoJetSystem(x_events,y_events)
+quit()
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
 sig2,_ = apply_StandardScaling(sig2,scaler,False)
@@ -78,9 +80,9 @@ ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
 rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
 rec_sig = np.rec.array(save_sig, dtype=ds_dt)
 
-with h5py.File("v8p1_515515.hdf5","w") as h5f:
+with h5py.File("v8p1_515520.hdf5","w") as h5f:
   dset = h5f.create_dataset("data",data=rec_bkg)
-with h5py.File("v8p1_515518.hdf5","w") as h5f:
+with h5py.File("v8p1_515522.hdf5","w") as h5f:
   dset = h5f.create_dataset("data",data=rec_sig)
 
 quit()

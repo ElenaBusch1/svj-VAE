@@ -21,14 +21,36 @@ import h5py
 with h5py.File("../v8.1/v8p1bkg.hdf5","r") as f:
   bkg_data = f.get('qcd')[:]
 
+variables = [f_name for (f_name,f_type) in bkg_data.dtype.descr]
 bkg_loss = bkg_data["score"]
+bkg20 = np.percentile(bkg_loss, 80)
 
-with h5py.File("../v8.1/v8p1_515518.hdf5","r") as f:
+dsids = [515495,515498,515499,515502,515507,515510,515515,515518,515520,515522]
+for dsid in dsids:
+  with h5py.File("../v8.1/v8p1_"+str(dsid)+".hdf5","r") as f:
+    sig1_data = f.get('data')[:]
+  sig1_loss = sig1_data["score"]
+  total = len(sig1_loss)
+  sig1_cut = sig1_loss[sig1_loss>bkg20]
+  cut = len(sig1_cut)/total
+  print(dsid, f'{cut:.0%}') 
+
+quit()
+with h5py.File("../v8.1/v8p1_515495.hdf5","r") as f:
   sig1_data = f.get('data')[:]
+with h5py.File("../v8.1/v8p1_515498.hdf5","r") as f:
+  sig2_data = f.get('data')[:]
+with h5py.File("../v8.1/v8p1_515515.hdf5","r") as f:
+  sig3_data = f.get('data')[:]
+with h5py.File("../v8.1/v8p1_515518.hdf5","r") as f:
+  sig4_data = f.get('data')[:]
 
-mT_sig = sig1_data["mT_jj"]
-weights = sig1_data["weight"]
-sig_loss = sig1_data["score"]
+sig1_loss = sig1_data["score"]
+sig2_loss = sig2_data["score"]
+sig3_loss = sig3_data["score"]
+sig4_loss = sig4_data["score"]
+
+print(variables)
 
 ##  #--- Grid test
 ##  scores = np.zeros((10,4))
@@ -65,34 +87,27 @@ sig_loss = sig1_data["score"]
 #bkg_loss = np.log(bkg_loss)
 #sig_loss = np.log(sig_loss)
 #plot_score(bkg_loss, sig_loss, False, True, ae_model)
-bkg100 = np.percentile(bkg_loss, 0)
 bkg20 = np.percentile(bkg_loss, 80)
-bkg10 = np.percentile(bkg_loss, 90)
-bkg05 = np.percentile(bkg_loss, 95)
-bkg01 = np.percentile(bkg_loss, 99)
 
-print("Cuts: ", bkg20, bkg10, bkg05,bkg01)
-#mT_jj0 = mT_bkg[bkg_loss > bkg100]
-#mT_jj20 = mT_bkg[bkg_loss > bkg20]
-#mT_jj10 = mT_bkg[bkg_loss > bkg10]
-#mT_jj05 = mT_bkg[bkg_loss > bkg05]
-#mT_jj01 = mT_bkg[bkg_loss > bkg01]
-#weight0 = weights[bkg_loss > bkg100]
-#weight20 = weights[bkg_loss > bkg20]
-#weight10 = weights[bkg_loss > bkg10]
-#weight05 = weights[bkg_loss > bkg05]
-#weight01 = weights[bkg_loss > bkg01]
-mT_jj00 = mT_sig[sig_loss > bkg100]
-mT_jj20 = mT_sig[sig_loss > bkg20]
-mT_jj10 = mT_sig[sig_loss > bkg10]
-mT_jj05 = mT_sig[sig_loss > bkg05]
-mT_jj01 = mT_sig[sig_loss > bkg01]
-weight00 = weights[sig_loss > bkg100]
-weight20 = weights[sig_loss > bkg20]
-weight10 = weights[sig_loss > bkg10]
-weight05 = weights[sig_loss > bkg05]
-weight01 = weights[sig_loss > bkg01]
+w0 = bkg_data["weight"][bkg_loss>bkg20] 
+w1 = sig1_data["weight"][sig1_loss>bkg20] 
+w2 = sig2_data["weight"][sig2_loss>bkg20] 
+w3 = sig3_data["weight"][sig3_loss>bkg20] 
+w4 = sig4_data["weight"][sig4_loss>bkg20] 
+w = [w0,w1,w2,w3,w4]
 
+labels = ["QCD (20%)", "1500 GeV,0.2 (35%)", "1500 GeV,0.8 (46%)", "4000 GeV,0.2 (61%)", "4000 GeV,0.8 (52%)"]
+for var in ["mT_jj"]:
+  if (var=="weight" or var=="mcEventWeight"): continue
+  bkg = bkg_data[var][bkg_loss>bkg20]
+  sig1 = sig1_data[var][sig1_loss>bkg20] 
+  sig2 = sig2_data[var][sig2_loss>bkg20] 
+  sig3 = sig3_data[var][sig3_loss>bkg20] 
+  sig4 = sig4_data[var][sig4_loss>bkg20] 
+  d = [bkg, sig1, sig2, sig3, sig4]
+  plot_single_variable(d,w,labels, var, logy=True) 
+
+quit()
 w = [weight00, weight20, weight10, weight05, weight01]
 mT = [mT_jj00, mT_jj20,mT_jj10,mT_jj05,mT_jj01]
 names =  ["100% QCD", "20% QCD", "10% QCD", "5% QCD", "1% QCD"]
