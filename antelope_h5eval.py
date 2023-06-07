@@ -19,11 +19,17 @@ import h5py
 
 # ## AE loss
 with h5py.File("../v8.1/v8p1bkg.hdf5","r") as f:
-  data = f.get('qcd')[:]
+  bkg_data = f.get('qcd')[:]
 
-mT_bkg = data["mT_jj"]
-weights = data["weight"]
-bkg_loss = data["score"]
+bkg_loss = bkg_data["score"]
+
+with h5py.File("../v8.1/v8p1_515518.hdf5","r") as f:
+  sig1_data = f.get('data')[:]
+
+mT_sig = sig1_data["mT_jj"]
+weights = sig1_data["weight"]
+sig_loss = sig1_data["score"]
+
 ##  #--- Grid test
 ##  scores = np.zeros((10,4))
 ##  aucs = np.zeros((10,4))
@@ -66,21 +72,32 @@ bkg05 = np.percentile(bkg_loss, 95)
 bkg01 = np.percentile(bkg_loss, 99)
 
 print("Cuts: ", bkg20, bkg10, bkg05,bkg01)
-mT_jj0 = mT_bkg[bkg_loss > bkg100]
-mT_jj20 = mT_bkg[bkg_loss > bkg20]
-mT_jj10 = mT_bkg[bkg_loss > bkg10]
-mT_jj05 = mT_bkg[bkg_loss > bkg05]
-mT_jj01 = mT_bkg[bkg_loss > bkg01]
-weight0 = weights[bkg_loss > bkg100]
-weight20 = weights[bkg_loss > bkg20]
-weight10 = weights[bkg_loss > bkg10]
-weight05 = weights[bkg_loss > bkg05]
-weight01 = weights[bkg_loss > bkg01]
-w = [weight0, weight20, weight10, weight05, weight01]
-mT = [mT_jj0, mT_jj20,mT_jj10,mT_jj05,mT_jj01]
+#mT_jj0 = mT_bkg[bkg_loss > bkg100]
+#mT_jj20 = mT_bkg[bkg_loss > bkg20]
+#mT_jj10 = mT_bkg[bkg_loss > bkg10]
+#mT_jj05 = mT_bkg[bkg_loss > bkg05]
+#mT_jj01 = mT_bkg[bkg_loss > bkg01]
+#weight0 = weights[bkg_loss > bkg100]
+#weight20 = weights[bkg_loss > bkg20]
+#weight10 = weights[bkg_loss > bkg10]
+#weight05 = weights[bkg_loss > bkg05]
+#weight01 = weights[bkg_loss > bkg01]
+mT_jj00 = mT_sig[sig_loss > bkg100]
+mT_jj20 = mT_sig[sig_loss > bkg20]
+mT_jj10 = mT_sig[sig_loss > bkg10]
+mT_jj05 = mT_sig[sig_loss > bkg05]
+mT_jj01 = mT_sig[sig_loss > bkg01]
+weight00 = weights[sig_loss > bkg100]
+weight20 = weights[sig_loss > bkg20]
+weight10 = weights[sig_loss > bkg10]
+weight05 = weights[sig_loss > bkg05]
+weight01 = weights[sig_loss > bkg01]
+
+w = [weight00, weight20, weight10, weight05, weight01]
+mT = [mT_jj00, mT_jj20,mT_jj10,mT_jj05,mT_jj01]
 names =  ["100% QCD", "20% QCD", "10% QCD", "5% QCD", "1% QCD"]
-plot_single_variable(mT,w,names, "mT Shape Check", logy=True) 
-plot_ratio(mT,w,names, "mT Shape Check", logy=True) 
+#plot_single_variable(mT,w,names, "mT Shape Check- Signal(515518)", logy=True) 
+plot_ratio(mT,w,names, "mT Shape Check - Signal(515518)", logy=True) 
 
 #do_roc(bkg_loss, sig_loss, ae_model, False)
 

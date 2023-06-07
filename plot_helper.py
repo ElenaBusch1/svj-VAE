@@ -175,7 +175,6 @@ def plot_single_variable(hists, weights, h_names, title, logy=False):
 def plot_ratio(hists, weights, h_names, title, logy=False):
   f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
   nbins=50
-  print(hists) 
   hists_flat=np.concatenate(hists)
   print(hists_flat) 
   #bin_min=np.min(hists_flat)
@@ -184,9 +183,9 @@ def plot_ratio(hists, weights, h_names, title, logy=False):
   bins=np.linspace(1000,6000,nbins)
   x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
   hists=list(hists)
+  nTot = len(hists[0])
   for data,weight,name,i in zip(hists,weights,h_names, range(len(hists))):
-    print(weight)
-    y,_, _=axs[0].hist(data, bins=bins, label=name, density=True, histtype='step', weights=weight)
+    y,_, _=axs[0].hist(data, bins=bins, label=f'{name} ({len(data)/nTot:.0%} Sig)', density=True, histtype='step', weights=weight)
     #print(i, len(bins), len(y), bins, y) 
     #if i ==len(hists)-1:
     if i ==0: y0=y # make sure the first of hists list has the most number of events
@@ -194,7 +193,6 @@ def plot_ratio(hists, weights, h_names, title, logy=False):
     axs[1].scatter(x_bins,y/y0)
     #axs[1].scatter(x_bins,zero_div(y,y0))
 
-  print('x_bins', x_bins)
   axs[1].set_ylim(0.5,3.0)  
   axs[1].set_ylabel('Ratio')
   axs[1].legend(loc='upper right')
