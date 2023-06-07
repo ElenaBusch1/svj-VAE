@@ -16,75 +16,16 @@ import h5py
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-pfn_model = 'PFNv1'
-ae_model = 'ANTELOPEv1'
-arch_dir = "architectures_saved/"
-
-## ---------- Load graph model ----------
-graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
-graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
-graph.compile()
-
-## ---------- Load AE model ----------
-encoder = keras.models.load_model(arch_dir+ae_model+'_encoder_arch')
-decoder = keras.models.load_model(arch_dir+ae_model+'_decoder_arch')
-ae = AE(encoder,decoder)
-
-ae.get_layer('encoder').load_weights(arch_dir+ae_model+'_encoder_weights.h5')
-ae.get_layer('decoder').load_weights(arch_dir+ae_model+'_decoder_weights.h5')
-
-ae.compile(optimizer=keras.optimizers.Adam())
-
-## Load history
-# with open(arch_dir+ae_model+"_history.json", 'r') as f:
-#     h = json.load(f)
-# print(h)
-# print(type(h))
-
-print ("Loaded model")
-
-## Load testing data
-x_events = 2464544
-y_events = 631735
-my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
-bkg2, sig2, mT_bkg, mT_sig = getTwoJetSystem(x_events,y_events, my_variables)
-scaler = load(arch_dir+pfn_model+'_scaler.bin')
-bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
-sig2,_ = apply_StandardScaling(sig2,scaler,False)
-#plot_vectors(bkg2,sig2,"ANTELOPE")
-
-phi_bkg = graph.predict(bkg2)
-phi_sig = graph.predict(sig2)
-
-## Scale phis - values from v1 training
-eval_min = 0.0
-eval_max = 167.20311
-phi_bkg = (phi_bkg - eval_min)/(eval_max-eval_min)
-phi_sig = (phi_sig - eval_min)/(eval_max-eval_min)
-
-pred_phi_bkg = ae.predict(phi_bkg)['reconstruction']
-pred_phi_sig = ae.predict(phi_sig)['reconstruction']
 
 # ## AE loss
-bkg_loss = np.array(keras.losses.mse(phi_bkg, pred_phi_bkg))
-sig_loss = np.array(keras.losses.mse(phi_sig, pred_phi_sig))
+with h5py.File("../v8.1/v8p1bkg.hdf5","r") as f:
+  data = f.get('qcd')[:]
 
-my_variables.insert(0,"score")
-print(my_variables)
-save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
-save_sig = np.concatenate((sig_loss[:,None], mT_sig),axis=1)
-#print(save_bkg)
-ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
-rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
-rec_sig = np.rec.array(save_sig, dtype=ds_dt)
-
-with h5py.File("v8p1bkg.hdf5","w") as h5f:
-  dset = h5f.create_dataset("qcd",data=rec_bkg)
-with h5py.File("v8p1sig.hdf5","w") as h5f:
-  dset = h5f.create_dataset("sig",data=rec_sig)
-
-quit()
-
+print(data)
+mT_jj = data["mT_jj"]
+print(mT_jj)
+bkg_loss = data["score"]
+print(bkg_loss)
 ##  #--- Grid test
 ##  scores = np.zeros((10,4))
 ##  aucs = np.zeros((10,4))
@@ -134,10 +75,6 @@ mT_jj01 = mT_bkg[bkg_loss > bkg01]
 print(len(mT_jj20), len(mT_jj10), len(mT_jj05), len(mT_jj01))
 plot_single_variable([mT_bkg, mT_jj20,mT_jj10,mT_jj05,mT_jj01], ["100% QCD", "20% QCD", "10% QCD", "5% QCD", "1% QCD"], "mT Shape Check", logy=True) 
 
-if (len(bkg_loss) > len(sig_loss)):
-   bkg_loss = bkg_loss[:len(sig_loss)]
-else:
-   sig_loss = sig_loss[:len(bkg_loss)]
 #do_roc(bkg_loss, sig_loss, ae_model, False)
 
 #transform_loss_ex(bkg_loss, sig_loss, True)
