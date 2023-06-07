@@ -21,11 +21,9 @@ import h5py
 with h5py.File("../v8.1/v8p1bkg.hdf5","r") as f:
   data = f.get('qcd')[:]
 
-print(data)
-mT_jj = data["mT_jj"]
-print(mT_jj)
+mT_bkg = data["mT_jj"]
+weights = data["weight"]
 bkg_loss = data["score"]
-print(bkg_loss)
 ##  #--- Grid test
 ##  scores = np.zeros((10,4))
 ##  aucs = np.zeros((10,4))
@@ -61,19 +59,28 @@ print(bkg_loss)
 #bkg_loss = np.log(bkg_loss)
 #sig_loss = np.log(sig_loss)
 #plot_score(bkg_loss, sig_loss, False, True, ae_model)
+bkg100 = np.percentile(bkg_loss, 0)
 bkg20 = np.percentile(bkg_loss, 80)
 bkg10 = np.percentile(bkg_loss, 90)
 bkg05 = np.percentile(bkg_loss, 95)
 bkg01 = np.percentile(bkg_loss, 99)
 
 print("Cuts: ", bkg20, bkg10, bkg05,bkg01)
-
+mT_jj0 = mT_bkg[bkg_loss > bkg100]
 mT_jj20 = mT_bkg[bkg_loss > bkg20]
 mT_jj10 = mT_bkg[bkg_loss > bkg10]
 mT_jj05 = mT_bkg[bkg_loss > bkg05]
 mT_jj01 = mT_bkg[bkg_loss > bkg01]
-print(len(mT_jj20), len(mT_jj10), len(mT_jj05), len(mT_jj01))
-plot_single_variable([mT_bkg, mT_jj20,mT_jj10,mT_jj05,mT_jj01], ["100% QCD", "20% QCD", "10% QCD", "5% QCD", "1% QCD"], "mT Shape Check", logy=True) 
+weight0 = weights[bkg_loss > bkg100]
+weight20 = weights[bkg_loss > bkg20]
+weight10 = weights[bkg_loss > bkg10]
+weight05 = weights[bkg_loss > bkg05]
+weight01 = weights[bkg_loss > bkg01]
+w = [weight0, weight20, weight10, weight05, weight01]
+mT = [mT_jj0, mT_jj20,mT_jj10,mT_jj05,mT_jj01]
+names =  ["100% QCD", "20% QCD", "10% QCD", "5% QCD", "1% QCD"]
+plot_single_variable(mT,w,names, "mT Shape Check", logy=True) 
+plot_ratio(mT,w,names, "mT Shape Check", logy=True) 
 
 #do_roc(bkg_loss, sig_loss, ae_model, False)
 

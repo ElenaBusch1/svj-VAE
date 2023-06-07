@@ -161,27 +161,54 @@ def plot_inputs(bkg, sig, variable_array):
       plt.savefig(plot_dir+'input_vars_'+str(i)+tag+'.png')
       plt.clf()
 
-def plot_single_variable(hists, h_names, title, logy=False):
-  hists = []
-  bins = np.linspace(0,6000,50)
-  for data,name, in zip(hists,h_names):
-    h, bins = plt.hist(data, bins=bins, alpha=0.5, label=name, density=False)
-    hists.append(h)
+def plot_single_variable(hists, weights, h_names, title, logy=False):
+  bins = np.linspace(1000,6000,50)
+  for data,weight,name in zip(hists,weights,h_names):
+    plt.hist(data, bins=bins, alpha=0.5, label=name, density=False, weights=weight)
   plt.legend()
   if (logy): plt.yscale("log")
   plt.title(title)
-  #plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
+  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
   plt.clf()
   print("Saved plot",title)
 
-  ratios = []
-  for i in range(len(hists)):
-    ratios.append(hists[i]/hists[0])
-    print(ratios[i])
-    plt.plot(ratios[i], bins)
-  plt.title("Ratio")
+def plot_ratio(hists, weights, h_names, title, logy=False):
+  f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
+  nbins=50
+  print(hists) 
+  hists_flat=np.concatenate(hists)
+  print(hists_flat) 
+  #bin_min=np.min(hists_flat)
+  #bin_max=np.max(hists_flat)
+  #gap=(bin_max-bin_min)*0.05
+  bins=np.linspace(1000,6000,nbins)
+  x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
+  hists=list(hists)
+  for data,weight,name,i in zip(hists,weights,h_names, range(len(hists))):
+    print(weight)
+    y,_, _=axs[0].hist(data, bins=bins, label=name, density=True, histtype='step', weights=weight)
+    #print(i, len(bins), len(y), bins, y) 
+    #if i ==len(hists)-1:
+    if i ==0: y0=y # make sure the first of hists list has the most number of events
+   
+    axs[1].scatter(x_bins,y/y0)
+    #axs[1].scatter(x_bins,zero_div(y,y0))
+
+  print('x_bins', x_bins)
+  axs[1].set_ylim(0.5,3.0)  
+  axs[1].set_ylabel('Ratio')
+  axs[1].legend(loc='upper right')
+  plt.tick_params(axis='y', which='minor') 
+  plt.grid()
+ 
+  axs[0].set_ylabel('Event Number')
+  if (logy): axs[0].set_yscale("log")
+  axs[0].legend(loc='upper right')
+  axs[1].legend(loc='upper right')
+  axs[0].set_title(title)
   plt.savefig(plot_dir+'ratio_'+title.replace(" ","")+'.png')
   plt.clf()
+  print("Saved rato plot",title)
 
 def get_nTracks(x):
   n_tracks = []
