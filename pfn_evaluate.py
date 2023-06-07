@@ -12,22 +12,18 @@ from models import *
 from models_archive import *
 from eval_helper import *
 import h5py
-## ---------- USER PARAMETERS ----------
-## Model options:
-##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-pfn_model = 'PFN'
-#pfn_model = 'PFNv1'
-#arch_dir = "/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/"
-arch_dir="architectures_saved_old/architectures_saved_jun5/"
+import sys
+from termcolor import cprint
 ## ---------- Load graph model ----------
-graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
-graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
-graph.compile()
+def call_functions(x_events,y_events, tag, bool_weight, extraVars):
+  graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
+  graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
+  graph.compile()
 
 ## Load classifier model
-classifier = keras.models.load_model(arch_dir+pfn_model+'_classifier_arch')
-classifier.load_weights(arch_dir+pfn_model+'_classifier_weights.h5')
-classifier.compile()
+  classifier = keras.models.load_model(arch_dir+pfn_model+'_classifier_arch')
+  classifier.load_weights(arch_dir+pfn_model+'_classifier_weights.h5')
+  classifier.compile()
 
 ## Load history
 # with open(arch_dir+ae_model+"_history.json", 'r') as f:
@@ -35,89 +31,164 @@ classifier.compile()
 # print(h)
 # print(type(h))
 
-print ("Loaded model")
+  print ("Loaded model")
 
+  bkg2, sig2, mT_bkg, mT_sig = getTwoJetSystem(x_events,y_events,tag_file=tag, tag_title=tag, bool_weight=bool_weight,  extraVars=my_variables)
+#bkg2, sig2, mT_bkg, mT_sig = getTwoJetSystem(x_events,y_events, ["mT_jj"])
+  scaler = load(arch_dir+pfn_model+'_scaler.bin')
+  bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
+  sig2,_ = apply_StandardScaling(sig2,scaler,False)
+# plot_vectors(bkg2,sig2,"PFN")
+
+  phi_bkg = graph.predict(bkg2)
+  phi_sig = graph.predict(sig2)
+
+# each event has a pfn score 
+  pred_phi_bkg = classifier.predict(phi_bkg)
+  pred_phi_sig = classifier.predict(phi_sig)
+
+# write on html
+
+
+## Classifier loss
+  bkg_loss = pred_phi_bkg[:,1]
+  sig_loss = pred_phi_sig[:,1]
+  cprint('sig_loss', 'blue')
+  cprint(sig_loss, 'blue')
+  cprint('mT_sig', 'blue')
+  cprint(mT_sig, 'blue')
+
+  if (len(bkg_loss) > len(sig_loss)):
+    bkg_loss = bkg_loss[:len(sig_loss)]
+    mT_bkg=mT_bkg[:len(sig_loss)] # added
+  else:
+    sig_loss = sig_loss[:len(bkg_loss)]
+    mT_sig=mT_sig[:len(sig_loss)] # added
+  cprint('bkg_loss', 'yellow')
+  cprint(bkg_loss, 'yellow')
+  cprint('mT_bkg', 'yellow')
+  cprint(mT_bkg, 'yellow')
+
+  cprint('sig_loss', 'yellow')
+  cprint(sig_loss, 'yellow')
+  cprint('mT_sig', 'yellow')
+  cprint(mT_sig, 'yellow')
+  my_variables.insert(0,"score")
+  save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+  save_sig = np.concatenate((sig_loss[:,None], mT_sig),axis=1)
+  cprint('save_bkg', 'yellow')
+  cprint(save_bkg, 'yellow')
+  ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
+  rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
+  rec_sig = np.rec.array(save_sig, dtype=ds_dt)
+  
+  cprint('rec_bkg', 'yellow')
+  cprint(rec_bkg, 'yellow')
+  return rec_bkg, rec_sig
+
+## ---------- USER PARAMETERS ----------
+## Model options:
+##    "AE", "VAE", "PFN_AE", "PFN_VAE"
+pfn_model = 'PFN'
+#pfn_model = 'PFNv1'
+#arch_dir = "/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/"
 ## Load testing data
+#x_events = 5000
+#y_events = 5000
 x_events = 5000
 y_events = 5000
 bool_weight=True
 if bool_weight:weight_tag='ws'
 else:weight_tag='nws'
-tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
-bkg2, sig2, mT_bkg, mT_sig = getTwoJetSystem(x_events,y_events,tag_file=tag, tag_title=tag, bool_weight=bool_weight,  extraVars=["mT_jj"])
-#bkg2, sig2, mT_bkg, mT_sig = getTwoJetSystem(x_events,y_events, ["mT_jj"])
-scaler = load(arch_dir+pfn_model+'_scaler.bin')
-bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
-sig2,_ = apply_StandardScaling(sig2,scaler,False)
-#plot_vectors(bkg2,sig2,"PFN")
+tag= f'{pfn_model}_2jAvg_MM_{weight_tag}_NE={x_events}'
+#tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
+my_variables= ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
+#my_variables=["mT_jj"]
+#bool_rewrite=True
+bool_rewrite=False
+h5dir='h5dir/'
+filename_bkg=f'{tag}_bkg'
+filename_sig=f'{tag}_sig'
+h5path_bkg=h5dir+filename_bkg+'.h5'
+h5path_sig=h5dir+filename_sig+'.h5'
+arch_dir="architectures_saved_old/architectures_saved_jun5/"
+data_bkg={}
+data_sig={}
+if bool_rewrite or (not(os.path.exists(h5path_bkg)) or not(os.path.exists(h5path_sig))):
+  print('will write files b/c the files donot exist or bool_rewrite is set to be True'+ h5path_bkg+ h5path_sig)
+  rec_bkg, rec_sig=call_functions(x_events,y_events, tag, bool_weight=bool_weight, extraVars=my_variables)
+  with h5py.File(h5path_bkg, 'w') as f:
+    ar_bkg = f.create_dataset("default", data = rec_bkg)
+  with h5py.File(h5path_sig, 'w') as f:
+    ar_sig = f.create_dataset("default", data = rec_sig)
 
-phi_bkg = graph.predict(bkg2)
-phi_sig = graph.predict(sig2)
+else:print('both exist and not rewrite')
+# read the files anyway even after writing b/c otherwise throws an error that it's not a dataset
+with h5py.File(h5path_bkg, 'r') as f:
+#    data_bkg = f["default"]['mT_jj'][()]
+  for var in my_variables+["score"]:
+#    data_bkg = f["default"][()]
+    ar=f["default"][var]
+    data_bkg[var] = ar[:,0]
+  print(h5path_bkg)
+  print('hi')
+with h5py.File(h5path_sig, 'r') as f:
+  for var in my_variables+["score"]:
+    ar=f["default"][var]
+    data_sig[var] = ar[:,0]
+  print(h5path_sig)
+   
+#  data_bkg=f["default"][()]
+#  data_sig=f["default"][()]
+####################################
+#"""
+#"""
+print(data_bkg)
+#data_bkg=np.array(data_bkg)
+#data_bkg2=data_bkg2
+#print(data_bkg['mT_jj'][:,0],data_bkg['mT_jj'].size)
 
-# each event has a pfn score 
-pred_phi_bkg = classifier.predict(phi_bkg)
-pred_phi_sig = classifier.predict(phi_sig)
 
-# write on html
-print('*'*30)
-print(phi_bkg)
-print('-'*30)
-print(pred_phi_bkg)
-#print(np.min(pred_phi_sig[:,1]))
-#arr=pred_phi_bkg
+#bkg_loss=data_bkg[0,None]
+#sig_loss=data_sig[0,None]
+#var_bkg=data_bkg[0,None]
 """
-arr=pred_phi_bkg
-add='bkg'
-print(arr, add)
-h5dir='h5dir'
-filename=f'{tag}_{add}'
-h5path=h5dir+filename+'.h5'
-if not os.path.exists(h5path):
-  pred_phi_bkg = classifier.predict(phi_bkg)
-  print(h5dir+filename+'.h5')
-  with h5py.File(h5path, 'w') as f:
-    data = f.create_dataset("default", data = arr)
-else:
-  with h5py.File(h5path, 'r') as f:
-    data = f["default"]
-  pred_phi_bkg=data
-
+save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+save_sig = np.concatenate((sig_loss[:,None], mT_sig),axis=1)
 """
 
-print(np.min(data[:,1]))
-## Classifier loss
-bkg_loss = pred_phi_bkg[:,1]
-sig_loss = pred_phi_sig[:,1]
-
-if (len(bkg_loss) > len(sig_loss)):
-   bkg_loss = bkg_loss[:len(sig_loss)]
-else:
-   sig_loss = sig_loss[:len(bkg_loss)]
 #do_roc(bkg_loss, sig_loss, pfn_model, True)
 make_transformed_plot=False
-auc=do_roc(bkg_loss, sig_loss, tag_file=tag, tag_title=tag, make_transformed_plot=make_transformed_plot)
+#auc=do_roc(bkg_loss, sig_loss, tag_file=tag, tag_title=tag, make_transformed_plot=make_transformed_plot)
+auc=do_roc(data_bkg['score'], data_sig['score'], tag_file=tag, tag_title=tag, make_transformed_plot=make_transformed_plot)
 
 #cut on each event depending on a pfn score
 #find which score gives us signal to percentile of background
-
-percentile=50 #10 # 95
-score = getSignalSensitivityScore(bkg_loss, sig_loss, percentile=percentile)
+#percentile_ls=[20, 30, 60, 100]
+"""
+percentile_ls=[0,20, 60]
+cuts=[]
+for percentile in percentile_ls:
+  score = getSignalSensitivityScore(data_bkg['score'], data_sig['score'], percentile=percentile)
+  #score = getSignalSensitivityScore(bkg_loss, sig_loss, percentile=percentile)
+  cuts.append(round(score,3))
 print(f'{percentile}% -score {score}')
+"""
 
-cuts=[0, .3, .6,.9, score] 
-bkg_ls=[]
-bkg_loss_arr=np.array(bkg_loss)
-print(mT_bkg.shape, mT_bkg)
-for i, cut in enumerate(cuts):
-  bkg_cut_idx=np.argwhere(bkg_loss_arr>=cut)
-  bkg_cut=mT_bkg[bkg_cut_idx]  
+cuts=[0, .3, .6,.9] 
+for key in data_bkg:
+  bkg_ls=[]
+  bkg_loss_arr=np.array(data_bkg['score'])
+  for i, cut in enumerate(cuts):
+    bkg_cut_idx=np.argwhere(bkg_loss_arr>=cut)
+    bkg_cut=data_bkg[key][bkg_cut_idx]  
 #  bkg_cut=bkg_loss_arr[bkg_cut_idx]
-  bkg_cut=bkg_cut.flatten()
-  print(i, cut, len(bkg_cut),bkg_cut)
-  bkg_ls.append(bkg_cut)
+    bkg_cut=bkg_cut.flatten()
+    print(i, cut, len(bkg_cut),bkg_cut)
+    bkg_ls.append(bkg_cut)
 #plot mT distribution
 #plot_single_variable([bkg_loss_arr,bkg_cut], cuts, "mT distribution", logy=True) 
-plot_single_variable(bkg_ls, cuts, "mT distribution", logy=True)
+  plot_single_variable(bkg_ls, cuts, f"{key} distribution", logy=True)
  
 #plot_single_variable([bkg_loss,sig_loss], ["Background", "Signal"], "mT distribution", logy=True) 
 print('done')

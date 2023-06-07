@@ -3,6 +3,7 @@ import numpy as np
 import awkward as ak
 
 import os
+from termcolor import cprint
 variable_array = ["jet1_pt", "met_met", "dphi_min", "pt_balance_12", "mT_jj", "rT", "dR_12", "deltaY_12", "deta_12", "hT", "maxphi_minphi", "n_r04_jets"]
 #jet_array = ["all_jets_pt", "all_jets_eta", "all_jets_phi", "all_jets_E"]
 ## Track array
@@ -112,7 +113,9 @@ def read_flat_vars(infile, nEvents, variable_array, bool_weight=True):
 
     #print('Flat variable index:', idx.shape, idx)
     selected_array = np.array([val[idx] for _,val in my_array.items()]).T
-
+    cprint(selected_array,'blue')
+    cprint(nEvents,'blue')
+ 
     return selected_array
 
 

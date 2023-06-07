@@ -9,7 +9,7 @@ from math import ceil
 #tag = "PFN_2jAvg_MM"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 #plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun5_500000_nep100_nl100/'
-plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun6_mT/'
+plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun7/'
 def detect_outliers(x):
   z = np.abs(stats.zscore(x))
   print(max(z))
@@ -180,18 +180,19 @@ def plot_single_variable(hists, h_names, title, logy=False):
   bins=np.linspace(bin_min-gap,bin_max+gap,nbins)
   x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
   hists=list(hists)
+
+  cut0_idx=0
+  len0=len(hists[cut0_idx])
   for data,name,i in zip(hists,h_names, range(len(hists))):
-    y,_, _=axs[0].hist(data, bins=bins, alpha=0.6, label=f'cut on {name}, #={len(data)}')
+    y,_, _=axs[0].hist(data, bins=bins, alpha=0.6, label=f'NE={len(data)}, {round(len(data)/len0*100,2)}% remains after a cut on {name}')
 #    print(i, len(bins), len(y), bins, y) 
     #if i ==len(hists)-1:
-    if i ==0: # make sure the first of hists list has the most number of events
+    if i ==cut0_idx: # make sure the first of hists list has the most number of events
       print(i, len(hists))
       y0=y
     else: 
       print('no', i, len(hists))
    
-    print(y)
-    print(y0) 
     axs[1].scatter(x_bins,y/y0)
     #axs[1].scatter(x_bins,zero_div(y,y0))
 

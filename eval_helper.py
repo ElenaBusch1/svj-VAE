@@ -76,6 +76,9 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, extraVa
     sig_pt1 = sig_in1[sig_nz]
     bjet_sel = jet_bkg[bkg_nz]
     sjet_sel = jet_sig[sig_nz]
+    if getExtraVars:
+      vars_bkg = vars_bkg[bkg_nz]    
+      vars_sig = vars_sig[sig_nz]  
     
 
     bkg_sel0 = pt_sort(bkg_pt0, 0)
@@ -108,8 +111,8 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, extraVa
     #x = bkg
     #sig = sig
 
-    print(bkg.shape)
-    print(sig.shape)
+    print('*'*15,bkg.shape)
+    print('*'*15,sig.shape)
     #x = x_2D.reshape(bkg.shape[0],x_2D.shape[1]*4)
     #sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
     #plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
