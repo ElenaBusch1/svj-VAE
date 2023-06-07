@@ -48,23 +48,37 @@ print ("Loaded model")
 x_events = 50000
 y_events = 18000
 bkg2, sig2 = getTwoJetSystem(x_events, y_events)
+high_multi, low_multi = get_multiplicity_signals(bkg2)
+
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
+
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
 sig2,_ = apply_StandardScaling(sig2,scaler,False)
-plot_vectors(bkg2,sig2,"ANTELOPE")
+high_multi, _ = apply_StandardScaling(high_multi, scaler, False)
+low_multi, _ = apply_StandardScaling(low_multi, scaler, False)
+
+#plot_vectors(bkg2,sig2,"ANTELOPE")
+plot_vectors(bkg2, high_multi, "ANTELOPEv1_high_multi")
+plot_vectors(bkg2, low_multi, "ANTELOPEv1_low_multi")
 
 phi_bkg = graph.predict(bkg2)
-phi_sig = graph.predict(sig2)
+phi_high_multi = graph.predict(high_multi)
+phi_low_multi = graph.predict(low_multi)
+#phi_sig = graph.predict(sig2)
 
 ## Scale phis - for now by hand
 eval_min = 0.0
 #eval_max = 29.119692 
 eval_max = 167.20311
 phi_bkg = (phi_bkg - eval_min)/(eval_max-eval_min)
-phi_sig = (phi_sig - eval_min)/(eval_max-eval_min)
+#phi_sig = (phi_sig - eval_min)/(eval_max-eval_min)
+phi_high_multi = (phi_high_multi - eval_min)/(eval_max-eval_min)
+phi_low_multi = (phi_low_multi - eval_min)/(eval_max-eval_min)
 
 pred_phi_bkg = ae.predict(phi_bkg)['reconstruction']
-pred_phi_sig = ae.predict(phi_sig)['reconstruction']
+#pred_phi_sig = ae.predict(phi_sig)['reconstruction']
+pred_phi_high_mutli = ae.predict(phi_high_multi)['reconstruction']
+pred_phi_low_multi = ae.predict(phi_low_multi)['reconstruction']
 
 # ## Classifier loss
 # bkg_loss = pred_phi_bkg[:,1]
@@ -72,7 +86,9 @@ pred_phi_sig = ae.predict(phi_sig)['reconstruction']
 
 # ## AE loss
 bkg_loss = keras.losses.mse(phi_bkg, pred_phi_bkg)
-sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
+#sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
+high_multi_loss = keras.losses.mse(phi_high_multi, pred_phi_high_mutli)
+low_multi_loss = keras.losses.mse(phi_low_multi, pred_phi_low_multi)
 
 ##  #--- Grid test
 ##  scores = np.zeros((10,4))
@@ -107,7 +123,10 @@ sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
 # 2. Anomaly score
 #plot_score(bkg_loss, sig_loss, False, False, ae_model)
 bkg_loss = np.log(bkg_loss)
-sig_loss = np.log(sig_loss)
+#sig_loss = np.log(sig_loss)
+high_multi_loss = np.log(high_multi_loss)
+low_multi_loss = np.log(low_multi_loss)
+
 #plot_score(bkg_loss, sig_loss, False, False, ae_model+'logx')
 
 #print(mT)
@@ -126,14 +145,23 @@ sig_loss = np.log(sig_loss)
 ##  score = getSignalSensitivityScore(bkg_loss, sig_loss)
 ##  print("95 percentile score = ",score)
 # 4. ROCs/AUCs using sklearn functions imported above  
-if (len(bkg_loss) > len(sig_loss)):
-   bkg_loss = bkg_loss[:len(sig_loss)]
-else:
-   sig_loss = sig_loss[:len(bkg_loss)]
+
+##if (len(bkg_loss) > len(sig_loss)):
+##   bkg_loss = bkg_loss[:len(sig_loss)]
+##else:
+##   sig_loss = sig_loss[:len(bkg_loss)]
+
+loss_len = [len(loss) for loss in [bkg_loss, high_multi_loss, low_multi_loss]]
+bkg_loss = bkg_loss[:min(loss_len)]
+high_multi_loss = high_multi_loss[:min(loss_len)]
+low_multi_loss = low_multi_loss[:min(loss_len)]
 
 #bkg_loss, sig_loss = vrnn_transform(bkg_loss, sig_loss, True)
 
-do_roc(bkg_loss, sig_loss, ae_model, True)
+#do_roc(bkg_loss, sig_loss, ae_model, True)
+do_roc(bkg_loss, high_multi_loss, ae_model + "_high_multi", True)
+do_roc(bkg_loss, low_multi_loss, ae_model + "_low_multi", True)
+
 if ae_model.find('VAE') > -1:
     do_roc(bkg_reco_loss, sig_reco_loss, ae_model+'_Reco', True)
     do_roc(bkg_kl_loss, sig_kl_loss, ae_model+'_KLD', True)
