@@ -171,9 +171,7 @@ def zero_div(a,b, bool_print=False): # this avoid zero division error
 def plot_single_variable(hists, h_names, title, logy=False):
   f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
   nbins=50
-  print(hists) 
   hists_flat=np.concatenate(hists)
-  print(hists_flat) 
   bin_min=np.min(hists_flat)
   bin_max=np.max(hists_flat)
   gap=(bin_max-bin_min)*0.05
@@ -188,15 +186,11 @@ def plot_single_variable(hists, h_names, title, logy=False):
 #    print(i, len(bins), len(y), bins, y) 
     #if i ==len(hists)-1:
     if i ==cut0_idx: # make sure the first of hists list has the most number of events
-      print(i, len(hists))
       y0=y
-    else: 
-      print('no', i, len(hists))
    
     axs[1].scatter(x_bins,y/y0)
     #axs[1].scatter(x_bins,zero_div(y,y0))
 
-  print('x_bins', x_bins)
   axs[1].set_ylim(-.2,1.2)  
   axs[1].set_ylabel('Ratio')
   axs[1].legend(loc='upper right')

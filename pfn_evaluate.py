@@ -53,37 +53,25 @@ def call_functions(x_events,y_events, tag, bool_weight, extraVars):
 ## Classifier loss
   bkg_loss = pred_phi_bkg[:,1]
   sig_loss = pred_phi_sig[:,1]
+  """
   cprint('sig_loss', 'blue')
   cprint(sig_loss, 'blue')
   cprint('mT_sig', 'blue')
   cprint(mT_sig, 'blue')
-
+  """
   if (len(bkg_loss) > len(sig_loss)):
     bkg_loss = bkg_loss[:len(sig_loss)]
     mT_bkg=mT_bkg[:len(sig_loss)] # added
   else:
     sig_loss = sig_loss[:len(bkg_loss)]
     mT_sig=mT_sig[:len(sig_loss)] # added
-  cprint('bkg_loss', 'yellow')
-  cprint(bkg_loss, 'yellow')
-  cprint('mT_bkg', 'yellow')
-  cprint(mT_bkg, 'yellow')
-
-  cprint('sig_loss', 'yellow')
-  cprint(sig_loss, 'yellow')
-  cprint('mT_sig', 'yellow')
-  cprint(mT_sig, 'yellow')
   my_variables.insert(0,"score")
   save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
   save_sig = np.concatenate((sig_loss[:,None], mT_sig),axis=1)
-  cprint('save_bkg', 'yellow')
-  cprint(save_bkg, 'yellow')
   ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
   rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
   rec_sig = np.rec.array(save_sig, dtype=ds_dt)
   
-  cprint('rec_bkg', 'yellow')
-  cprint(rec_bkg, 'yellow')
   return rec_bkg, rec_sig
 
 ## ---------- USER PARAMETERS ----------
@@ -104,8 +92,8 @@ tag= f'{pfn_model}_2jAvg_MM_{weight_tag}_NE={x_events}'
 #tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 my_variables= ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
 #my_variables=["mT_jj"]
-#bool_rewrite=True
-bool_rewrite=False
+bool_rewrite=True
+#bool_rewrite=False
 h5dir='h5dir/'
 filename_bkg=f'{tag}_bkg'
 filename_sig=f'{tag}_sig'
@@ -184,7 +172,7 @@ for key in data_bkg:
     bkg_cut=data_bkg[key][bkg_cut_idx]  
 #  bkg_cut=bkg_loss_arr[bkg_cut_idx]
     bkg_cut=bkg_cut.flatten()
-    print(i, cut, len(bkg_cut),bkg_cut)
+    print(i, cut, len(bkg_cut))
     bkg_ls.append(bkg_cut)
 #plot mT distribution
 #plot_single_variable([bkg_loss_arr,bkg_cut], cuts, "mT distribution", logy=True) 

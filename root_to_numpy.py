@@ -113,8 +113,6 @@ def read_flat_vars(infile, nEvents, variable_array, bool_weight=True):
 
     #print('Flat variable index:', idx.shape, idx)
     selected_array = np.array([val[idx] for _,val in my_array.items()]).T
-    cprint(selected_array,'blue')
-    cprint(nEvents,'blue')
  
     return selected_array
 
