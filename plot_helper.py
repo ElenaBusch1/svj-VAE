@@ -168,7 +168,41 @@ def zero_div(a,b, bool_print=False): # this avoid zero division error
     #e.g. a= [2 2 4], b= [1 0 3], result [2 0 1.333]
     return np.divide(a, b, out=np.zeros_like(a), where=mask) 
 
-def plot_single_variable(hists, h_names, weights_ls,title,density_top=True, logy=False):
+def plot_single_variable(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[]):
+  nbins=50
+  hists_flat=np.concatenate(hists)
+  bin_min=np.min(hists_flat)
+  bin_max=np.max(hists_flat)
+  gap=(bin_max-bin_min)*0.05
+  bins=np.linspace(bin_min-gap,bin_max+gap,nbins)
+  x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
+  hists=list(hists)
+
+  cut0_idx=0
+  len0=len(hists[cut0_idx])
+ 
+  ratio_all=np.array([]) 
+  for data,name,weights,i in zip(hists,h_names,weights_ls, range(len(hists))):
+    y,_, _=plt.hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i],1)}% left, cut={name}')
+    #y,_, _=plt[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len0*100,1)}% left, cut={name}')
+#    y_unnorm,_, _=plt[0].hist(data, bins=bins, density=False,histtype='step', alpha=0)
+#    print(i, len(bins), len(y), bins, y) 
+    #if i ==len(hists)-1:
+  plt.tick_params(axis='y', which='minor') 
+  plt.grid()
+ 
+  plt.ylabel('Event Number')
+  if (logy): plt.yscale("log")
+  plt.legend(loc='upper right')
+  plt.title(title)
+
+  plt.savefig(plot_dir+'hist_'+title.replace(" ","").replace('(','')+'_weighted'+'.png')
+  plt.clf()
+  print("Saved plot",title)
+
+
+
+def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False):
   f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
   nbins=50
   hists_flat=np.concatenate(hists)
@@ -184,7 +218,8 @@ def plot_single_variable(hists, h_names, weights_ls,title,density_top=True, logy
  
   ratio_all=np.array([]) 
   for data,name,weights,i in zip(hists,h_names,weights_ls, range(len(hists))):
-    y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len0*100,1)}% left, cut={name}')
+    y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i],1)}% left, cut={name}')
+    #y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len0*100,1)}% left, cut={name}')
 #    y_unnorm,_, _=axs[0].hist(data, bins=bins, density=False,histtype='step', alpha=0)
 #    print(i, len(bins), len(y), bins, y) 
     #if i ==len(hists)-1:
@@ -192,12 +227,11 @@ def plot_single_variable(hists, h_names, weights_ls,title,density_top=True, logy
       y0=y
       #y0=y_unnorm
 #      axs[0].set_ylim([min(y)/1e2, max(y)*1e2])
-    cprint(y, 'blue')  
     axs[1].scatter(x_bins,y/y0)
 #    axs[1].set_ylim([])
     #axs[1].scatter(x_bins,zero_div(y,y0))
     ratio_all
-#  axs[1].set_ylim(-.2,1.2)  
+  axs[1].set_ylim(0.5,3)  
   axs[1].set_ylabel('Ratio')
   axs[1].legend(loc='upper right')
   plt.tick_params(axis='y', which='minor') 
@@ -209,10 +243,9 @@ def plot_single_variable(hists, h_names, weights_ls,title,density_top=True, logy
   axs[1].legend(loc='upper right')
   axs[0].set_title(title)
 
-  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'_weighted'+'.png')
+  plt.savefig(plot_dir+'hist_'+title.replace(" ","").replace('(','')+'_weighted'+'.png')
   plt.clf()
   print("Saved plot",title)
-
 
 
 
