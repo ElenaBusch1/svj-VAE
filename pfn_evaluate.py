@@ -59,12 +59,6 @@ def call_functions(x_events,y_events, tag, bool_weight, extraVars):
   cprint('mT_sig', 'blue')
   cprint(mT_sig, 'blue')
   """
-  if (len(bkg_loss) > len(sig_loss)):
-    bkg_loss = bkg_loss[:len(sig_loss)]
-    mT_bkg=mT_bkg[:len(sig_loss)] # added
-  else:
-    sig_loss = sig_loss[:len(bkg_loss)]
-    mT_sig=mT_sig[:len(sig_loss)] # added
   my_variables.insert(0,"score")
   save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
   save_sig = np.concatenate((sig_loss[:,None], mT_sig),axis=1)
@@ -81,25 +75,27 @@ pfn_model = 'PFN'
 #pfn_model = 'PFNv1'
 #arch_dir = "/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/"
 ## Load testing data
-#x_events = 5000
-#y_events = 5000
-x_events = 5000
-y_events = 5000
+x_events = 2464544
+y_events = 631735
+#x_events = 50000
+#y_events = 50000
 bool_weight=True
 if bool_weight:weight_tag='ws'
 else:weight_tag='nws'
-tag= f'{pfn_model}_2jAvg_MM_{weight_tag}_NE={x_events}'
+tag= f'{pfn_model}_2jAvg_MM_{weight_tag}_xNE={x_events}_yNE={y_events}'
+#tag= f'{pfn_model}_2jAvg_MM_{weight_tag}_NE={x_events}'
 #tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 my_variables= ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
 #my_variables=["mT_jj"]
-bool_rewrite=True
-#bool_rewrite=False
+bool_rewrite=False
+#bool_rewrite=True
 h5dir='h5dir/'
 filename_bkg=f'{tag}_bkg'
 filename_sig=f'{tag}_sig'
 h5path_bkg=h5dir+filename_bkg+'.h5'
 h5path_sig=h5dir+filename_sig+'.h5'
-arch_dir="architectures_saved_old/architectures_saved_jun5/"
+#arch_dir="architectures_saved_old/architectures_saved_jun5/"
+arch_dir="architectures_saved/"
 data_bkg={}
 data_sig={}
 if bool_rewrite or (not(os.path.exists(h5path_bkg)) or not(os.path.exists(h5path_sig))):
@@ -145,39 +141,49 @@ save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
 save_sig = np.concatenate((sig_loss[:,None], mT_sig),axis=1)
 """
 
-#do_roc(bkg_loss, sig_loss, pfn_model, True)
-make_transformed_plot=False
-#auc=do_roc(bkg_loss, sig_loss, tag_file=tag, tag_title=tag, make_transformed_plot=make_transformed_plot)
-auc=do_roc(data_bkg['score'], data_sig['score'], tag_file=tag, tag_title=tag, make_transformed_plot=make_transformed_plot)
-
 #cut on each event depending on a pfn score
 #find which score gives us signal to percentile of background
 #percentile_ls=[20, 30, 60, 100]
-"""
-percentile_ls=[0,20, 60]
+
+"""percentile_ls=[0, 0.5, 5, 20]
 cuts=[]
 for percentile in percentile_ls:
-  score = getSignalSensitivityScore(data_bkg['score'], data_sig['score'], percentile=percentile)
+  score = getSignalSensitivityScore(data_bkg['score'], data_sig['score'], percentile=100-percentile)
   #score = getSignalSensitivityScore(bkg_loss, sig_loss, percentile=percentile)
   cuts.append(round(score,3))
 print(f'{percentile}% -score {score}')
 """
+def equal_length(bkg_loss, sig_loss):
+  if (len(bkg_loss) > len(sig_loss)): # necessary when computing AUC score
+    bkg_loss = bkg_loss[:len(sig_loss)]
+#    mT_bkg=mT_bkg[:len(sig_loss)] # added
+  else:
+    sig_loss = sig_loss[:len(bkg_loss)]
+#    mT_sig=mT_sig[:len(sig_loss)] # added
+  return bkg_loss,sig_loss
+bkg_loss,sig_loss=equal_length(bkg_loss=data_bkg['score'],sig_loss=data_sig['score'])
+make_transformed_plot=False
+auc=do_roc(bkg_loss, sig_loss, tag_file=tag, tag_title=tag, make_transformed_plot=make_transformed_plot)
 
-cuts=[0, .3, .6,.9] 
+cuts=[0, .6,.9,.98] 
 for key in data_bkg:
   bkg_ls=[]
+  bkg_weight_ls=[]
   bkg_loss_arr=np.array(data_bkg['score'])
   for i, cut in enumerate(cuts):
     bkg_cut_idx=np.argwhere(bkg_loss_arr>=cut)
     bkg_cut=data_bkg[key][bkg_cut_idx]  
+    bkg_cut_weight=data_bkg['weight'][bkg_cut_idx]  
 #  bkg_cut=bkg_loss_arr[bkg_cut_idx]
     bkg_cut=bkg_cut.flatten()
     print(i, cut, len(bkg_cut))
     bkg_ls.append(bkg_cut)
+    bkg_weight_ls.append(bkg_cut_weight)
 #plot mT distribution
 #plot_single_variable([bkg_loss_arr,bkg_cut], cuts, "mT distribution", logy=True) 
-  plot_single_variable(bkg_ls, cuts, f"{key} distribution", logy=True)
+  plot_single_variable(bkg_ls, cuts,title= f"{key} distribution",weights_ls=bkg_weight_ls, density_top=True,logy=True)
  
+
 #plot_single_variable([bkg_loss,sig_loss], ["Background", "Signal"], "mT distribution", logy=True) 
 print('done')
 ##  #--- Grid test

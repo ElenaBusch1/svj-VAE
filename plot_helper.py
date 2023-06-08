@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from root_to_numpy import variable_array
 from math import ceil
-
+from termcolor import cprint
 #tag = "PFN_2jAvg_MM"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 #plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun5_500000_nep100_nl100/'
-plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun7/'
+plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun8/'
 def detect_outliers(x):
   z = np.abs(stats.zscore(x))
   print(max(z))
@@ -168,7 +168,7 @@ def zero_div(a,b, bool_print=False): # this avoid zero division error
     #e.g. a= [2 2 4], b= [1 0 3], result [2 0 1.333]
     return np.divide(a, b, out=np.zeros_like(a), where=mask) 
 
-def plot_single_variable(hists, h_names, title, logy=False):
+def plot_single_variable(hists, h_names, weights_ls,title,density_top=True, logy=False):
   f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
   nbins=50
   hists_flat=np.concatenate(hists)
@@ -181,17 +181,23 @@ def plot_single_variable(hists, h_names, title, logy=False):
 
   cut0_idx=0
   len0=len(hists[cut0_idx])
-  for data,name,i in zip(hists,h_names, range(len(hists))):
-    y,_, _=axs[0].hist(data, bins=bins, alpha=0.6, label=f'NE={len(data)}, {round(len(data)/len0*100,2)}% remains after a cut on {name}')
+ 
+  ratio_all=np.array([]) 
+  for data,name,weights,i in zip(hists,h_names,weights_ls, range(len(hists))):
+    y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len0*100,1)}% left, cut={name}')
+#    y_unnorm,_, _=axs[0].hist(data, bins=bins, density=False,histtype='step', alpha=0)
 #    print(i, len(bins), len(y), bins, y) 
     #if i ==len(hists)-1:
     if i ==cut0_idx: # make sure the first of hists list has the most number of events
       y0=y
-   
+      #y0=y_unnorm
+#      axs[0].set_ylim([min(y)/1e2, max(y)*1e2])
+    cprint(y, 'blue')  
     axs[1].scatter(x_bins,y/y0)
+#    axs[1].set_ylim([])
     #axs[1].scatter(x_bins,zero_div(y,y0))
-
-  axs[1].set_ylim(-.2,1.2)  
+    ratio_all
+#  axs[1].set_ylim(-.2,1.2)  
   axs[1].set_ylabel('Ratio')
   axs[1].legend(loc='upper right')
   plt.tick_params(axis='y', which='minor') 
@@ -202,7 +208,8 @@ def plot_single_variable(hists, h_names, title, logy=False):
   axs[0].legend(loc='upper right')
   axs[1].legend(loc='upper right')
   axs[0].set_title(title)
-  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
+
+  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'_weighted'+'.png')
   plt.clf()
   print("Saved plot",title)
 
