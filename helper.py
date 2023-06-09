@@ -54,6 +54,8 @@ class Label:
             string=Label.get_string(self)
             if 'output' in string or 'bkg' in string or 'QCD' in string or 'Znunu' in string: return f'{Label.get_string(self)}'.replace('test','')
             else:
+                print(string)
+                print(f'{Label.proc_m[string]} GeV, {int(Label.proc_rinv[string])/10}')
                 return f'{Label.proc_m[string]} GeV, {int(Label.proc_rinv[string])/10}'
         else:return self.name
 

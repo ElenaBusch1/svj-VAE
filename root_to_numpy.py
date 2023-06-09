@@ -43,21 +43,31 @@ def read_hlvs(infile, nEvents, variable_array, bool_weight=False): # different f
 
 	# A random 6 variables	
     my_array = tree.arrays(variable_array, library="np")
+#    if nEvents > len(my_array):
     
-    if bool_weight:
-      idx=get_weighted_elements(tree, nEvents)
+          
+    try:
+      if bool_weight:
+        idx=get_weighted_elements(tree, nEvents)
 #      print('weighted sampling idx', idx.shape, idx)
 
-    else: 
+      else: 
     # select evenly spaced events from input distribution
-      idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
+        idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
 #      print(f'{len(my_jet_array[jet_array[0]])/nEvents}th idx', idx.shape, idx)
 #      print(my_jet_array[jet_array[0]])
 #      print('evenly spaced sampling idx', idx.shape, idx)
 
     #padded_array=selected_jet_array
+    except:
+      print('Given nEvents larger than events present so selecting all events')
+#      print(my_array)
+#      print(my_array)
+#      print(my_array.size)
+      length=len(my_array[variable_array[0]])
+      idx=list(range(length))
 
-
+    cprint(f'given events{nEvents}, selecting events {len(idx)}','green')
     selected_array = np.array([val[idx] for _,val in my_array.items()]).T
 	#print("My array:")
 	#print(selected_array)
@@ -106,11 +116,14 @@ def read_flat_vars(infile, nEvents, variable_array, bool_weight=True):
     
     # Read flat branches from nTuple
     my_array = tree.arrays(variable_array, library="np")
-    if (bool_weight):
-        idx = get_weighted_elements(tree, nEvents)
-    else:
-        idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
+    try:
+      if (bool_weight):
+          idx = get_weighted_elements(tree, nEvents)
+      else:
+          idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
 
+    except:
+      idx=list(range(len(my_array)))
     #print('Flat variable index:', idx.shape, idx)
     selected_array = np.array([val[idx] for _,val in my_array.items()]).T
  
@@ -119,7 +132,7 @@ def read_flat_vars(infile, nEvents, variable_array, bool_weight=True):
 
 #def read_vectors(infile, nEvents, jet_array, bool_weight=True):
 #def read_vectors(infile, nEvents, bool_weight=True, flatten=True):
-def read_vectors(infile, nEvents,jet_array, bool_weight=True):
+def read_vectors(infile, nEvents,jet_array, bool_weight=True,bool_select_all=False):
     file = uproot.open(infile)
     
     #print("File keys: ", file.keys())
@@ -146,22 +159,17 @@ def read_vectors(infile, nEvents,jet_array, bool_weight=True):
     sys.exit()
     """
     my_jet_array = tree.arrays(jet_array, library = "np")
-    if bool_weight:
-#      print('*'*30)
-#      print('correct weight_array')
-      #weight_array=["jet_Width"]
+    try:
+      if bool_weight:
 
-      idx = get_weighted_elements(tree, nEvents)
-#    idx[0]=1
-#      print('weighted sampling idx', idx.shape, idx)
+        idx = get_weighted_elements(tree, nEvents)
 
-    else: 
+      else: 
 #      print('*'*30)
     # select evenly spaced events from input distribution
-      idx = get_spaced_elements(len(my_jet_array[jet_array[0]]),nEvents)
-#      print(f'{len(my_jet_array[jet_array[0]])/nEvents}th idx', idx.shape, idx)
-#      print(my_jet_array[jet_array[0]])
-#      print('evenly spaced sampling idx', idx.shape, idx)
+        idx = get_spaced_elements(len(my_jet_array[jet_array[0]]),nEvents)
+    except:
+      idx=list(range(len(my_array)))
 
     selected_jet_array = np.array([val[idx] for _,val in my_jet_array.items()]).T
     j=idx[0] # REMOVE this line

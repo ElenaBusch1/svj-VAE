@@ -9,7 +9,7 @@ from termcolor import cprint
 #tag = "PFN_2jAvg_MM"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 #plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun5_500000_nep100_nl100/'
-plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun8/'
+plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun9/'
 def detect_outliers(x):
   z = np.abs(stats.zscore(x))
   print(max(z))
@@ -183,7 +183,7 @@ def plot_single_variable(hists, h_names, weights_ls,title,density_top=True, logy
  
   ratio_all=np.array([]) 
   for data,name,weights,i in zip(hists,h_names,weights_ls, range(len(hists))):
-    y,_, _=plt.hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i],1)}% left, cut={name}')
+    y,_, _=plt.hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i]*100,1)}% left, cut={name}')
     #y,_, _=plt[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len0*100,1)}% left, cut={name}')
 #    y_unnorm,_, _=plt[0].hist(data, bins=bins, density=False,histtype='step', alpha=0)
 #    print(i, len(bins), len(y), bins, y) 
@@ -193,10 +193,11 @@ def plot_single_variable(hists, h_names, weights_ls,title,density_top=True, logy
  
   plt.ylabel('Event Number')
   if (logy): plt.yscale("log")
-  plt.legend(loc='upper right')
+  plt.legend(loc='lower right')
+  #plt.legend(loc='upper right')
   plt.title(title)
 
-  plt.savefig(plot_dir+'hist_'+title.replace(" ","").replace('(','')+'_weighted'+'.png')
+  plt.savefig(plot_dir+'hist_'+title.replace(" ","").replace('(','')+'_weighted1'+'.png')
   plt.clf()
   print("Saved plot",title)
 
@@ -218,7 +219,7 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
  
   ratio_all=np.array([]) 
   for data,name,weights,i in zip(hists,h_names,weights_ls, range(len(hists))):
-    y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i],1)}% left, cut={name}')
+    y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i],1)*100}% left, cut={name}')
     #y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len0*100,1)}% left, cut={name}')
 #    y_unnorm,_, _=axs[0].hist(data, bins=bins, density=False,histtype='step', alpha=0)
 #    print(i, len(bins), len(y), bins, y) 

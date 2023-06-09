@@ -25,7 +25,7 @@ def extract_tag(filename):
   else: tag=''+filename[2]
   return tag
 
-def read_hdf5(x_events, y_events, tag, h5path, bool_rewrite, extraVars_short):
+def read_hdf5(x_events, y_events,sig_file, tag, h5path, bool_rewrite, extraVars_short):
   cprint(h5path, 'yellow')
   cprint(extraVars_short, 'yellow')
   data={}
@@ -40,7 +40,6 @@ def read_hdf5(x_events, y_events, tag, h5path, bool_rewrite, extraVars_short):
   with h5py.File(h5path, 'r') as f:
 #    data_bkg = f["default"]['mT_jj'][()]
     for var in extraVars_short+["score"]:
-#    data_bkg = f["default"][()]
       ar=f["default"][var]
       data[var] = ar[:,0]
   return data
@@ -122,14 +121,16 @@ else:weight_tag='nws'
 bool_rewrite=False
 #bool_rewrite=True
 h5dir='h5dir/'
-sig_file="user.ebusch.SIGskim.mc20e.root"
+#sig_file="user.ebusch.SIGskim.mc20e.root"
 
 
 #filename_bkg=f'{tag}_'+extract_tag(filename=bkg_file)
 #arch_dir="architectures_saved_old/architectures_saved_jun5/"
 arch_dir="architectures_saved/"
-file_ls=['skim.user.ebusch.515487.mc20e.root', 'skim.user.ebusch.515498.mc20e.root', 'skim.user.ebusch.515515.mc20e.root', 'skim.user.ebusch.515518.mc20e.root']
+#file_ls=['skim.user.ebusch.515498.mc20e.root']
+file_ls=['skim.user.ebusch.515495.mc20e.root', 'skim.user.ebusch.515498.mc20e.root', 'skim.user.ebusch.515515.mc20e.root', 'skim.user.ebusch.515518.mc20e.root']
 file_ls+=["user.ebusch.QCDskim.mc20e.root"]
+#enumber_ls=[6809]
 enumber_ls=[15813,6809, 38352, 15813]
 enumber_ls+=[2464544]
 data_dict={}
@@ -144,8 +145,9 @@ for fl, enumber,filetag in zip(file_ls,enumber_ls,filetag_ls):
   if 'QCD' in fl:h5path=h5dir+'/bkg/'+'PFN_2jAvg_MM_ws_xNE=2464544_yNE=631735_bkg.h5'
   #if 'QCD' in fl:h5path=h5dir+'/bkg/'+filename+'.h5'
   else:h5path=h5dir+'/sig/'+filename+'.h5'
-  
-  data_dict[filetag]=read_hdf5(x_events=x_events,y_events= enumber, tag=tag,h5path= h5path, bool_rewrite=bool_rewrite, extraVars_short=my_variables)
+  cprint(filetag, 'magenta')
+   
+  data_dict[filetag]=read_hdf5(x_events=x_events,y_events= enumber,sig_file=fl, tag=tag,h5path= h5path, bool_rewrite=bool_rewrite, extraVars_short=my_variables)
   
    
 #  data_bkg=f["default"][()]
@@ -192,21 +194,22 @@ def equal_length(bkg_loss, sig_loss):
 #auc=do_roc(bkg_loss, sig_loss, tag_file=tag, tag_title=tag, make_transformed_plot=make_transformed_plot)
 
 #cuts=[0, .6,.9,.98]
-var_ls=['mT_jj']
+#var_ls=['rT']
+var_ls=['mT_jj','rT']
 bkg_len_ls=[]
  
 
 for var in var_ls:
 #for var in data_rel:
   #data_rel=data_dict[key]
-  hist_tag=f' {var}'
+  hist_tag=f' '
   #hist_tag=f' {key}'
   bkg_ls=[]
   bkg_weight_ls=[]
   h_names=[]
   #for i, cut in enumerate(cuts):
   for i, key in enumerate(data_dict):
-    cut=.95
+    cut=0
     data_rel=data_dict[key]
     bkg_loss_arr=np.array(data_rel['score'])
     bkg_len=len(bkg_loss_arr)

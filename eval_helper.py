@@ -9,7 +9,7 @@ from sklearn.preprocessing import MinMaxScaler
 #from sklearn.preprocessing import MaxAbsScaler
 from plot_helper import *
 from models import *
-
+from termcolor import cprint
 def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_file,bkg_file="user.ebusch.QCDskim.mc20e.root",extraVars=[]):
 ###################
     getExtraVars = len(extraVars) > 0
@@ -44,6 +44,7 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_fil
 
     """
 #    sig_file="user.ebusch.SIGskim.mc20e.root"
+    cprint(f'reading {sig_file}','red')
     read_dir='/nevis/katya01/data/users/ebusch/SVJ/autoencoder/v8.1/'
 #    jet_bkg = read_hlvs(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, jet_array)  # select with weight??
     jet_bkg = read_hlvs(read_dir+bkg_file, x_events, jet_array, bool_weight=bool_weight)  # select with weight??
