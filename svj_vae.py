@@ -57,7 +57,7 @@ if (hlvs):
     input_dim = 12
     scale = False
 if (jets_1D):
-    input_dim = 160
+    input_dim = 640
     scale = True
 if (jets_2D):
     input_dim = [16, 4]

@@ -6,7 +6,7 @@ from matplotlib import colors
 from root_to_numpy import variable_array
 from math import ceil
 
-tag = "PFNAE_scaling_tests"
+tag = "AE_zeros160"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):

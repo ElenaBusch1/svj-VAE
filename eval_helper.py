@@ -15,14 +15,11 @@ def getTwoJetSystem(x_events,y_events):
     track_array1 = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"]
     jet_array = ["jet_eta", "jet_phi"]
     bkg_in0 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array0)
-    sig_in0 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", y_events, track_array0)
-    #sig_in0 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array0)
+    sig_in0 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array0)
     bkg_in1 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, track_array1)
-    sig_in1 = read_vectors("../v8/v8SmallPartialQCDmc20e.root", y_events, track_array1)
-    #sig_in1 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array1)
+    sig_in1 = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, track_array1)
     jet_bkg = read_vectors("../v8/v8SmallPartialQCDmc20e.root", x_events, jet_array)
-    jet_sig = read_vectors("../v8/v8SmallPartialQCDmc20e.root", y_events, jet_array)
-    #jet_sig = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, jet_array)
+    jet_sig = read_vectors("../v8/v8SmallSIGmc20e.root", y_events, jet_array)
 
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg, True)
     _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig, False)
@@ -100,9 +97,9 @@ def pt_sort(x, jet_idx):
         ev = x[i]
         x[i] = ev[ev[:,0].argsort()]
     if (jet_idx == 0):
-        y = x[:,-20:,:]
+        y = x[:,-80:,:]
     elif (jet_idx == 1):
-        y = x[:,-20:,:]
+        y = x[:,-80:,:]
     else:
         y = x[:,-3:,:]
     return y
@@ -112,10 +109,7 @@ def apply_TrackSelection(x_raw, jets, highTrackMult):
     x[x[:,:,0] < 10] = 0 # apply pT requirement
     print("Input track shape: ", x.shape)
     # require at least 3 tracks
-    if highTrackMult:
-        x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 10 for jet in x])
-    else:
-        x_nz = np.array([3 <= len(jet.any(axis=1)[jet.any(axis=1)==True]) < 10 for jet in x])
+    x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 3 for jet in x])
     x = x[x_nz]
     jets = jets[x_nz]
     print("Track selections")
