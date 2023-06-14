@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "jdm"
+tag = "sic_scan"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -77,6 +77,14 @@ def make_roc(fpr,tpr,auc,model=""):
 
 def make_sic(fpr,tpr,auc, model=""):
   y = tpr[1:]/np.sqrt(fpr[1:])
+  good = (y != np.inf) & (tpr[1:] > 0.08)
+  ymax = max(y[good])
+  ymax_i = np.argmax(y[good])
+  sigEff = tpr[1:][good][ymax_i]
+  qcdEff = fpr[1:][good][ymax_i]
+  print("Max improvement: ", ymax)
+  print("Sig eff: ", sigEff)
+  print("Bkg eff: ", qcdEff)
   plt.plot(tpr[1:],y,label="AUC = %0.2f" % auc)
   plt.axhline(y=1, color='0.8', linestyle='--')
   plt.xlabel("Signal Efficiency (TPR)")
@@ -86,7 +94,34 @@ def make_sic(fpr,tpr,auc, model=""):
   plt.savefig(plot_dir+'sic_'+model+'_'+tag+'.png')
   plt.clf()
   print("Saved SIC for", model)
+  return {'ymax':ymax, 'sigEff': sigEff, 'qcdEff': qcdEff}
 
+def make_grid_plot(values,title):
+  #values must be 4 X 10
+
+  fig,ax = plt.subplots(1,1)
+  if (title == "qcdEff" or title == "sigEff"): img = ax.imshow(values,cmap = "summer", norm=colors.LogNorm())
+  else: img = ax.imshow(values)
+
+  # add text to table
+  for (j,i),label in np.ndenumerate(values):
+    if label == 0.0: continue
+    if title == "qcdEff": ax.text(i,j,'{0:.3f}'.format(label),ha='center', va='center', fontsize = 'x-small')
+    else: ax.text(i,j,'{0:.2f}'.format(label),ha='center', va='center', fontsize = 'x-small')
+
+  # x-y labels for grid 
+  x_label_list = ['1.0', '1.25', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '5.0', '6.0']
+  y_label_list = ['0.2', '0.4', '0.6', '0.8']
+  ax.set_xticks([0,1,2,3,4,5,6,7,8,9])
+  ax.set_xticklabels(x_label_list)
+  ax.set_xlabel('Z\' Mass [TeV]')
+  ax.set_yticks([0,1,2,3])
+  ax.set_yticklabels(y_label_list)
+  ax.set_ylabel('$R_{inv}$')
+  
+  ax.set_title(title)
+  plt.savefig(plot_dir+'table_'+title+'_'+tag+'.png')
+  print("Saved grid plot for", title)
 
 def make_single_roc(rocs,aucs,ylabel):
   plt.plot(rocs[0],rocs[1],label=str(np.round(r,4))+", $\sigma$="+str(sigs)+": AUC="+str(np.round(aucs,3)))
@@ -178,10 +213,11 @@ def plot_single_variable(hists, weights, h_names, title, logy=False):
   print("Saved plot",title)
 
 def plot_ratio(hists, weights, h_names, title, logy=False):
+  colors = ['black', 'darkblue', 'deepskyblue', 'firebrick', 'orange']
+
   f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
   nbins=50
   hists_flat=np.concatenate(hists)
-  print(hists_flat) 
   #bin_min=np.min(hists_flat)
   #bin_max=np.max(hists_flat)
   #gap=(bin_max-bin_min)*0.05
@@ -190,24 +226,26 @@ def plot_ratio(hists, weights, h_names, title, logy=False):
   hists=list(hists)
   nTot = len(hists[0])
   for data,weight,name,i in zip(hists,weights,h_names, range(len(hists))):
-    y,_, _=axs[0].hist(data, bins=bins, label=f'{name} ({len(data)/nTot:.0%} Sig)', density=True, histtype='step', weights=weight)
+    y,_, _=axs[0].hist(data, bins=bins, label=f'{name}', density=False, histtype='step', weights=weight, color=colors[i])
     #print(i, len(bins), len(y), bins, y) 
     #if i ==len(hists)-1:
-    if i ==0: y0=y # make sure the first of hists list has the most number of events
-   
-    axs[1].scatter(x_bins,y/y0)
+    if i ==0:
+      y0=y # make sure the first of hists list has the most number of events
+      continue
+    axs[1].scatter(x_bins,y/np.sqrt(y0), marker="+", color=colors[i], label=f'{max(y/np.sqrt(100*y0)):.1E}')
     #axs[1].scatter(x_bins,zero_div(y,y0))
 
-  axs[1].set_ylim(0.5,3.0)  
-  axs[1].set_ylabel('Ratio')
-  axs[1].legend(loc='upper right')
+  #axs[1].set_ylim(0.5,3.0)  
+  axs[1].set_ylabel('S/$sqrt$b')
+  axs[1].set_yscale('log')
+  axs[1].legend(loc='upper right', fontsize='x-small')
   plt.tick_params(axis='y', which='minor') 
   plt.grid()
  
   axs[0].set_ylabel('Event Number')
   if (logy): axs[0].set_yscale("log")
-  axs[0].legend(loc='upper right')
-  axs[1].legend(loc='upper right')
+  axs[0].legend(loc='upper right', fontsize='x-small')
+  #axs[1].legend(loc='upper right')
   axs[0].set_title(title)
   plt.savefig(plot_dir+'ratio_'+title.replace(" ","")+'.png')
   plt.clf()

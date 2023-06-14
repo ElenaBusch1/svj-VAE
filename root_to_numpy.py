@@ -20,6 +20,7 @@ def read_flat_vars(infile, nEvents, variable_array, use_weight=True):
     
     # Read flat branches from nTuple
     my_array = tree.arrays(variable_array, library="np")
+    if (nEvents == -1): nEvents = len(my_array[variable_array[0]])
     if (use_weight):
         idx = get_weighted_elements(tree, nEvents)
     else:
@@ -41,6 +42,7 @@ def read_vectors(infile, nEvents, jet_array, use_weight=True):
 
     # Read vector branches from nTuple
     my_jet_array = tree.arrays(jet_array, library = "np")
+    if (nEvents == -1): nEvents = len(my_jet_array[jet_array[0]])
     if (use_weight):
         idx = get_weighted_elements(tree, nEvents)
     else:

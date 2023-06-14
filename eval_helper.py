@@ -9,55 +9,42 @@ from sklearn.preprocessing import MinMaxScaler
 #from sklearn.preprocessing import MaxAbsScaler
 from plot_helper import *
 from models import *
+import json
 
-def getTwoJetSystem(x_events,y_events, extraVars=[]):
+def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True):
     getExtraVars = len(extraVars) > 0
     
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e", "jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
     track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e", "jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
     jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"]
     print("Reading in data...")
-    bkg_in0 = read_vectors("../v8.1/skim.user.ebusch.QCDskim.mc20e.root", x_events, track_array0, use_weight=True)
-    sig_in0 = read_vectors("../v8.1/skim.user.ebusch.SIGskim.mc20e.root", y_events, track_array0, use_weight=False)
-    bkg_in1 = read_vectors("../v8.1/skim.user.ebusch.QCDskim.mc20e.root", x_events, track_array1, use_weight=True)
-    sig_in1 = read_vectors("../v8.1/skim.user.ebusch.SIGskim.mc20e.root", y_events, track_array1, use_weight=False)
-    jet_bkg = read_flat_vars("../v8.1/skim.user.ebusch.QCDskim.mc20e.root", x_events, jet_array, use_weight=True)
-    jet_sig = read_flat_vars("../v8.1/skim.user.ebusch.SIGskim.mc20e.root", y_events, jet_array, use_weight=False)
+    bkg_in0 = read_vectors(input_file, x_events, track_array0, use_weight=use_weight)
+    bkg_in1 = read_vectors(input_file, x_events, track_array1, use_weight=use_weight)
+    jet_bkg = read_flat_vars(input_file, x_events, jet_array, use_weight=use_weight)
     if getExtraVars: 
-        vars_bkg = read_flat_vars("../v8.1/skim.user.ebusch.QCDskim.mc20e.root", x_events, extraVars, use_weight=True)
-        vars_sig = read_flat_vars("../v8.1/skim.user.ebusch.SIGskim.mc20e.root", y_events, extraVars, use_weight=False)
+        vars_bkg = read_flat_vars(input_file, x_events, extraVars, use_weight=use_weight)
 
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
-    _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig)
     _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
-    _, _, sig_nz1 = apply_TrackSelection(sig_in1, jet_sig)
     
     bkg_nz = bkg_nz0 & bkg_nz1
-    sig_nz = sig_nz0 & sig_nz1
 
     # select events which have both valid leading and subleading jet tracks
     bkg_pt0 = bkg_in0[bkg_nz]
     bkg_pt1 = bkg_in1[bkg_nz]
-    sig_pt0 = sig_in0[sig_nz]
-    sig_pt1 = sig_in1[sig_nz]
     bjet_sel = jet_bkg[bkg_nz]
-    sjet_sel = jet_sig[sig_nz]
     if getExtraVars:
         vars_bkg = vars_bkg[bkg_nz]    
-        vars_sig = vars_sig[sig_nz]    
 
     #plot_nTracks(bkg_pt0, sig_pt0, "j1")
     #plot_nTracks(bkg_pt1, sig_pt1, "j2")
 
     bkg_sel = np.concatenate((bkg_pt0,bkg_pt1),axis=1)
-    sig_sel = np.concatenate((sig_pt0,sig_pt1),axis=1)
-    plot_vectors(bkg_sel,sig_sel,"PFNraw")
     #bkg_sel = pt_sort(bkg_sel)
     #sig_sel = pt_sort(sig_sel)
     #plot_nTracks(bkg_sel, sig_sel, "jAll")
 
     bkg = apply_JetScalingRotation(bkg_sel, bjet_sel,0)
-    sig = apply_JetScalingRotation(sig_sel, sjet_sel,0)
 
     #plot
     #x_sel_nz = remove_zero_padding(bkg_sel)
@@ -74,14 +61,13 @@ def getTwoJetSystem(x_events,y_events, extraVars=[]):
     #sig = sig
 
     print(bkg.shape)
-    print(sig.shape)
     #print(mT_sel.shape)
     #x = x_2D.reshape(bkg.shape[0],x_2D.shape[1]*4)
     #sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
     #plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
     #plot_vectors(x,sig,"AEWithZeroRotated")
-    if getExtraVars: return bkg, sig, vars_bkg, vars_sig
-    else: return bkg, sig
+    if getExtraVars: return bkg, vars_bkg
+    else: return bkg
 
 def check_weights(x_events):
     #bkg_nw1 = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 10000, ["jet1_pt"], use_weight=False)
@@ -279,7 +265,19 @@ def do_roc(bkg_loss, sig_loss, plot_tag, make_transformed_plot=False):
     fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
     auc = roc_auc_score(truth_labels, eval_vals)
     print("AUC - "+plot_tag+": ", auc)
-    make_roc(fpr,tpr,auc,plot_tag)
-    make_sic(fpr,tpr,auc,plot_tag)
-    return auc
+    #make_roc(fpr,tpr,auc,plot_tag)
+    sic_vals = make_sic(fpr,tpr,auc,plot_tag)
+    sic_vals['auc'] = auc
+    return sic_vals
 
+def do_grid_plots(sic_vals):
+    with open("dsids_grid_locations.json", "r") as f:
+      dsid_coords = json.load(f)
+    dsids = list(sic_vals.keys())
+    vals = list(sic_vals[dsids[0]].keys())
+    for val in vals:
+        values = np.zeros([4,10])
+        for dsid in dsids:
+            loc = tuple(dsid_coords[str(dsid)])
+            values[loc] = sic_vals[dsid][val]
+        make_grid_plot(values, val)
