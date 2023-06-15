@@ -11,6 +11,7 @@ from plot_helper import *
 from models import *
 from models_archive import *
 from eval_helper import *
+import h5py
 
 ## ---------- USER PARAMETERS ----------
 ## Model options:
@@ -37,54 +38,39 @@ classifier.compile()
 print ("Loaded model")
 
 ## Load testing data
-x_events = 5000
-y_events = 5000
-bkg2, sig2, mT_bkg, mT_sig = getTwoJetSystem(x_events,y_events, ["mT_jj"])
-scaler = load(arch_dir+pfn_model+'_scaler.bin')
-bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
-sig2,_ = apply_StandardScaling(sig2,scaler,False)
-#plot_vectors(bkg2,sig2,"PFN")
+x_events = -1 ## -1 for all events
+#dsids = [515487, 515488, 515489, 515490, 515491, 515492, 515493, 515494, 515504, 515507, 515508, 515509, 515510, 515511, 515514, 515515, 515516, 515518, 515520, 515521, 515522, 515523, 515525, 515526]
+dsids = range(515486,515527)
+#dsids = ["QCDskim"]
+for dsid in dsids:
+  my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
+  try:
+    bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim.user.ebusch."+str(dsid)+".mc20e.root", my_variables)
+  except:
+    continue
+  scaler = load(arch_dir+pfn_model+'_scaler.bin')
+  bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
+  
+  phi_bkg = graph.predict(bkg2)
+   
+  pred_phi_bkg = classifier.predict(phi_bkg)
+  
+  # ## Classifier loss
+  bkg_loss = pred_phi_bkg[:,1]
+  
+  my_variables.insert(0,"score")
+  print(my_variables)
+  save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+  #print(save_bkg)
+  ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
+  rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
+  
+  with h5py.File("v8p1_PFN_"+str(dsid)+".hdf5","w") as h5f:
+    dset = h5f.create_dataset("data",data=rec_bkg)
+  print("Saved hdf5 for ", dsid)
 
-phi_bkg = graph.predict(bkg2)
-phi_sig = graph.predict(sig2)
+quit()
 
-pred_phi_bkg = classifier.predict(phi_bkg)
-pred_phi_sig = classifier.predict(phi_sig)
-
-## Classifier loss
-bkg_loss = pred_phi_bkg[:,1]
-sig_loss = pred_phi_sig[:,1]
-
-if (len(bkg_loss) > len(sig_loss)):
-   bkg_loss = bkg_loss[:len(sig_loss)]
-else:
-   sig_loss = sig_loss[:len(bkg_loss)]
-do_roc(bkg_loss, sig_loss, pfn_model, True)
-
-
-##  #--- Grid test
-##  scores = np.zeros((10,4))
-##  aucs = np.zeros((10,4))
-##  j = -1
-##  for i in range(487,527):
-##    k = i%4-3
-##    if k == 0: j+=1
-##    if i in [488,511,514,517,520,522]:continue
-##    sig_raw = read_vectors("../v6.4/user.ebusch.515"+str(i)+".root", nevents)
-##    sig = apply_EventScaling(sig_raw)
-##    phi_sig = graph.predict(sig)
-##    pred_phi_sig = ae.predict(phi_sig)['reconstruction']
-##    sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
-##  
-##    score = getSignalSensitivityScore(bkg_loss, sig_loss)
-##    #print("95 percentile score = ",score)
-##    auc = do_roc(bkg_loss, sig_loss, ae_model, False)
-##    print(auc,score)
-##    scores[j,k] = score
-##    aucs[j,k] = auc
-##  
-##  print(scores)
-##  print(aucs)
 
 ##  #--- Eval plots 
 ##  # 1. Loss vs. epoch 

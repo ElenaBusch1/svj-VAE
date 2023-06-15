@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "sic_scan"
+tag = "cms_low_rT"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -208,7 +208,7 @@ def plot_single_variable(hists, weights, h_names, title, logy=False):
   plt.legend(loc='best', fontsize='x-small')
   if (logy): plt.yscale("log")
   plt.title(title)
-  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
+  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'_'+tag+'.png')
   plt.clf()
   print("Saved plot",title)
 
@@ -247,7 +247,7 @@ def plot_ratio(hists, weights, h_names, title, logy=False):
   axs[0].legend(loc='upper right', fontsize='x-small')
   #axs[1].legend(loc='upper right')
   axs[0].set_title(title)
-  plt.savefig(plot_dir+'ratio_'+title.replace(" ","")+'.png')
+  plt.savefig(plot_dir+'ratio_'+title.replace(" ","")+'_'+tag+'.png')
   plt.clf()
   print("Saved rato plot",title)
 
