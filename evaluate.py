@@ -14,7 +14,7 @@ from eval_helper import *
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
 model = "AE"
-arch_dir = "architectures_saved/"
+arch_dir = "architectures_saved/ZeroPadding_80/"
 
 xevents = 99500
 nevents = 10000
@@ -31,19 +31,19 @@ else: jets_1D = True
 x_full, sig = getTwoJetSystem(xevents,nevents)
 x_train, x, _, _ = train_test_split(x_full, x_full, test_size=sig.shape[0]) #done randomly
 # NOTE had to reshape
-x_train = x_train.reshape(x_train.shape[0], 400)
-x = x.reshape(x.shape[0], 400)
+x_train = x_train.reshape(x_train.shape[0], x_train.shape[1]*x_train.shape[2])
+x = x.reshape(x.shape[0], x.shape[1]*x.shape[2])
 #x_test,_ = apply_StandardScaling(x_test_1,scaler,False)
-sig = sig.reshape(sig.shape[0],400)
+sig = sig.reshape(sig.shape[0],sig.shape[1]*sig.shape[2])
 #x = x[:sig.shape[0]]
 
-high_multiplicity, low_multiplicity = get_multiplicity_signals(x_full)
-high_multiplicity = high_multiplicity.reshape(high_multiplicity.shape[0], 400)
-low_multiplicity = low_multiplicity.reshape(low_multiplicity.shape[0], 400)
+#high_multiplicity, low_multiplicity = get_multiplicity_signals(x_full)
+#high_multiplicity = high_multiplicity.reshape(high_multiplicity.shape[0], 400)
+#low_multiplicity = low_multiplicity.reshape(low_multiplicity.shape[0], 400)
 
-#plot_vectors(x,sig,"AEtest")
-plot_vectors(x, high_multiplicity, "AEtest_high_multi")
-plot_vectors(x, low_multiplicity, "AEtest_low_multi")
+plot_vectors(x,sig,"AEtest")
+#plot_vectors(x, high_multiplicity, "AEtest_high_multi")
+#plot_vectors(x, low_multiplicity, "AEtest_low_multi")
 
 
 ## Load model
@@ -84,17 +84,18 @@ if (model.find("VAE") > -1):
 ## Evaluate single Loss model
 else:
     pred_bkg = model_svj.predict(x)['reconstruction']
-    #pred_sig = model_svj.predict(sig)['reconstruction']
-    pred_high = model_svj.predict(high_multiplicity)["reconstruction"]
-    pred_low = model_svj.predict(low_multiplicity)["reconstruction"]
-    plot_vectors(pred_bkg,pred_high,"AEpred_high_multi")
-    plot_vectors(pred_bkg,pred_low,"AEpred_low_multi")
+    pred_sig = model_svj.predict(sig)['reconstruction']
+    #pred_high = model_svj.predict(high_multiplicity)["reconstruction"]
+    #pred_low = model_svj.predict(low_multiplicity)["reconstruction"]
+    #plot_vectors(pred_bkg,pred_high,"AEpred_high_multi")
+    #plot_vectors(pred_bkg,pred_low,"AEpred_low_multi")
+    plot_vectors(pred_bkg, pred_sig, "AEpred")
 
     bkg_loss = keras.losses.mse(x, pred_bkg)
-    high_loss = keras.losses.mse(high_multiplicity, pred_high)
-    low_loss = keras.losses.mse(low_multiplicity, pred_low)
+    #high_loss = keras.losses.mse(high_multiplicity, pred_high)
+    #low_loss = keras.losses.mse(low_multiplicity, pred_low)
 
-    #sig_loss = keras.losses.mse(sig, pred_sig)
+    sig_loss = keras.losses.mse(sig, pred_sig)
     #bkg_loss, sig_loss = get_single_loss(model_svj, x, sig)
 
 # --- Eval plots 
@@ -104,10 +105,10 @@ plot_saved_loss(h, model, "loss")
 #     plot_saved_loss(h, model, "kl_loss")
 #     plot_saved_loss(h, model, "reco_loss")
 # 2. Anomaly score
-#plot_score(bkg_loss, sig_loss, False, False, model)
+plot_score(bkg_loss, sig_loss, False, False, model)
 
-plot_score(bkg_loss, high_loss, False, False, model+"_high_multi")
-plot_score(bkg_loss, low_loss, False, False, model+"_low_multi")
+#plot_score(bkg_loss, high_loss, False, False, model+"_high_multi")
+#plot_score(bkg_loss, low_loss, False, False, model+"_low_multi")
 
 #plot_score(bkg_loss, sig_loss, False, True, model+"_xlog")
 if model.find('VAE') > -1:
@@ -117,9 +118,9 @@ if model.find('VAE') > -1:
 # score = getSignalSensitivityScore(bkg_loss, sig_loss)
 # print("score = ",score)
 # 4. ROCs/AUCs using sklearn functions imported above  
-#do_roc(bkg_loss, sig_loss, model, True)
-do_roc(bkg_loss, high_loss, model + "_high_multi", True)
-do_roc(bkg_loss, low_loss, model + "_low_multi", True)
+do_roc(bkg_loss, sig_loss, model, True)
+#do_roc(bkg_loss, high_loss, model + "_high_multi", True)
+#do_roc(bkg_loss, low_loss, model + "_low_multi", True)
 
 # if model.find('VAE') > -1:
 #     do_roc(bkg_reco_loss, sig_reco_loss, model+'_Reco', True)

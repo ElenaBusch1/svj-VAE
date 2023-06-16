@@ -6,7 +6,8 @@ from matplotlib import colors
 from math import ceil
 
 #tag = "PFN_2jAvg_MM"
-tag = "pfnEvalTest"
+#tag = "pfnEvalTest"
+tag = "80_zeroPaddingTest_v8"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 plot_dir = "/nevis/milne/files/gpm2117/WWW/SVJ/autoencoder/"
 
@@ -28,6 +29,7 @@ def plot_loss(h, model="", loss='loss'):
   plt.yscale('log')
   plt.legend(['train', 'val'], loc='upper left')
   plt.savefig(plot_dir+loss+'VsEpoch_'+model+'_'+tag+'.png')
+  plt.tight_layout()
   plt.clf()
   print("Saved loss plot for ", model, loss)
 
@@ -40,6 +42,7 @@ def plot_saved_loss(h, model="", loss='loss'):
   plt.yscale('log')
   plt.legend(['train', 'val'], loc='upper left')
   plt.savefig(plot_dir+loss+'VsEpoch_'+model+'_'+tag+'log.png')
+  plt.tight_layout()
   plt.clf()
   print("Saved loss plot for ", model, loss)
 
@@ -63,6 +66,7 @@ def plot_var(x_dict, x_cut1, x_cut2, key):
   ax[1].set_ylim(0,2)
   ax[1].set_xlabel('GeV')
   ax[1].set_ylabel('Ratio * (1/cut)')
+  plt.tight_layout()
   plt.savefig(plot_dir+key+'_'+tag+'.png')
   plt.clf()
   print("Saved cut distribution for", key)
@@ -73,6 +77,7 @@ def make_roc(fpr,tpr,auc,model=""):
   plt.ylabel("True Positive Rate")
   plt.title("SVJ "+model+" ROC")
   plt.legend()
+  plt.tight_layout()
   plt.savefig(plot_dir+'roc_'+model+'_'+tag+'.png')
   plt.clf()
   print("Saved ROC curve for model", model)
@@ -85,6 +90,7 @@ def make_sic(fpr,tpr,auc, model=""):
   plt.ylabel("Signal Sensitivity ($TPR/\sqrt{FPR}$)")
   plt.title("Significance Improvement Characteristic: "+model )
   plt.legend()
+  plt.tight_layout()
   plt.savefig(plot_dir+'sic_'+model+'_'+tag+'.png')
   plt.clf()
   print("Saved SIC for", model)
@@ -97,6 +103,7 @@ def make_single_roc(rocs,aucs,ylabel):
   plt.title('ROC: '+saveTag)
   plt.figtext(0.7,0.95,"size="+str(sizeeach)+", nvars="+str(nInputs))
   plt.legend()
+  plt.tight_layout()
   plt.savefig(saveTag+'_roc_aucs_'+Ylabel.replace("/","")+'.pdf')
   plt.clf()
 
@@ -122,6 +129,7 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, extra_tag=
   plt.legend()
   plt.title("Anomaly Score " + extra_tag)
   plt.xlabel('Loss')
+  plt.tight_layout()
   plt.savefig(plot_dir+'score_'+extra_tag+'_'+tag+'.png')
   plt.clf()
   print("Saved score distribution for", extra_tag)
@@ -222,12 +230,13 @@ def plot_vectors(train,sig,extra_tag):
     if(bins[-1] > 3000): bins = np.arange(0,3000,50)
     plt.subplot(4,2,i+1)
     plt.tight_layout(h_pad=1, w_pad=1)
-    plt.hist(train_v, alpha=0.5, label="v8", bins=bins, density=False)
+    plt.hist(train_v, alpha=0.5, label="bkg", bins=bins, density=False)
     #plt.hist(test_v, alpha=0.5, label="test", bins=bins, density=True, color='lightskyblue')
-    plt.hist(sig_v, alpha=0.5, label="v8.1", bins=bins, density=False)
+    plt.hist(sig_v, alpha=0.5, label="sig", bins=bins, density=False)
     plt.yscale('log')
     plt.title(variable_array[i])
     if i == 1: plt.legend()
+  plt.tight_layout()
   plt.savefig(plot_dir+'inputs_'+extra_tag+'_'+tag+'.png')
   plt.clf()
   print("Saved inputs plot (", extra_tag, ")")
