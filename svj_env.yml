@@ -158,5 +158,4 @@ dependencies:
   - zstd=1.5.2=ha4553b6_0
   - pip:
     - awkward==1.10.1
-prefix: /a/home/kolya/ebusch/miniconda3/envs/svj
 

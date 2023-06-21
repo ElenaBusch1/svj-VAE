@@ -19,6 +19,7 @@ batchsize_ae=32
 pfn_model = 'PFNv1'
 ae_model = 'ANTELOPE'
 arch_dir = "architectures_saved/"
+npy_dir = "npy_inputs/"
 
 ################### Train the AE ###############################
 graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
@@ -28,7 +29,11 @@ graph.compile()
 ## AE events
 x_events = 200000
 y_events = 20000
-bkg2, sig2 = getTwoJetSystem(x_events,y_events)
+
+#bkg2, sig2 = getTwoJetSystem(x_events,y_events)
+bkg2 = np.load(npy_dir+"bkg.npy")
+sig2 = np.load(npy_dir+"sig.npy")
+
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
 sig2,_ = apply_StandardScaling(sig2,scaler,False)
