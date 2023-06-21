@@ -16,7 +16,7 @@ phi_dim = 64
 nepochs=50
 batchsize_ae=32
 
-pfn_model = 'PFNv1'
+pfn_model = 'PFN'
 ae_model = 'ANTELOPE'
 arch_dir = "architectures_saved/"
 

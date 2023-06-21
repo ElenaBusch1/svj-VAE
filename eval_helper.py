@@ -64,16 +64,16 @@ def getTwoJetSystem(x_events, y_events, extraVars=[]):
     #plot_nTracks(bkg_pt1, sig_pt1, "j2")
 
     #plot_nTracks_2d_hist(bkg_pt0, bkg_pt1)
-    """
+    
     # NOTE no need to sort for ANTELOPE
-    bkg_sel0 = pt_sort(bkg_pt0, 0)
-    bkg_sel1 = pt_sort(bkg_pt1, 1)
-    sig_sel0 = pt_sort(sig_pt0, 0)
-    sig_sel1 = pt_sort(sig_pt1, 1)
-    """
+    bkg_sel0 = pt_sort(bkg_pt0)
+    bkg_sel1 = pt_sort(bkg_pt1)
+    sig_sel0 = pt_sort(sig_pt0)
+    sig_sel1 = pt_sort(sig_pt1)
+    
 
-    bkg_sel = np.concatenate((bkg_pt0,bkg_pt1),axis=1)
-    sig_sel = np.concatenate((sig_pt0,sig_pt1),axis=1)
+    bkg_sel = np.concatenate((bkg_sel0,bkg_sel1),axis=1)
+    sig_sel = np.concatenate((sig_sel0,sig_sel1),axis=1)
 
     #bkg_sel = pt_sort(bkg_sel)
     #sig_sel = pt_sort(sig_sel)
@@ -166,8 +166,8 @@ def pt_sort(x):
     for i in range(x.shape[0]):
         ev = x[i]
         x[i] = ev[ev[:,0].argsort()]
-    #y = x[:,-60:,:]
-    return x
+    y = x[:,-80:,:]
+    return y
 
 def apply_TrackSelection(x_raw, jets):
     x = np.copy(x_raw)
