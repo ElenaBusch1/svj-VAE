@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "PFNv2_eval"
+tag = "PFNv3_eval"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -101,7 +101,7 @@ def make_grid_plot(values,title):
 
   fig,ax = plt.subplots(1,1)
   if (title == "qcdEff" or title == "sigEff"): img = ax.imshow(values,cmap = "summer", norm=colors.LogNorm())
-  elif (title == "s_sqrtb_Inclusive" or title == "s_sqrtb_Max"): img = ax.imshow(values, norm=colors.LogNorm(), vmin=1e-10, vmax=1)
+  elif (title == "s_sqrtb_Inclusive" or title == "s_sqrtb_Max"): img = ax.imshow(values, norm=colors.LogNorm())
   else: img = ax.imshow(values)
 
   # add text to table
@@ -233,7 +233,7 @@ def plot_ratio(hists, weights, h_names, title, logy=False):
     if i ==0:
       y0=y # make sure the first of hists list has the most number of events
       continue
-    axs[1].scatter(x_bins,y/np.sqrt(y0), marker="+", color=colors[i], label=f'{max(y/np.sqrt(100*y0)):.1E}')
+    axs[1].scatter(x_bins,y/np.sqrt(y0), marker="+", color=colors[i], label=f'{max(y/np.sqrt(y0)):.1E}')
     #axs[1].scatter(x_bins,zero_div(y,y0))
 
   #axs[1].set_ylim(0.5,3.0)  

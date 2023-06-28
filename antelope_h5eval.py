@@ -76,20 +76,24 @@ def cms_mT_plots():
 
 
 def score_cut_mT_plot():
-  with h5py.File("../v8.1/v8p1_PFN_QCDskim.hdf5","r") as f:
-    bkg_data = f.get('data')[:]
+  with h5py.File("../v8.1/v8p1_PFNv3_QCDskim3_1.hdf5","r") as f:
+    bkg_data1 = f.get('data')[:]
+  with h5py.File("../v8.1/v8p1_PFNv3_QCDskim3_2.hdf5","r") as f:
+    bkg_data2 = f.get('data')[:]
+
+  bkg_data = np.concatenate((bkg_data1,bkg_data2))
   
   variables = [f_name for (f_name,f_type) in bkg_data.dtype.descr]
   bkg_loss = bkg_data["score"]
-  bkg20 = np.percentile(bkg_loss,99)
+  bkg20 = np.percentile(bkg_loss,90)
   
-  with h5py.File("../v8.1/v8p1_PFN_515495.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_PFNv3_515495.hdf5","r") as f:
     sig1_data = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFN_515498.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_PFNv3_515498.hdf5","r") as f:
     sig2_data = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFN_515515.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_PFNv3_515515.hdf5","r") as f:
     sig3_data = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFN_515518.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_PFNv3_515518.hdf5","r") as f:
     sig4_data = f.get('data')[:]
   
   sig1_loss = sig1_data["score"]
@@ -99,7 +103,7 @@ def score_cut_mT_plot():
   
   print(variables)
   
-  w0 = 100*bkg_data["weight"][bkg_loss>bkg20] 
+  w0 = 5*bkg_data["weight"][bkg_loss>bkg20] 
   w1 = sig1_data["weight"][sig1_loss>bkg20] 
   w2 = sig2_data["weight"][sig2_loss>bkg20] 
   w3 = sig3_data["weight"][sig3_loss>bkg20] 
@@ -126,9 +130,14 @@ def score_cut_mT_plot():
 
 
 def grid_scan():
-  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_1.hdf5","r") as f:
-    bkg_data = f.get('data')[:]
-  
+  with h5py.File("../v8.1/v8p1_PFNv3_QCDskim3_1.hdf5","r") as f:
+    bkg_data1 = f.get('data')[:]
+  with h5py.File("../v8.1/v8p1_PFNv3_QCDskim3_2.hdf5","r") as f:
+    bkg_data2 = f.get('data')[:]
+
+  print(type(bkg_data1))  
+  bkg_data = np.concatenate((bkg_data1,bkg_data2))
+
   variables = [f_name for (f_name,f_type) in bkg_data.dtype.descr]
   bkg_loss = bkg_data["score"]
   print("bkg events", len(bkg_loss))
@@ -136,11 +145,11 @@ def grid_scan():
   
   sic_values = {}
   
-  dsids = range(515499,515503) #,515499,515502,515507,515510,515515,515518,515520,515522]
+  dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
     print()
     try:
-      with h5py.File("../v8.1/v8p1_PFNv2_"+str(dsid)+".hdf5","r") as f:
+      with h5py.File("../v8.1/v8p1_PFNv3_"+str(dsid)+".hdf5","r") as f:
         sig1_data = f.get('data')[:]
       sig1_loss = sig1_data["score"]
       bkg_idx = get_spaced_elements(len(bkg_loss),len(sig1_loss))
@@ -158,28 +167,34 @@ def grid_scan():
   do_grid_plots(sic_values)
 
 def grid_s_sqrt_b(bkg_percent):
-  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim_1.hdf5","r") as f:
-    bkg_data = f.get('data')[:]
+  with h5py.File("../v8.1/v8p1_PFNv3_QCDskim3_1.hdf5","r") as f:
+    bkg_data1 = f.get('data')[:]
+  with h5py.File("../v8.1/v8p1_PFNv3_QCDskim3_2.hdf5","r") as f:
+    bkg_data2 = f.get('data')[:]
+
+  print(type(bkg_data1))  
+  bkg_data = np.concatenate((bkg_data1,bkg_data2))
   
   bkg_loss = bkg_data["score"]
   score_cut = np.percentile(bkg_loss,100.0-bkg_percent)
   print(score_cut)
+  #selection0 = (bkg_data["rT"] <= 0.25) & (bkg_data["rT"] > 0.15) & (bkg_data["dphi_min"] < 0.8) & (bkg_data["deta_12"] < 1.5)
+  #bkg_mT = bkg_data["mT_jj"][selection0]
+  #bkg_weight = bkg_data["weight"][selection0]
   bkg_mT = bkg_data["mT_jj"][bkg_loss>score_cut]
   bkg_weight = bkg_data["weight"][bkg_loss>score_cut]
-  bkg_weight = 100*bkg_weight
+  bkg_weight = 5*bkg_weight
 
   bins=np.logspace(17.04,21.54,20,base=1.5)
   y0,_,_ =plt.hist(bkg_mT, bins=bins, density=False, histtype='step', weights=bkg_weight)
-  print(y0)  
   y0_total = np.sum(y0)
-  print(y0_total)
 
   sb_values = {}
   
   dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
     try:
-      with h5py.File("../v8.1/v8p1_PFNv2_"+str(dsid)+".hdf5","r") as f:
+      with h5py.File("../v8.1/v8p1_PFNv3_"+str(dsid)+".hdf5","r") as f:
         sig1_data = f.get('data')[:]
       sig1_loss = sig1_data["score"]
       sig1_mT = sig1_data["mT_jj"][sig1_loss>score_cut]
@@ -194,8 +209,9 @@ def grid_s_sqrt_b(bkg_percent):
   do_grid_plots(sb_values)
 
 def main():
-  grid_scan()
-  #grid_s_sqrt_b(2)
+  #grid_scan()
+  #grid_s_sqrt_b(10)
+  score_cut_mT_plot()
 
 if __name__ == '__main__':
   main()

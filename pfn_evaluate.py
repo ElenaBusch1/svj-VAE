@@ -58,7 +58,7 @@ save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
 #print(save_bkg)
 ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
 rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
-with h5py.File("v8p1_PFNv2_QCDskim0_2.hdf5","w") as h5f:
+with h5py.File("v8p1_PFNv2_QCDskim0_3.hdf5","w") as h5f:
   dset = h5f.create_dataset("data",data=rec_bkg)
 print("Saved hdf5 for QCDskim")
 
@@ -68,7 +68,7 @@ quit()
 for dsid in dsids:
   my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
   try:
-    bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/user.ebusch."+str(dsid)+".root", my_variables, False)
+    bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim3.user.ebusch."+str(dsid)+".root", my_variables, False, False)
   except:
     continue
   scaler = load(arch_dir+pfn_model+'_scaler.bin')
@@ -88,7 +88,7 @@ for dsid in dsids:
   ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
   rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
   
-  with h5py.File("v8p1_PFNv2_"+str(dsid)+".hdf5","w") as h5f:
+  with h5py.File("v8p1_PFNv3_"+str(dsid)+".hdf5","w") as h5f:
     dset = h5f.create_dataset("data",data=rec_bkg)
   print("Saved hdf5 for ", dsid)
 
