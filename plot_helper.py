@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "PFNv3"
+tag = "PFNv2_eval"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):

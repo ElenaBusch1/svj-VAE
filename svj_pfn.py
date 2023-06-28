@@ -10,13 +10,13 @@ from plot_helper import *
 from eval_helper import *
 
 # Example usage
-nevents = 5000
+nevents = 500000
 num_elements = 80
 element_size = 7
 encoding_dim = 32
 latent_dim = 4
 phi_dim = 64
-nepochs= 30
+nepochs= 100
 batchsize_pfn=500
 batchsize_ae=32
 
@@ -24,8 +24,8 @@ pfn_model = 'PFNv3'
 arch_dir = "architectures_saved/"
 
 ## Load leading two jets
-bkg_file = "../v8.1/skim0.user.ebusch.QCDskim.root"
-sig_file = "../v8.1/user.ebusch.SIGskim.root"
+bkg_file = "../v8.1/skim3.user.ebusch.QCDskim.root"
+sig_file = "../v8.1/skim3.user.ebusch.SIGskim.root"
 bkg = getTwoJetSystem(nevents,bkg_file,[],use_weight=True)
 sig = getTwoJetSystem(nevents,sig_file,[],use_weight=False)
 

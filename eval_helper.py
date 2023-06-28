@@ -26,10 +26,10 @@ def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True, reduce_s
 
     print("Selecting tracks & rotating...")
     if(reduce_size):
-        bkg_in0 = bkg_in0[:2000000]
-        bkg_in1 = bkg_in1[:2000000]
-        jet_bkg = jet_bkg[:2000000]
-        vars_bkg = vars_bkg[:2000000]
+        bkg_in0 = bkg_in0[2000000:4000000]
+        bkg_in1 = bkg_in1[2000000:4000000]
+        jet_bkg = jet_bkg[2000000:4000000]
+        vars_bkg = vars_bkg[2000000:4000000]
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
     _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
     

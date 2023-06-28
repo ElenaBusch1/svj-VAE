@@ -126,7 +126,7 @@ def score_cut_mT_plot():
 
 
 def grid_scan():
-  with h5py.File("../v8.1/v8p1_PFN_QCDskim.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_1.hdf5","r") as f:
     bkg_data = f.get('data')[:]
   
   variables = [f_name for (f_name,f_type) in bkg_data.dtype.descr]
@@ -136,14 +136,15 @@ def grid_scan():
   
   sic_values = {}
   
-  dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
+  dsids = range(515499,515503) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
     print()
     try:
-      with h5py.File("../v8.1/v8p1_PFN_"+str(dsid)+".hdf5","r") as f:
+      with h5py.File("../v8.1/v8p1_PFNv2_"+str(dsid)+".hdf5","r") as f:
         sig1_data = f.get('data')[:]
       sig1_loss = sig1_data["score"]
-      bkg1_loss = bkg_loss[:len(sig1_loss)]
+      bkg_idx = get_spaced_elements(len(bkg_loss),len(sig1_loss))
+      bkg1_loss = bkg_loss[bkg_idx]
       sic_vals = do_roc(bkg1_loss, sig1_loss, str(dsid), False)
       sic_values[dsid] = sic_vals
     except Exception as e:
@@ -157,7 +158,7 @@ def grid_scan():
   do_grid_plots(sic_values)
 
 def grid_s_sqrt_b(bkg_percent):
-  with h5py.File("../v8.1/v8p1_PFN_QCDskim.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim_1.hdf5","r") as f:
     bkg_data = f.get('data')[:]
   
   bkg_loss = bkg_data["score"]
@@ -178,7 +179,7 @@ def grid_s_sqrt_b(bkg_percent):
   dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
     try:
-      with h5py.File("../v8.1/v8p1_PFN_"+str(dsid)+".hdf5","r") as f:
+      with h5py.File("../v8.1/v8p1_PFNv2_"+str(dsid)+".hdf5","r") as f:
         sig1_data = f.get('data')[:]
       sig1_loss = sig1_data["score"]
       sig1_mT = sig1_data["mT_jj"][sig1_loss>score_cut]
@@ -193,7 +194,8 @@ def grid_s_sqrt_b(bkg_percent):
   do_grid_plots(sb_values)
 
 def main():
-  grid_s_sqrt_b(2)
+  grid_scan()
+  #grid_s_sqrt_b(2)
 
 if __name__ == '__main__':
   main()
