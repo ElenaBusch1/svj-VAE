@@ -11,7 +11,7 @@ from plot_helper import *
 from models import *
 import json
 
-def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True):
+def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True, reduce_size=False):
     getExtraVars = len(extraVars) > 0
     
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e", "jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
@@ -24,6 +24,12 @@ def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True):
     if getExtraVars: 
         vars_bkg = read_flat_vars(input_file, x_events, extraVars, use_weight=use_weight)
 
+    print("Selecting tracks & rotating...")
+    if(reduce_size):
+        bkg_in0 = bkg_in0[:2000000]
+        bkg_in1 = bkg_in1[:2000000]
+        jet_bkg = jet_bkg[:2000000]
+        vars_bkg = vars_bkg[:2000000]
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
     _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
     

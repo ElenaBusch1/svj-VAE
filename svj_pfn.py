@@ -10,21 +10,24 @@ from plot_helper import *
 from eval_helper import *
 
 # Example usage
-nevents = 500000
+nevents = 5000
 num_elements = 80
 element_size = 7
 encoding_dim = 32
 latent_dim = 4
 phi_dim = 64
-nepochs= 100
+nepochs= 30
 batchsize_pfn=500
 batchsize_ae=32
 
-pfn_model = 'PFN'
+pfn_model = 'PFNv3'
 arch_dir = "architectures_saved/"
 
 ## Load leading two jets
-bkg, sig = getTwoJetSystem(nevents,nevents)
+bkg_file = "../v8.1/skim0.user.ebusch.QCDskim.root"
+sig_file = "../v8.1/user.ebusch.SIGskim.root"
+bkg = getTwoJetSystem(nevents,bkg_file,[],use_weight=True)
+sig = getTwoJetSystem(nevents,sig_file,[],use_weight=False)
 
 # Plot inputs
 plot_vectors(bkg,sig,"PFNrotated")
@@ -88,6 +91,6 @@ plot_score(bkg_score, sig_score, False, False, pfn_model)
 n_test = min(len(sig_score),len(bkg_score))
 bkg_score = bkg_score[:n_test]
 sig_score = sig_score[:n_test]
-do_roc(bkg_score, sig_score, "PFN", False)
+do_roc(bkg_score, sig_score, pfn_model, False)
 
 

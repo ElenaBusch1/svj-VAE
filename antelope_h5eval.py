@@ -11,6 +11,7 @@ from plot_helper import *
 from models import *
 from models_archive import *
 from eval_helper import *
+import matplotlib.pyplot as plt
 import h5py
 
 def mT_shape_compare():
@@ -155,8 +156,44 @@ def grid_scan():
   
   do_grid_plots(sic_values)
 
+def grid_s_sqrt_b(bkg_percent):
+  with h5py.File("../v8.1/v8p1_PFN_QCDskim.hdf5","r") as f:
+    bkg_data = f.get('data')[:]
+  
+  bkg_loss = bkg_data["score"]
+  score_cut = np.percentile(bkg_loss,100.0-bkg_percent)
+  print(score_cut)
+  bkg_mT = bkg_data["mT_jj"][bkg_loss>score_cut]
+  bkg_weight = bkg_data["weight"][bkg_loss>score_cut]
+  bkg_weight = 100*bkg_weight
+
+  bins=np.logspace(17.04,21.54,20,base=1.5)
+  y0,_,_ =plt.hist(bkg_mT, bins=bins, density=False, histtype='step', weights=bkg_weight)
+  print(y0)  
+  y0_total = np.sum(y0)
+  print(y0_total)
+
+  sb_values = {}
+  
+  dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
+  for dsid in dsids:
+    try:
+      with h5py.File("../v8.1/v8p1_PFN_"+str(dsid)+".hdf5","r") as f:
+        sig1_data = f.get('data')[:]
+      sig1_loss = sig1_data["score"]
+      sig1_mT = sig1_data["mT_jj"][sig1_loss>score_cut]
+      sig1_weight = sig1_data["weight"][sig1_loss>score_cut]
+      y,_,_ =plt.hist(sig1_mT, bins=bins, density=False, histtype='step', weights=sig1_weight)
+      y_total = np.sum(y)
+
+      sb_values[dsid] = {"s_sqrtb_Inclusive": y_total/np.sqrt(y0_total), "s_sqrtb_Max": max(y/np.sqrt(y0))}
+    except Exception as e:
+      print(e)
+
+  do_grid_plots(sb_values)
+
 def main():
-  cms_mT_plots()
+  grid_s_sqrt_b(2)
 
 if __name__ == '__main__':
   main()

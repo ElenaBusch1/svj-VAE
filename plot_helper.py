@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "cms_low_rT"
+tag = "PFNv3"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def detect_outliers(x):
@@ -101,12 +101,13 @@ def make_grid_plot(values,title):
 
   fig,ax = plt.subplots(1,1)
   if (title == "qcdEff" or title == "sigEff"): img = ax.imshow(values,cmap = "summer", norm=colors.LogNorm())
+  elif (title == "s_sqrtb_Inclusive" or title == "s_sqrtb_Max"): img = ax.imshow(values, norm=colors.LogNorm(), vmin=1e-10, vmax=1)
   else: img = ax.imshow(values)
 
   # add text to table
   for (j,i),label in np.ndenumerate(values):
     if label == 0.0: continue
-    if title == "qcdEff": ax.text(i,j,'{0:.3f}'.format(label),ha='center', va='center', fontsize = 'x-small')
+    if title == "qcdEff" or title == "s_sqrtb_Inclusive" or title == "s_sqrtb_Max": ax.text(i,j,'{0:.1e}'.format(label),ha='center', va='center', fontsize = 'x-small')
     else: ax.text(i,j,'{0:.2f}'.format(label),ha='center', va='center', fontsize = 'x-small')
 
   # x-y labels for grid 
@@ -216,12 +217,12 @@ def plot_ratio(hists, weights, h_names, title, logy=False):
   colors = ['black', 'darkblue', 'deepskyblue', 'firebrick', 'orange']
 
   f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
-  nbins=50
+  nbins=20
   hists_flat=np.concatenate(hists)
   #bin_min=np.min(hists_flat)
   #bin_max=np.max(hists_flat)
   #gap=(bin_max-bin_min)*0.05
-  bins=np.linspace(1000,6000,nbins)
+  bins=np.logspace(17.04,21.54,nbins,base=1.5)
   x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
   hists=list(hists)
   nTot = len(hists[0])

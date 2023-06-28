@@ -16,7 +16,7 @@ import h5py
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-pfn_model = 'PFNv1'
+pfn_model = 'PFNv2'
 arch_dir = "architectures_saved/"
 
 ## ---------- Load graph model ----------
@@ -42,10 +42,33 @@ x_events = -1 ## -1 for all events
 #dsids = [515487, 515488, 515489, 515490, 515491, 515492, 515493, 515494, 515504, 515507, 515508, 515509, 515510, 515511, 515514, 515515, 515516, 515518, 515520, 515521, 515522, 515523, 515525, 515526]
 dsids = range(515486,515527)
 #dsids = ["QCDskim"]
+my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
+
+## evaluate bkg
+bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim0.user.ebusch.QCDskim.root", my_variables, False, True)
+scaler = load(arch_dir+pfn_model+'_scaler.bin')
+bkg2,_ = apply_StandardScaling(bkg2,scaler,False) 
+phi_bkg = graph.predict(bkg2)
+pred_phi_bkg = classifier.predict(phi_bkg)
+# ## Classifier loss
+bkg_loss = pred_phi_bkg[:,1]
+my_variables.insert(0,"score")
+print(my_variables)
+save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+#print(save_bkg)
+ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
+rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
+with h5py.File("v8p1_PFNv2_QCDskim0_2.hdf5","w") as h5f:
+  dset = h5f.create_dataset("data",data=rec_bkg)
+print("Saved hdf5 for QCDskim")
+
+quit()
+
+## evaluate signals
 for dsid in dsids:
   my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
   try:
-    bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim.user.ebusch."+str(dsid)+".mc20e.root", my_variables)
+    bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/user.ebusch."+str(dsid)+".root", my_variables, False)
   except:
     continue
   scaler = load(arch_dir+pfn_model+'_scaler.bin')
@@ -65,7 +88,7 @@ for dsid in dsids:
   ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
   rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
   
-  with h5py.File("v8p1_PFN_"+str(dsid)+".hdf5","w") as h5f:
+  with h5py.File("v8p1_PFNv2_"+str(dsid)+".hdf5","w") as h5f:
     dset = h5f.create_dataset("data",data=rec_bkg)
   print("Saved hdf5 for ", dsid)
 
