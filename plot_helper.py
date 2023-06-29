@@ -5,8 +5,11 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "PFNv3_eval"
+tag = "cms_sensitivity"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
+
+def my_metric(s,b):
+    return np.sqrt(2*((s+b)*np.log(1+s/b)-s))
 
 def detect_outliers(x):
   z = np.abs(stats.zscore(x))
@@ -91,17 +94,20 @@ def make_sic(fpr,tpr,auc, model=""):
   plt.ylabel("Signal Sensitivity ($TPR/\sqrt{FPR}$)")
   plt.title("Significance Improvement Characteristic: "+model )
   plt.legend()
-  plt.savefig(plot_dir+'sic_'+model+'_'+tag+'.png')
+  #plt.savefig(plot_dir+'sic_'+model+'_'+tag+'.png')
   plt.clf()
   print("Saved SIC for", model)
-  return {'ymax':ymax, 'sigEff': sigEff, 'qcdEff': qcdEff}
+  return {'sicMax':ymax, 'sigEff': sigEff, 'qcdEff': qcdEff}
 
 def make_grid_plot(values,title):
   #values must be 4 X 10
 
   fig,ax = plt.subplots(1,1)
-  if (title == "qcdEff" or title == "sigEff"): img = ax.imshow(values,cmap = "summer", norm=colors.LogNorm())
+  if (title == "qcdEff"): img = ax.imshow(values,norm=colors.LogNorm(vmin=1e-7,vmax=1e-1))
+  elif (title == "sigEff"): img = ax.imshow(values,vmin=-0.1,vmax=0.7)
   elif (title == "s_sqrtb_Inclusive" or title == "s_sqrtb_Max"): img = ax.imshow(values, norm=colors.LogNorm())
+  elif (title == "auc"): img = ax.imshow(values, vmin=0.7, vmax=1)
+  elif (title == "sicMax"): img = ax.imshow(values, vmin=-2, vmax=20)
   else: img = ax.imshow(values)
 
   # add text to table
@@ -206,10 +212,10 @@ def plot_single_variable(hists, weights, h_names, title, logy=False):
   if(title=="mT_jj"): bins=np.linspace(500,6500, 80)
   for data,weight,name in zip(hists,weights,h_names):
     plt.hist(data, bins=bins, histtype='step', label=name, density=True, weights=weight)
-  plt.legend(loc='best', fontsize='x-small')
+  plt.legend(loc='lower center', fontsize='x-small')
   if (logy): plt.yscale("log")
   plt.title(title)
-  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'_'+tag+'.png')
+  plt.savefig(plot_dir+'histlin_'+title.replace(" ","")+'_'+tag+'.png')
   plt.clf()
   print("Saved plot",title)
 
@@ -222,7 +228,7 @@ def plot_ratio(hists, weights, h_names, title, logy=False):
   #bin_min=np.min(hists_flat)
   #bin_max=np.max(hists_flat)
   #gap=(bin_max-bin_min)*0.05
-  bins=np.logspace(17.04,21.54,nbins,base=1.5)
+  bins=np.linspace(1500,6500,5)
   x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
   hists=list(hists)
   nTot = len(hists[0])
@@ -233,11 +239,12 @@ def plot_ratio(hists, weights, h_names, title, logy=False):
     if i ==0:
       y0=y # make sure the first of hists list has the most number of events
       continue
-    axs[1].scatter(x_bins,y/np.sqrt(y0), marker="+", color=colors[i], label=f'{max(y/np.sqrt(y0)):.1E}')
+    #axs[1].scatter(x_bins,my_metric(y,y0), marker="+", color=colors[i], label=f'{max(my_metric(y,y0)):.1E}')
+    axs[1].scatter(x_bins,my_metric(y,y0), marker="+", color=colors[i], label=f'{max(y):.1E}')
     #axs[1].scatter(x_bins,zero_div(y,y0))
 
   #axs[1].set_ylim(0.5,3.0)  
-  axs[1].set_ylabel('S/$sqrt$b')
+  axs[1].set_ylabel('Fig of Merit')
   axs[1].set_yscale('log')
   axs[1].legend(loc='upper right', fontsize='x-small')
   plt.tick_params(axis='y', which='minor') 

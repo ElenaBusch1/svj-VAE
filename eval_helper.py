@@ -11,7 +11,7 @@ from plot_helper import *
 from models import *
 import json
 
-def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True, reduce_size=False):
+def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True):
     getExtraVars = len(extraVars) > 0
     
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e", "jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
@@ -25,11 +25,6 @@ def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True, reduce_s
         vars_bkg = read_flat_vars(input_file, x_events, extraVars, use_weight=use_weight)
 
     print("Selecting tracks & rotating...")
-    if(reduce_size):
-        bkg_in0 = bkg_in0[4000000:]
-        bkg_in1 = bkg_in1[4000000:]
-        jet_bkg = jet_bkg[4000000:]
-        vars_bkg = vars_bkg[4000000:]
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
     _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
     
@@ -52,6 +47,10 @@ def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True, reduce_s
 
     bkg = apply_JetScalingRotation(bkg_sel, bjet_sel,0)
 
+    #bkg = np.concatenate(all_bkg)
+    #if getExtraVars:
+    #    vars_bkg = np.concatenate(all_vars)
+    
     #plot
     #x_sel_nz = remove_zero_padding(bkg_sel)
     #sig_sel_nz = remove_zero_padding(sig_sel)
@@ -66,7 +65,7 @@ def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True, reduce_s
     #x = bkg
     #sig = sig
 
-    print(bkg.shape)
+    print("Total jets:", bkg.shape)
     #print(mT_sel.shape)
     #x = x_2D.reshape(bkg.shape[0],x_2D.shape[1]*4)
     #sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
@@ -115,14 +114,14 @@ def pt_sort(x):
 def apply_TrackSelection(x_raw, jets):
     x = np.copy(x_raw)
     x[x[:,:,0] < 10] = 0 # apply pT requirement
-    print("Input track shape: ", x.shape)
+    #print("Input track shape: ", x.shape)
     # require at least 3 tracks
     x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 3 for jet in x])
     x = x[x_nz]
     jets = jets[x_nz]
-    print("Selected track shape: ", x.shape)
-    print("Selected jet shape: ", jets.shape)
-    print()
+    #print("Selected track shape: ", x.shape)
+    #print("Selected jet shape: ", jets.shape)
+    #print()
     return x, jets, x_nz
 
 def apply_StandardScaling(x_raw, scaler=MinMaxScaler(), doFit=True):

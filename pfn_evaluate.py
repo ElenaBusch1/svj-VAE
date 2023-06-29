@@ -39,32 +39,39 @@ print ("Loaded model")
 
 ## Load testing data
 x_events = -1 ## -1 for all events
-#dsids = [515487, 515488, 515489, 515490, 515491, 515492, 515493, 515494, 515504, 515507, 515508, 515509, 515510, 515511, 515514, 515515, 515516, 515518, 515520, 515521, 515522, 515523, 515525, 515526]
-dsids = range(515486,515527)
-#dsids = ["QCDskim"]
-my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
+bkg_arrays = []
+bkg_files = ["user.ebusch."+str(x)+".root" for x in range(515487,515490)]
+for bkg_file in bkg_files:
+  my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
+  
+  ## evaluate bkg
+  bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/"+bkg_file, my_variables, False)
+  #bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/user.ebusch.515491.root", my_variables, False)
+  scaler = load(arch_dir+pfn_model+'_scaler.bin')
+  bkg2,_ = apply_StandardScaling(bkg2,scaler,False) 
+  phi_bkg = graph.predict(bkg2)
+  pred_phi_bkg = classifier.predict(phi_bkg)
+  # ## Classifier loss
+  bkg_loss = pred_phi_bkg[:,1]
+  my_variables.insert(0,"score")
+  print(my_variables)
+  save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+  bkg_arrays.append(save_bkg)
+  print("Mini bkg: ", save_bkg.shape)
 
-## evaluate bkg
-bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim0.user.ebusch.QCDskim.root", my_variables, False, True)
-scaler = load(arch_dir+pfn_model+'_scaler.bin')
-bkg2,_ = apply_StandardScaling(bkg2,scaler,False) 
-phi_bkg = graph.predict(bkg2)
-pred_phi_bkg = classifier.predict(phi_bkg)
-# ## Classifier loss
-bkg_loss = pred_phi_bkg[:,1]
-my_variables.insert(0,"score")
-print(my_variables)
-save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+total_bkg = np.concatenate(bkg_arrays,axis=0)
+print("Total bkg: ", total_bkg.shape)
 #print(save_bkg)
 ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
-rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
-with h5py.File("v8p1_PFNv2_QCDskim0_3.hdf5","w") as h5f:
+rec_bkg = np.rec.array(total_bkg, dtype=ds_dt)
+with h5py.File("v8p1_"+pfn_model+"_sumTest.hdf5","w") as h5f:
   dset = h5f.create_dataset("data",data=rec_bkg)
-print("Saved hdf5 for QCDskim")
+print("Saved hdf5 for test")
 
 quit()
 
 ## evaluate signals
+dsids = range(515486,515527)
 for dsid in dsids:
   my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
   try:

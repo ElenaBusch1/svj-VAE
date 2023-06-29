@@ -24,7 +24,7 @@ def read_flat_vars(infile, nEvents, variable_array, use_weight=True):
     if (use_weight):
         idx = get_weighted_elements(tree, nEvents)
     else:
-        idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
+          idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
 
     #print('Flat variable index:', idx.shape, idx)
     selected_array = np.array([val[idx] for _,val in my_array.items()]).T
