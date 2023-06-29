@@ -9,7 +9,9 @@ from termcolor import cprint
 #tag = "PFN_2jAvg_MM"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 #plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun5_500000_nep100_nl100/'
-plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun9/'
+#plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/sig_elena/jun12_sig/'
+#plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/bkg_elena/jun12_bkg/'
+plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun29/lala/'
 def detect_outliers(x):
   z = np.abs(stats.zscore(x))
   print(max(z))
@@ -18,7 +20,7 @@ def detect_outliers(x):
   print(n_removed, " outliers removed")
   return x_smooth, n_removed
 
-def plot_loss(h, loss='loss', tag_file="", tag_title=""):
+def plot_loss(h, loss='loss', tag_file="", tag_title="", plot_dir=""):
   #print(h.history)
   plt.plot(h.history[loss])
   plt.plot(h.history['val_'+loss])
@@ -32,7 +34,7 @@ def plot_loss(h, loss='loss', tag_file="", tag_title=""):
   plt.clf()
   print("Saved loss plot for ", tag_file, loss)
 
-def plot_saved_loss(h, loss='loss', tag_file="", tag_title=""):
+def plot_saved_loss(h, loss='loss', tag_file="", tag_title="", plot_dir=""):
   plt.plot(h[loss])
   plt.plot(h['val_'+loss])
   plt.title(loss +f' {tag_title}')
@@ -45,7 +47,7 @@ def plot_saved_loss(h, loss='loss', tag_file="", tag_title=""):
   plt.clf()
   print("Saved loss plot for ", tag_file)
 
-def plot_var(x_dict, x_cut1, x_cut2, key , tag_file="", tag_title=""):
+def plot_var(x_dict, x_cut1, x_cut2, key , tag_file="", tag_title="", plot_dir=""):
   #bmax = max(max(x_orig),max(y_orig))
   #bmin = min(min(x_orig),min(y_orig))
   #bins=np.histogram(np.hstack((x_dict[key],x_cut1[key])),bins=20)[1]
@@ -69,7 +71,7 @@ def plot_var(x_dict, x_cut1, x_cut2, key , tag_file="", tag_title=""):
   plt.clf()
   print("Saved cut distribution for", key)
 
-def make_roc(fpr,tpr,auc, tag_file="", tag_title=""):
+def make_roc(fpr,tpr,auc, tag_file="", tag_title="", plot_dir=""):
   plt.plot(fpr,tpr,label="AUC = %0.2f" % auc)
   plt.xlabel("False Positive Rate")
   plt.ylabel("True Positive Rate")
@@ -79,7 +81,7 @@ def make_roc(fpr,tpr,auc, tag_file="", tag_title=""):
   plt.clf()
   print("Saved ROC curve for ", tag_file)
 
-def make_sic(fpr,tpr,auc,  tag_file="", tag_title=""):
+def make_sic(fpr,tpr,auc,  tag_file="", tag_title="",  plot_dir=""):
   y = tpr[1:]/np.sqrt(fpr[1:])
   plt.plot(tpr[1:],y,label="AUC = %0.2f" % auc)
   plt.axhline(y=1, color='0.8', linestyle='--')
@@ -92,7 +94,7 @@ def make_sic(fpr,tpr,auc,  tag_file="", tag_title=""):
   print("Saved SIC for", tag_file)
 
 
-def make_single_roc(rocs,aucs,ylabel, tag_file="", tag_title=""):
+def make_single_roc(rocs,aucs,ylabel, tag_file="", tag_title="",  plot_dir=""):
   plt.plot(rocs[0],rocs[1],label=str(np.round(r,4))+", $\sigma$="+str(sigs)+": AUC="+str(np.round(aucs,3)))
   plt.xlabel('fpr')
   plt.ylabel(Ylabel)
@@ -102,7 +104,7 @@ def make_single_roc(rocs,aucs,ylabel, tag_file="", tag_title=""):
   plt.savefig(saveTag+'_roc_aucs_'+Ylabel.replace("/","")+tag_file+'.pdf')
   plt.clf()
 
-def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="", tag_title=""):
+def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="", tag_title="",  plot_dir=""):
   if remove_outliers:
     bkg_score,nb = detect_outliers(bkg_score)
     sig_score,ns = detect_outliers(sig_score)
@@ -122,13 +124,13 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
   if xlog: plt.xscale('log')
   plt.yscale('log')
   plt.legend()
-  plt.title(f'Anomaly Score {tag_title}')
+  plt.title(f'PFN Score {tag_title}')
   plt.xlabel('Loss')
   plt.savefig(plot_dir+'score_'+tag_file+'.png')
   plt.clf()
   print("Saved score distribution for", tag_file)
 
-def plot_phi(phis,name,extra_tag, tag_file="", tag_title=""):
+def plot_phi(phis,name,extra_tag, tag_file="", tag_title="",  plot_dir=""):
   nphis = phis.shape[1]
   nevents = phis.shape[0]
   idx = [i for i in range(nphis)]*nevents
@@ -149,7 +151,7 @@ def plot_phi(phis,name,extra_tag, tag_file="", tag_title=""):
   plt.savefig(plot_dir+'phi2D_'+name+'_'+tag_file+'.png')
   print("Saved 2D plot of phi-rep for", tag_file)
 
-def plot_inputs(bkg, sig, tag_file="", tag_title=""):
+def plot_inputs(bkg, sig, tag_file="", tag_title="",  plot_dir=""):
   for i in range(len(variable_array)):
     plt.subplot(2,2,i%4+1)
     plt.tight_layout(h_pad=1, w_pad=1)
@@ -168,7 +170,7 @@ def zero_div(a,b, bool_print=False): # this avoid zero division error
     #e.g. a= [2 2 4], b= [1 0 3], result [2 0 1.333]
     return np.divide(a, b, out=np.zeros_like(a), where=mask) 
 
-def plot_single_variable(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[]):
+def plot_single_variable(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir=""):
   nbins=50
   hists_flat=np.concatenate(hists)
   bin_min=np.min(hists_flat)
@@ -197,13 +199,13 @@ def plot_single_variable(hists, h_names, weights_ls,title,density_top=True, logy
   #plt.legend(loc='upper right')
   plt.title(title)
 
-  plt.savefig(plot_dir+'hist_'+title.replace(" ","").replace('(','')+'_weighted1'+'.png')
+  plt.savefig(plot_dir+'hist_'+title.replace(" ","").replace('(','')+'_weighted_cut'+'.png')
   plt.clf()
   print("Saved plot",title)
 
 
 
-def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False):
+def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir=""):
   f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
   nbins=50
   hists_flat=np.concatenate(hists)
@@ -232,7 +234,7 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
 #    axs[1].set_ylim([])
     #axs[1].scatter(x_bins,zero_div(y,y0))
     ratio_all
-  axs[1].set_ylim(0.5,3)  
+  axs[1].set_ylim(0,3)  
   axs[1].set_ylabel('Ratio')
   axs[1].legend(loc='upper right')
   plt.tick_params(axis='y', which='minor') 
@@ -258,7 +260,7 @@ def get_nTracks(x):
     n_tracks.append(len(tracks))
   return n_tracks
  
-def plot_nTracks(bkg, sig, tag_file="", tag_title=""):
+def plot_nTracks(bkg, sig, tag_file="", tag_title="",  plot_dir=""):
   bkg_tracks = get_nTracks(bkg)
   sig_tracks = get_nTracks(sig)
   #bins=np.histogram(np.hstack((bkg_tracks,sig_tracks)),bins=60)[1]
@@ -271,7 +273,7 @@ def plot_nTracks(bkg, sig, tag_file="", tag_title=""):
   plt.clf()
   print("Saved plot of nTracks")
 
-def plot_vectors_jet(train,sig,jet_array, tag_file="", tag_title="", bool_jet=False):
+def plot_vectors_jet(train,sig,jet_array, tag_file="", tag_title="", bool_jet=False,  plot_dir=""):
 #  variable_array=["pt"]
   print('before reshaping, train and sig', train.shape, sig.shape)
 #  size=2 # different than size in plot_vectors
@@ -296,7 +298,7 @@ def plot_vectors_jet(train,sig,jet_array, tag_file="", tag_title="", bool_jet=Fa
     plt.close()
     print("Saved inputs plot (", plot_dir+'inputs_jet_'+tag_file+'.png')
 
-def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True):
+def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir=""):
   #variable_array = ["pT", "eta", "phi", "E"]
   variable_array = ["pT", "eta", "phi", "E", "z0", "d0", "qOverP"]
   print('before reshaping, train and sig', train.shape, sig.shape)

@@ -52,7 +52,7 @@ class Label:
     def get_label(self,bool_change=False):
         if not bool_change:
             string=Label.get_string(self)
-            if 'output' in string or 'bkg' in string or 'QCD' in string or 'Znunu' in string: return f'{Label.get_string(self)}'.replace('test','')
+            if 'output' in string or 'sig' in string or 'bkg' in string or 'QCD' in string or 'Znunu' in string: return f'{Label.get_string(self)}'.replace('test','')
             else:
                 print(string)
                 print(f'{Label.proc_m[string]} GeV, {int(Label.proc_rinv[string])/10}')

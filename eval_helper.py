@@ -10,7 +10,7 @@ from sklearn.preprocessing import MinMaxScaler
 from plot_helper import *
 from models import *
 from termcolor import cprint
-def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_file,bkg_file="user.ebusch.QCDskim.mc20e.root",extraVars=[]):
+def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_file,bkg_file="user.ebusch.QCDskim.mc20e.root",extraVars=[], plot_dir=''):
 ###################
     getExtraVars = len(extraVars) > 0
 
@@ -24,54 +24,21 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_fil
 #    jet_array_old = ["jet_eta", "jet_phi"]
 #    track_array2 = ["jet_GhostTrack_d0_0", "jet_GhostTrack_z0_0", "jet_GhostTrack_qOverP_0", "jet_GhostTrack_e_0"]
 
-    """
-    read_dir='/nevis/katya01/data/users/ebusch/SVJ/autoencoder/'
-    bkg_in0 = read_vectors(read_dir+"v8/v8SmallPartialQCDmc20e.root", x_events, track_array0, bool_weight=bool_weight)
-    sig_in0 = read_vectors(read_dir+"v8/v8SmallSIGmc20e.root", y_events, track_array0, bool_weight=bool_weight)
-    bkg_in1 = read_vectors(read_dir+"v8/v8SmallPartialQCDmc20e.root", x_events, track_array1, bool_weight=bool_weight)
-    sig_in1 = read_vectors(read_dir+"v8/v8SmallSIGmc20e.root", y_events, track_array1, bool_weight=bool_weight)
-    jet_bkg = read_vectors(read_dir+"v8/v8SmallPartialQCDmc20e.root", x_events, jet_array, bool_weight=bool_weight)
-    jet_sig = read_vectors(read_dir+"v8/v8SmallSIGmc20e.root", y_events, jet_array, bool_weight=bool_weight)
-    read_dir='/nevis/katya01/data/users/ebusch/SVJ/autoencoder/v8.1/'
-    jet_bkg = read_hlvs(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, jet_array)  # select with weight??
-    sys.exit()
-    bkg_in0 = read_vectors(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, track_array0, bool_weight=bool_weight)
-    
-
-    read_dir='/nevis/katya01/data/users/ebusch/SVJ/autoencoder/'
-    bkg_in0 = read_vectors(read_dir+"v8/v8SmallPartialQCDmc20e.root", x_events, track_array0_old, bool_weight=False)
-    jet_bkg = read_vectors(read_dir+"v8/v8SmallPartialQCDmc20e.root", x_events, jet_array_old, bool_weight=False)
-
-    """
 #    sig_file="user.ebusch.SIGskim.mc20e.root"
     cprint(f'reading {sig_file}','red')
     read_dir='/nevis/katya01/data/users/ebusch/SVJ/autoencoder/v8.1/'
-#    jet_bkg = read_hlvs(read_dir+"user.ebusch.QCDskim.mc20e.root", x_events, jet_array)  # select with weight??
-    jet_bkg = read_hlvs(read_dir+bkg_file, x_events, jet_array, bool_weight=bool_weight)  # select with weight??
     bkg_in0 = read_vectors(read_dir+bkg_file, x_events, track_array0, bool_weight=bool_weight)
     bkg_in1 = read_vectors(read_dir+bkg_file, x_events, track_array1, bool_weight=bool_weight)
-
-    """
-    jet_sig_ls=[] 
-    sig_in0_ls=[]
-    sig_in1_ls=[]
-    vars_sig_ls=[]
-    for sig_file in sig_file_ls:
-      jet_sig_ls.append( read_hlvs(read_dir+sig_file, y_events, jet_array, bool_weight=False) )# evenly spaced sampling for signal
-      sig_in0_ls.append(read_vectors(read_dir+sig_file, y_events,track_array0, bool_weight=False))
-      sig_in1_ls.append(read_vectors(read_dir+sig_file, y_events,track_array1, bool_weight=False))
-      if getExtraVars:
-        vars_sig_ls.append( read_flat_vars(read_dir+sig_file, y_events, extraVars, bool_weight=False))
-
-    """
-    jet_sig = read_hlvs(read_dir+sig_file, y_events, jet_array, bool_weight=bool_weight)  # select with weight??
+    jet_bkg = read_hlvs(read_dir+bkg_file, x_events, jet_array, bool_weight=bool_weight)  # select with weight??
+    
     sig_in0 = read_vectors(read_dir+sig_file, y_events,track_array0, bool_weight=False)
     sig_in1 = read_vectors(read_dir+sig_file, y_events,track_array1, bool_weight=False)
+    jet_sig = read_hlvs(read_dir+sig_file, y_events, jet_array, bool_weight=bool_weight)  # select with weight??
     if getExtraVars: 
       vars_bkg = read_flat_vars(read_dir+bkg_file, x_events, extraVars, bool_weight=bool_weight)
       vars_sig = read_flat_vars(read_dir+sig_file, y_events, extraVars, bool_weight=False)
 
-    plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=tag_file, tag_title=tag_title)
+    plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
      
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
     _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
@@ -105,9 +72,9 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_fil
 #    print('bkg_sel0, bkg_sel1',bkg_sel.shape, bkg_sel1.shape)
 # ADDED 5/22/23 
 
-    plot_vectors(bkg_sel,sig_sel,tag_file=tag_file, tag_title=tag_title)
-    bkg = apply_JetScalingRotation(bkg_sel, bjet_sel,0)
-    sig = apply_JetScalingRotation(sig_sel, sjet_sel,0)
+    plot_vectors(bkg_sel,sig_sel,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
+    bkg_rot = apply_JetScalingRotation(bkg_sel, bjet_sel,0)
+    sig_rot = apply_JetScalingRotation(sig_sel, sjet_sel,0)
 
     #plot
     #x_sel_nz = remove_zero_padding(bkg_sel)
@@ -123,16 +90,17 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_fil
     #x = bkg
     #sig = sig
 
-    print('*'*15,bkg.shape)
-    print('*'*15,sig.shape)
+    print('*'*15,bkg_rot.shape)
+    print('*'*15,sig_rot.shape)
     #x = x_2D.reshape(bkg.shape[0],x_2D.shape[1]*4)
     #sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
     #plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
     #plot_vectors(x,sig,"AEWithZeroRotated")
 
 ###################
-    if getExtraVars: return bkg, sig, vars_bkg, vars_sig
-    else: return bkg, sig,bkg_tag,sig_tag
+    if getExtraVars: return bkg_rot, sig_rot, vars_bkg, vars_sig
+    else: return bkg_rot, sig_rot,np.array([]),np.array([])
+    #else: return bkg, sig,bkg_tag,sig_tag
 
 def get_dPhi(x1,x2):
     dPhi = x1 - x2
@@ -156,17 +124,20 @@ def reshape_3D(x, nTracks, nFeatures):
     print(x_out[4])
     return x_out
 
-def pt_sort(x, jet_idx):
+#def pt_sort(x, jet_idx):
+def pt_sort(x):
     for i in range(x.shape[0]):
         ev = x[i]
         x[i] = ev[ev[:,0].argsort()]
-    if (jet_idx == 0): # if leading jet
+    """if (jet_idx == 0): # if leading jet
         y = x[:,-9:,:]
     elif (jet_idx == 1):
         y = x[:,-7:,:]
     else:
         y = x[:,-3:,:]
     return y
+    """
+    return x
 
 def apply_TrackSelection(x_raw, jets):
     x = np.copy(x_raw)
@@ -293,7 +264,7 @@ def get_single_loss(model_svj, x_test, y_test):
 
     return bkg_loss, sig_loss
 
-def transform_loss(bkg_loss, sig_loss, make_plot=False, tag_file="", tag_title=""):
+def transform_loss(bkg_loss, sig_loss, make_plot=False, tag_file="", tag_title="", plot_dir=''):
     nevents = len(sig_loss)
     truth_sig = np.ones(nevents)
     truth_bkg = np.zeros(nevents)
@@ -305,7 +276,7 @@ def transform_loss(bkg_loss, sig_loss, make_plot=False, tag_file="", tag_title="
     bkg_transformed = [(x - eval_min)/eval_max for x in bkg_loss]
     sig_transformed = [(x - eval_min)/eval_max for x in sig_loss]
     if make_plot:
-        plot_score(bkg_transformed, sig_transformed, False, False, tag_file=tag_file+'_Transformed', tag_title=tag_title+'_Transformed')
+        plot_score(bkg_transformed, sig_transformed, False, False, tag_file=tag_file+'_Transformed', tag_title=tag_title+'_Transformed', plot_dir=plot_dir)
     return truth_labels, eval_vals 
 
 def getSignalSensitivityScore(bkg_loss, sig_loss, percentile=95):
@@ -315,12 +286,12 @@ def getSignalSensitivityScore(bkg_loss, sig_loss, percentile=95):
 def applyScoreCut(loss,test_array,cut_val):
     return test_array[loss>cut_val] 
 
-def do_roc(bkg_loss, sig_loss, tag_file, tag_title, make_transformed_plot=False):
-    truth_labels, eval_vals = transform_loss(bkg_loss, sig_loss, make_plot=make_transformed_plot, tag_file=tag_file, tag_title=tag_title) 
+def do_roc(bkg_loss, sig_loss, tag_file, tag_title, make_transformed_plot=False, plot_dir=''):
+    truth_labels, eval_vals = transform_loss(bkg_loss, sig_loss, make_plot=make_transformed_plot, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir) 
     fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
     auc = roc_auc_score(truth_labels, eval_vals)
     print("AUC - "+tag_file+": ", auc)
-    make_roc(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title)
-    make_sic(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title)
+    make_roc(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
+    make_sic(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
     return auc
 

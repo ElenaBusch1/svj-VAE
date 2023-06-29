@@ -20,6 +20,8 @@ def extract_tag(filename):
   filename=filename.split(".")
   if 'QCDskim' in filename:
     tag='bkg'
+  elif 'SIGskim' in filename:
+    tag='sig'
   elif filename[0]!='user':
     tag=''+filename[3]
   else: tag=''+filename[2]
@@ -32,6 +34,7 @@ def read_hdf5(x_events, y_events,sig_file, tag, h5path, bool_rewrite, extraVars_
   if bool_rewrite or (not(os.path.exists(h5path))):
     print('will write files b/c the files donot exist or bool_rewrite is set to be True'+ h5path)
     rec_bkg, rec_sig=call_functions(x_events,y_events, tag, bool_weight=bool_weight, sig_file=sig_file, extraVars=extraVars_short) # here the input extraVars and output are different b/c the out put includes 'score'
+    sys.exit()
     with h5py.File(h5path, 'w') as f:
       ar_sig = f.create_dataset("default", data = rec_sig)
 
@@ -62,8 +65,9 @@ def call_functions(x_events,y_events, tag, bool_weight, sig_file,extraVars):
 # print(type(h))
 
   print ("Loaded model")
-
-  bkg2, sig2, mT_bkg, mT_sig = getTwoJetSystem(x_events,y_events,tag_file=tag, tag_title=tag, bool_weight=bool_weight, sig_file=sig_file,bkg_file="user.ebusch.QCDskim.mc20e.root", extraVars=extraVars)
+  plot_dir='lala'
+  print(' edit plot_dir')
+  bkg2, sig2, mT_bkg, mT_sig = getTwoJetSystem(x_events,y_events,tag_file=tag, tag_title=tag, bool_weight=bool_weight, sig_file=sig_file,bkg_file="user.ebusch.QCDskim.mc20e.root", extraVars=extraVars, plot_dir=plot_dir)
 #bkg2, sig2, mT_bkg, mT_sig = getTwoJetSystem(x_events,y_events, ["mT_jj"])
   
   scaler = load(arch_dir+pfn_model+'_scaler.bin')
@@ -84,31 +88,52 @@ def call_functions(x_events,y_events, tag, bool_weight, sig_file,extraVars):
 ## Classifier loss
   bkg_loss = pred_phi_bkg[:,1]
   sig_loss = pred_phi_sig[:,1]
-  """
+ 
+  print(extraVars) 
+  cprint('pred_phi_sig','magenta')
+  cprint(pred_phi_sig, 'magenta')
   cprint('sig_loss', 'blue')
   cprint(sig_loss, 'blue')
-  cprint('mT_sig', 'blue')
-  cprint(mT_sig, 'blue')
-  """
+  cprint('mT_sig', 'yellow')
+  cprint(mT_sig, 'yellow')
+  cprint('pred_phi_sig','magenta')
+  cprint(pred_phi_sig.shape, 'magenta')
+  cprint('sig_loss', 'blue')
+  cprint(sig_loss.shape, 'blue')
+  cprint('mT_sig', 'yellow')
+  cprint(mT_sig.shape, 'yellow')
+  
+  print('extraVars')
+  print(extraVars)
+  print(len(extraVars))
+  print('sig_loss')
+  print(sig_loss[:,None].shape)
+  print(sig_loss[:,None])
+  print(mT_sig)
+  print(mT_sig.shape)
+  print(mT_sig)
+  #"""
   extraVars.insert(0,"score")
   save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
   save_sig = np.concatenate((sig_loss[:,None], mT_sig),axis=1)
+  print(save_sig.shape)
+  print(save_sig)
   ds_dt = np.dtype({'names':extraVars,'formats':[(float)]*len(extraVars)})
   rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
   rec_sig = np.rec.array(save_sig, dtype=ds_dt)
-  print(extraVars,'green') 
+  cprint(extraVars,'green') 
   return rec_bkg, rec_sig
 
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-pfn_model = 'PFN'
-#pfn_model = 'PFNv1'
+#pfn_model = 'PFN'
+pfn_model = 'PFNv1'
 #arch_dir = "/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/"
 ## Load testing data
 #x_events = 2464544
 x_events = 5
-y_events = 631735
+#y_events = 631735
 #x_events = 50000
 #y_events = 50000
 bool_weight=True
@@ -118,21 +143,26 @@ else:weight_tag='nws'
 #tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 #my_variables= ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
 #my_variables=["mT_jj"]
-bool_rewrite=False
-#bool_rewrite=True
+#bool_rewrite=False
+bool_rewrite=True
 h5dir='h5dir/'
 #sig_file="user.ebusch.SIGskim.mc20e.root"
 
 
 #filename_bkg=f'{tag}_'+extract_tag(filename=bkg_file)
 #arch_dir="architectures_saved_old/architectures_saved_jun5/"
-arch_dir="architectures_saved/"
+arch_dir="architectures_saved_elena/"
+#arch_dir="architectures_saved/"
 #file_ls=['skim.user.ebusch.515498.mc20e.root']
-file_ls=['skim.user.ebusch.515495.mc20e.root', 'skim.user.ebusch.515498.mc20e.root', 'skim.user.ebusch.515515.mc20e.root', 'skim.user.ebusch.515518.mc20e.root']
-file_ls+=["user.ebusch.QCDskim.mc20e.root"]
+#file_ls=['skim.user.ebusch.515495.mc20e.root', 'skim.user.ebusch.515498.mc20e.root', 'skim.user.ebusch.515515.mc20e.root', 'skim.user.ebusch.515518.mc20e.root']
+#file_ls=["user.ebusch.SIGskim.mc20e.root"]
+#file_ls+=["user.ebusch.QCDskim.mc20e.root"]
+file_ls=["user.ebusch.QCDskim.mc20e.root"]
 #enumber_ls=[6809]
-enumber_ls=[15813,6809, 38352, 15813]
-enumber_ls+=[2464544]
+#enumber_ls=[28033,6809, 38352, 15813]
+#enumber_ls=[631735]
+#enumber_ls+=[2464544] 
+enumber_ls=[2464544] 
 data_dict={}
 filetag_ls=[extract_tag(filename=fl) for fl in file_ls]
 for fl, enumber,filetag in zip(file_ls,enumber_ls,filetag_ls):
@@ -142,14 +172,18 @@ for fl, enumber,filetag in zip(file_ls,enumber_ls,filetag_ls):
   cprint(fl,'blue')
   cprint(my_variables, 'blue')
   filename=f'{tag}_'+filetag
-  if 'QCD' in fl:h5path=h5dir+'/bkg/'+'PFN_2jAvg_MM_ws_xNE=2464544_yNE=631735_bkg.h5'
+#  if ('QCD' in fl) or ('SIG' in fl):h5path=h5dir+'/bkg_elena/'+'PFN_2jAvg_MM_ws_xNE=2464544_yNE=631735_bkg.h5'
   #if 'QCD' in fl:h5path=h5dir+'/bkg/'+filename+'.h5'
-  else:h5path=h5dir+'/sig/'+filename+'.h5'
+  if ('QCD' in fl):h5path=h5dir+'/bkg_elena/'+filename+'.h5'
+  else:h5path=h5dir+'/sig_elena/'+filename+'.h5'
   cprint(filetag, 'magenta')
    
+  #if 'QCD' in fl:  
+   # data_dict[filetag]=read_hdf5(x_events=enumber,y_events= enumber,sig_file=fl, tag=tag,h5path= h5path, bool_rewrite=bool_rewrite, extraVars_short=my_variables, bool_sig=True)
+  #else:
   data_dict[filetag]=read_hdf5(x_events=x_events,y_events= enumber,sig_file=fl, tag=tag,h5path= h5path, bool_rewrite=bool_rewrite, extraVars_short=my_variables)
-  
-   
+  cprint(f"{fl} {enumber} {filetag} {h5path} {len(data_dict[filetag]['mT_jj'])}", 'magenta')
+  print(filetag)
 #  data_bkg=f["default"][()]
 #  data_sig=f["default"][()]
 ####################################
@@ -195,10 +229,14 @@ def equal_length(bkg_loss, sig_loss):
 
 #cuts=[0, .6,.9,.98]
 #var_ls=['rT']
-var_ls=['mT_jj','rT']
+var_ls=my_variables
+#var_ls=['mT_jj','rT']
 bkg_len_ls=[]
  
 
+#######plot the same file
+
+################# plot different files
 for var in var_ls:
 #for var in data_rel:
   #data_rel=data_dict[key]
@@ -209,24 +247,36 @@ for var in var_ls:
   h_names=[]
   #for i, cut in enumerate(cuts):
   for i, key in enumerate(data_dict):
-    cut=0
+    cprint(key, 'blue')
     data_rel=data_dict[key]
     bkg_loss_arr=np.array(data_rel['score'])
     bkg_len=len(bkg_loss_arr)
-    bkg_len_ls.append(bkg_len)
-    bkg_cut_idx=np.argwhere(bkg_loss_arr>=cut)
-    bkg_cut=data_rel[var][bkg_cut_idx]  
-    bkg_cut_weight=data_rel['weight'][bkg_cut_idx]  
+    if key =="sig":
+#    if key =="bkg":
+    #if key =="user.ebusch.QCDskim.mc20e.root":
+#    if key =="user.ebusch.SIGskim.mc20e.root":
+      cut_ls=[0]
+#      cut_ls=[0.9]
+#    else: cut_ls=[ 0.9]
+    #else: cut_ls=[ 0.9]
+    else: cut_ls=[0,.5, .9]
+    for cut in cut_ls: 
+      
+      bkg_len_ls.append(bkg_len) # added here to match the lengths of bkg_len_ls and bkg_ls
+#    cut=0
+      bkg_cut_idx=np.argwhere(bkg_loss_arr>=cut)
+      bkg_cut=data_rel[var][bkg_cut_idx]  
+      bkg_cut_weight=data_rel['weight'][bkg_cut_idx]  
 #  bkg_cut=bkg_loss_arr[bkg_cut_idx]
-    bkg_cut=bkg_cut.flatten()
-    print(i, cut, len(bkg_cut))
-    bkg_ls.append(bkg_cut)
-    bkg_weight_ls.append(bkg_cut_weight)
-    h_names.append(f'{cut}, {Label(key).get_label()}')
+      bkg_cut=bkg_cut.flatten()
+      print(i, cut, len(bkg_cut))
+      bkg_ls.append(bkg_cut)
+      bkg_weight_ls.append(bkg_cut_weight)
+      h_names.append(f'{cut}, {Label(key).get_label()}')
 #plot mT distribution
 #plot_single_variable([bkg_loss_arr,bkg_cut], cuts, "mT distribution", logy=True) 
   #plot_single_variable(bkg_ls, cuts,title= f"{key} distribution"+hist_tag,weights_ls=bkg_weight_ls, density_top=True,logy=True)
-  plot_single_variable(bkg_ls, h_names=h_names,len_ls=bkg_len_ls,title= f"{var} distribution"+hist_tag,weights_ls=bkg_weight_ls, density_top=True,logy=True)
+  plot_single_variable_ratio(bkg_ls, h_names=h_names,len_ls=bkg_len_ls,title= f"{var} distribution "+hist_tag,weights_ls=bkg_weight_ls, density_top=True,logy=True, plot_dir=plot_dir)
  
 
 #plot_single_variable([bkg_loss,sig_loss], ["Background", "Signal"], "mT distribution", logy=True) 

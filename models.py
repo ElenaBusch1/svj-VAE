@@ -147,7 +147,8 @@ def pfn_mask_func(X, mask_val=0):
 
 ## ------------------------------------------------------------------------------------
 def get_full_PFN(input_dim, phi_dim):
-  nlayer=100 # 50 
+  nlayer=50 # 50 
+  #nlayer=100 # 50 
 # https://wandb.ai/ayush-thakur/dl-question-bank/reports/Input-Keras-Layer-Explanation-With-Code-Samples--VmlldzoyMDIzMDU
   initializer = keras.initializers.HeUniform() # samples from uniform distribution
   loss = keras.losses.CategoricalCrossentropy() # computes crossentropy loss btwn labels and predictions
