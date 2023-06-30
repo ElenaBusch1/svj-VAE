@@ -169,7 +169,11 @@ def read_vectors(infile, nEvents,jet_array, bool_weight=True,bool_select_all=Fal
     # select evenly spaced events from input distribution
         idx = get_spaced_elements(len(my_jet_array[jet_array[0]]),nEvents)
     except:
-      idx=list(range(len(my_array)))
+      length=len(my_jet_array[jet_array[0]])
+      idx=list(range(length))
+     
+#      idx=list(range(len(my_jet_array))) # this is wrong and gives an error gives (7,15, 7) instead of something like (631735, 15, 7) 
+
 
     selected_jet_array = np.array([val[idx] for _,val in my_jet_array.items()]).T
     j=idx[0] # REMOVE this line

@@ -146,13 +146,13 @@ def pfn_mask_func(X, mask_val=0):
   return K.cast(K.any(K.not_equal(X, mask_val), axis=-1), K.dtype(X))
 
 ## ------------------------------------------------------------------------------------
-def get_full_PFN(input_dim, phi_dim):
-  nlayer=50 # 50 
-  #nlayer=100 # 50 
+def get_full_PFN(input_dim, phi_dim, nlayer, learning_rate):
+#  nlayer=100 # 50 
+#  nlayer=75# 50 
 # https://wandb.ai/ayush-thakur/dl-question-bank/reports/Input-Keras-Layer-Explanation-With-Code-Samples--VmlldzoyMDIzMDU
   initializer = keras.initializers.HeUniform() # samples from uniform distribution
   loss = keras.losses.CategoricalCrossentropy() # computes crossentropy loss btwn labels and predictions
-  optimizer = keras.optimizers.Adam(learning_rate=0.001) # a stochastic gradient descent method  
+  optimizer = keras.optimizers.Adam(learning_rate=learning_rate) # a stochastic gradient descent method  
 
   input_dim_x = input_dim[0]
   input_dim_y = input_dim[1]

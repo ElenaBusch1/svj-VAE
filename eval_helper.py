@@ -12,31 +12,33 @@ from models import *
 from termcolor import cprint
 def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_file,bkg_file="user.ebusch.QCDskim.mc20e.root",extraVars=[], plot_dir=''):
 ###################
+
+#def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, plot_dir=''):
+###################
     getExtraVars = len(extraVars) > 0
 
 
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e","jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
-#    track_array0_old = ["jet_GhostTrack_pt_0", "jet_GhostTrack_eta_0", "jet_GhostTrack_phi_0", "jet_GhostTrack_e_0","jet_GhostTrack_z0_0", "jet_GhostTrack_d0_0", "jet_GhostTrack_qOverP_0"]
     track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e","jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
-    #track_array1 = ["jet_GhostTrack_pt_1", "jet_GhostTrack_eta_1", "jet_GhostTrack_phi_1", "jet_GhostTrack_e_1"]
-#    jet_array = ["jet1_pt", "jet2_pt", "jet1_phi", "jet2_phi"] # order is important in apply_JetScalingRotation
     jet_array = ["jet1_eta", "jet2_eta", "jet1_phi", "jet2_phi"] # order is important in apply_JetScalingRotation
-#    jet_array_old = ["jet_eta", "jet_phi"]
-#    track_array2 = ["jet_GhostTrack_d0_0", "jet_GhostTrack_z0_0", "jet_GhostTrack_qOverP_0", "jet_GhostTrack_e_0"]
 
 #    sig_file="user.ebusch.SIGskim.mc20e.root"
-    cprint(f'reading {sig_file}','red')
+    cprint(f'reading {sig_file} and {bkg_file}','red')
     read_dir='/nevis/katya01/data/users/ebusch/SVJ/autoencoder/v8.1/'
-    bkg_in0 = read_vectors(read_dir+bkg_file, x_events, track_array0, bool_weight=bool_weight)
-    bkg_in1 = read_vectors(read_dir+bkg_file, x_events, track_array1, bool_weight=bool_weight)
-    jet_bkg = read_hlvs(read_dir+bkg_file, x_events, jet_array, bool_weight=bool_weight)  # select with weight??
+    bkg_file=read_dir+bkg_file
     
-    sig_in0 = read_vectors(read_dir+sig_file, y_events,track_array0, bool_weight=False)
-    sig_in1 = read_vectors(read_dir+sig_file, y_events,track_array1, bool_weight=False)
-    jet_sig = read_hlvs(read_dir+sig_file, y_events, jet_array, bool_weight=bool_weight)  # select with weight??
+    bkg_in0 = read_vectors(bkg_file, x_events, track_array0, bool_weight=bool_weight)
+    bkg_in1 = read_vectors(bkg_file, x_events, track_array1, bool_weight=bool_weight)
+    jet_bkg = read_hlvs(bkg_file, x_events, jet_array, bool_weight=bool_weight)  # select with weight??
+
+    sig_file=read_dir+sig_file
+    sig_in0 = read_vectors(sig_file, y_events,track_array0, bool_weight=True)
+    sig_in1 = read_vectors(sig_file, y_events,track_array1, bool_weight=True)
+    jet_sig = read_hlvs(sig_file, y_events, jet_array, bool_weight=bool_weight)  # select with weight??
+
     if getExtraVars: 
-      vars_bkg = read_flat_vars(read_dir+bkg_file, x_events, extraVars, bool_weight=bool_weight)
-      vars_sig = read_flat_vars(read_dir+sig_file, y_events, extraVars, bool_weight=False)
+      vars_bkg = read_flat_vars(bkg_file, x_events, extraVars, bool_weight=bool_weight)
+      vars_sig = read_flat_vars(sig_file, y_events, extraVars, bool_weight=True)
 
     plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
      
@@ -59,12 +61,16 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_fil
       vars_bkg = vars_bkg[bkg_nz]    
       vars_sig = vars_sig[sig_nz]  
     
-
+    """
     bkg_sel0 = pt_sort(bkg_pt0, 0)
     bkg_sel1 = pt_sort(bkg_pt1, 1)
     sig_sel0 = pt_sort(sig_pt0, 0)
     sig_sel1 = pt_sort(sig_pt1, 1)
- 
+    """
+    bkg_sel0 = pt_sort(bkg_pt0)
+    bkg_sel1 = pt_sort(bkg_pt1)
+    sig_sel0 = pt_sort(sig_pt0)
+    sig_sel1 = pt_sort(sig_pt1)
     bkg_sel = np.concatenate((bkg_sel0,bkg_sel1),axis=1)
     sig_sel = np.concatenate((sig_sel0,sig_sel1),axis=1)
 
@@ -185,6 +191,9 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
     
     x = np.copy(x_raw) #copy
     x_totals = x_raw.sum(axis=1) #get sum total pt, eta, phi, E for each event
+    cprint(x_raw,'yellow')
+    cprint(x_totals[:,0], 'blue')
+
     x[:,:,0] = (x_raw[:,:,0].T/x_totals[:,0]).T  #divide each pT entry by event pT total
     x[:,:,3] = (x_raw[:,:,3].T/x_totals[:,3]).T  #divide each E entry by event E total
     
