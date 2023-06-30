@@ -16,7 +16,7 @@ import time
 #added
 class Param:
   def __init__(self,  arch_dir="architectures_saved/",print_dir='',plot_dir='plots/', 
-      pfn_model='PFN', ae_model='PFN', x_events=500000, y_events=500000, 
+      pfn_model='PFN', ae_model='PFN', bkg_events=500000, sig_events=500000, 
       num_elements=100, element_size=7, encoding_dim=32, latent_dim=4, phi_dim=64, nepochs=100, nlayer=75, learning_rate=0.001,  
       batchsize_pfn=500,batchsize_ae=32,
       sig_file="user.ebusch.SIGskim.mc20e.root", bkg_file="user.ebusch.QCDskim.mc20e.root",  bool_weight=True, extraVars=[]):
@@ -37,8 +37,8 @@ class Param:
 
     self.pfn_model=pfn_model
     self.ae_model=ae_model
-    self.x_events=x_events
-    self.y_events=y_events
+    self.bkg_events=bkg_events
+    self.sig_events=sig_events
 
     self.num_elements=num_elements 
     self.element_size=element_size
@@ -73,10 +73,22 @@ class Param:
    
   def train(self):
     
-    ## Load leading two jets
+    track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e","jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
+    track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e","jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
+    jet_array = ["jet1_eta", "jet2_eta", "jet1_phi", "jet2_phi"] # order is important in apply_JetScalingRotation
+
+   ## Load leading two jets
     # Plot inputs before the jet rotation
-    bkg, sig, mT_bkg, mT_sig = getTwoJetSystem(self.x_events,self.y_events,tag_file=self.tag+"_NSNR", tag_title=self.weight_tag+"_NSNR", bool_weight=self.bool_weight, sig_file=self.sig_file,bkg_file=self.bkg_file, extraVars=self.extraVars, plot_dir=self.plot_dir)
-    #mT_bkg, mT_sig not used until after prediction e.g. when applying the scores
+#    bkg, sig, mT_bkg, mT_sig = getTwoJetSystem(self.x_events,self.y_events,tag_file=self.tag+"_NSNR", tag_title=self.weight_tag+"_NSNR", bool_weight=self.bool_weight, sig_file=self.sig_file,bkg_file=self.bkg_file, extraVars=self.extraVars, plot_dir=self.plot_dir)
+    bkg, mT_bkg, bkg_sel, jet_bkg = getTwoJetSystem(nevents=self.bkg_events,input_file=self.bkg_file,
+      track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
+      bool_weight=self.bool_weight,  extraVars=self.extraVars)
+    sig, mT_sig, sig_sel, jet_sig = getTwoJetSystem(nevents=self.sig_events,input_file=self.sig_file,
+      track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
+      bool_weight=self.bool_weight,  extraVars=self.extraVars)
+   
+    plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=self.tag+"_NSNR", tag_title=self.weight_tag+"_NSNR", plot_dir=self.plot_dir)
+    plot_vectors(bkg_sel,sig_sel,tag_file=self.tag+"_NSNR", tag_title=self.weight_tag+"_NSNR", plot_dir=self.plot_dir)
 
     # Plot inputs after the jet rotation
     plot_vectors(bkg,sig,tag_file=self.tag+"_NSYR", tag_title=self.weight_tag+"_NSYR", plot_dir=self.plot_dir)
@@ -153,9 +165,9 @@ class Param:
     return self.all_dir
 
 for latent_dim in [4]:
-  n_events=1000000
-  param1=Param( latent_dim=latent_dim, x_events=n_events, y_events=n_events)
-  print(param1.x_events, param1.phi_dim)  
+  n_events=500000
+  param1=Param( latent_dim=latent_dim, bkg_events=n_events, sig_events=n_events)
+  print(param1.bkg_events, param1.phi_dim)  
   print(param1.save_info()) 
   print(param1.train())
 

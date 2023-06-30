@@ -67,8 +67,15 @@ def call_functions(x_events,y_events, tag, bool_weight, sig_file,extraVars):
   print ("Loaded model")
   plot_dir='lala'
   print(' edit plot_dir')
-  bkg2, sig2, mT_bkg, mT_sig = getTwoJetSystem(x_events,y_events,tag_file=tag, tag_title=tag, bool_weight=bool_weight, sig_file=sig_file,bkg_file="user.ebusch.QCDskim.mc20e.root", extraVars=extraVars, plot_dir=plot_dir)
-#bkg2, sig2, mT_bkg, mT_sig = getTwoJetSystem(x_events,y_events, ["mT_jj"])
+  bkg_file="user.ebusch.QCDskim.mc20e.root"
+  bkg2, mT_bkg, bkg_sel, jet_bkg = getTwoJetSystem(nevents=x_events,input_file=bkg_file,
+      track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
+      bool_weight=bool_weight,  extraVars=extraVars)
+  sig2, mT_sig, sig_sel, jet_sig = getTwoJetSystem(nevents=y_events,input_file=sig_file,
+      track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
+      bool_weight=bool_weight,  extraVars=extraVars)
+
+
   
   scaler = load(arch_dir+pfn_model+'_scaler.bin')
   bkg2,_ = apply_StandardScaling(bkg2,scaler,False)

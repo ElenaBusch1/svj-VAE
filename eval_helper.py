@@ -10,77 +10,45 @@ from sklearn.preprocessing import MinMaxScaler
 from plot_helper import *
 from models import *
 from termcolor import cprint
-def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_file,bkg_file="user.ebusch.QCDskim.mc20e.root",extraVars=[], plot_dir=''):
-###################
-
-#def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, plot_dir=''):
-###################
+#def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_file,bkg_file="user.ebusch.QCDskim.mc20e.root",extraVars=[], plot_dir=''):
+def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array, extraVars=[], bool_weight=True):
+    
     getExtraVars = len(extraVars) > 0
 
-
-    track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e","jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
-    track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e","jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
-    jet_array = ["jet1_eta", "jet2_eta", "jet1_phi", "jet2_phi"] # order is important in apply_JetScalingRotation
-
 #    sig_file="user.ebusch.SIGskim.mc20e.root"
-    cprint(f'reading {sig_file} and {bkg_file}','red')
+    cprint(f'reading {input_file}','red')
     read_dir='/nevis/katya01/data/users/ebusch/SVJ/autoencoder/v8.1/'
-    bkg_file=read_dir+bkg_file
+    input_file=read_dir+input_file
     
-    bkg_in0 = read_vectors(bkg_file, x_events, track_array0, bool_weight=bool_weight)
-    bkg_in1 = read_vectors(bkg_file, x_events, track_array1, bool_weight=bool_weight)
-    jet_bkg = read_hlvs(bkg_file, x_events, jet_array, bool_weight=bool_weight)  # select with weight??
-
-    sig_file=read_dir+sig_file
-    sig_in0 = read_vectors(sig_file, y_events,track_array0, bool_weight=True)
-    sig_in1 = read_vectors(sig_file, y_events,track_array1, bool_weight=True)
-    jet_sig = read_hlvs(sig_file, y_events, jet_array, bool_weight=bool_weight)  # select with weight??
+    bkg_in0 = read_vectors(input_file, nevents, track_array0, bool_weight=bool_weight)
+    bkg_in1 = read_vectors(input_file, nevents, track_array1, bool_weight=bool_weight)
+    jet_bkg = read_hlvs(input_file, nevents, jet_array, bool_weight=bool_weight)  # select with weight??
 
     if getExtraVars: 
-      vars_bkg = read_flat_vars(bkg_file, x_events, extraVars, bool_weight=bool_weight)
-      vars_sig = read_flat_vars(sig_file, y_events, extraVars, bool_weight=True)
+      vars_bkg = read_flat_vars(input_file, nevents, extraVars, bool_weight=bool_weight)
 
-    plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
+
+    #plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
      
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
     _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
-    _, _, sig_nz0 = apply_TrackSelection(sig_in0, jet_sig)
-    _, _, sig_nz1 = apply_TrackSelection(sig_in1, jet_sig)
     
     bkg_nz = bkg_nz0 & bkg_nz1
-    sig_nz = sig_nz0 & sig_nz1
 
     # select events which have both valid leading and subleading jet tracks
     bkg_pt0 = bkg_in0[bkg_nz]
     bkg_pt1 = bkg_in1[bkg_nz]
-    sig_pt0 = sig_in0[sig_nz]
-    sig_pt1 = sig_in1[sig_nz]
     bjet_sel = jet_bkg[bkg_nz]
-    sjet_sel = jet_sig[sig_nz]
     if getExtraVars:
       vars_bkg = vars_bkg[bkg_nz]    
-      vars_sig = vars_sig[sig_nz]  
-    
-    """
-    bkg_sel0 = pt_sort(bkg_pt0, 0)
-    bkg_sel1 = pt_sort(bkg_pt1, 1)
-    sig_sel0 = pt_sort(sig_pt0, 0)
-    sig_sel1 = pt_sort(sig_pt1, 1)
-    """
-    bkg_sel0 = pt_sort(bkg_pt0)
-    bkg_sel1 = pt_sort(bkg_pt1)
-    sig_sel0 = pt_sort(sig_pt0)
-    sig_sel1 = pt_sort(sig_pt1)
-    bkg_sel = np.concatenate((bkg_sel0,bkg_sel1),axis=1)
-    sig_sel = np.concatenate((sig_sel0,sig_sel1),axis=1)
 
+    bkg_sel = np.concatenate((bkg_pt0,bkg_pt1),axis=1)
     
 #    print('bkg_sel0, bkg_sel1',bkg_sel.shape, bkg_sel1.shape)
 # ADDED 5/22/23 
 
-    plot_vectors(bkg_sel,sig_sel,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
-    bkg_rot = apply_JetScalingRotation(bkg_sel, bjet_sel,0)
-    sig_rot = apply_JetScalingRotation(sig_sel, sjet_sel,0)
+#    plot_vectors(bkg_sel,sig_sel,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
+    bkg = apply_JetScalingRotation(bkg_sel, bjet_sel,0)
 
     #plot
     #x_sel_nz = remove_zero_padding(bkg_sel)
@@ -96,17 +64,14 @@ def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_fil
     #x = bkg
     #sig = sig
 
-    print('*'*15,bkg_rot.shape)
-    print('*'*15,sig_rot.shape)
+    print('*'*15,bkg.shape)
     #x = x_2D.reshape(bkg.shape[0],x_2D.shape[1]*4)
     #sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
     #plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
     #plot_vectors(x,sig,"AEWithZeroRotated")
 
-###################
-    if getExtraVars: return bkg_rot, sig_rot, vars_bkg, vars_sig
-    else: return bkg_rot, sig_rot,np.array([]),np.array([])
-    #else: return bkg, sig,bkg_tag,sig_tag
+    if getExtraVars: return bkg, vars_bkg, bkg_sel, jet_bkg
+    else: return bkg, np.array([]), bkg_sel, jet_bkg
 
 def get_dPhi(x1,x2):
     dPhi = x1 - x2
@@ -130,19 +95,10 @@ def reshape_3D(x, nTracks, nFeatures):
     print(x_out[4])
     return x_out
 
-#def pt_sort(x, jet_idx):
 def pt_sort(x):
     for i in range(x.shape[0]):
         ev = x[i]
         x[i] = ev[ev[:,0].argsort()]
-    """if (jet_idx == 0): # if leading jet
-        y = x[:,-9:,:]
-    elif (jet_idx == 1):
-        y = x[:,-7:,:]
-    else:
-        y = x[:,-3:,:]
-    return y
-    """
     return x
 
 def apply_TrackSelection(x_raw, jets):
@@ -199,7 +155,7 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
     
     #jet_phi_avs = np.zeros(x.shape[0])
 #    print('*'*30)
-#    print('jet',jet.shape, jet)
+    print('jet shape for apply_JetScalingRotation',jet.shape, jet)
 #    print('x_raw', x_raw.shape, x_raw)
 #    print('jet_idx',  jet_idx)
     for e in range(x.shape[0]):
@@ -209,7 +165,6 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
 # change
 #        jet_eta_av = (jet[e,0] + jet[e,1])/2.0 
 #        jet_phi_av = (jet[e,2] + jet[e,3])/2.0 
-                
 
         #jet_phi_avs[e] = jet_phi_av
         for t in range(x.shape[1]):
