@@ -1,10 +1,10 @@
-# SVJ s-channel AutoEncoder
+# SVJ s-channel PFN and ANTELOPE
 
-Codes for training & evaluating the SVJ autoencoder
+Codes for training & evaluating the SVJ PFN and associated architecutres
 
 ## Files
 
-Input files can be found in the shares eos area: /eos/atlas/atlascerngroupdisk/phys-exotics/jdm/svjets-schannel
+Input files can be found in the shared eos area: /eos/atlas/atlascerngroupdisk/phys-exotics/jdm/svjets-schannel, or check /data/users/ebusch/SVJ/autoencoder/ on katya.
 
 ## Conda environment
 
@@ -16,25 +16,28 @@ Create a conda enviroment from the svj\_env.yml file. Key packages are:
 
 ## Running & Evaluating
 
-Training is done with the file `svj_vae.py`, in svj conda environment.
+Training is done with the file `svj_pfn.py`, in svj conda environment.
 ```
-python svj_vae.py
-```
-
-You can optionally save your trained network, and evaluate using the evaluate.py script.
-```
-python evaluate.py
+python svj_pfn.py
 ```
 
-**Note**: currently there is too much copy pasting between training and eval scripts, this should be fixed  
+You can save your trained network, and evaluate using the `pfn_evaluate.py` script.
+```
+python pfn_evaluate.py
+```
+
 **Note**: plot path is hardcoded in `plot_heler.py`
 
 ## File descriptions
-`svj_vae.py`: load training/valdiation/testing background & signal, train, save, evaluate  
-`evaluate.py`: load testing background & signal, load saved model, evaluate  
+`antelope_evaluate.py`: evaluate trained ANTELOPE model on more data and save HDF5s
+`antelope_h5eval.py`: evaluate HDF5s (AUC, grid plots, sensitivity, etc)
+`eval_helper.py`: functions used in training and evaluation, including to read in and apply track selection to jets
+`evaluate.py`: evaluate simple AE (defunct)
+`models.py`: model architectures
+`models_archive.py`: old models that we might work on again (defunct)
+`pfn_evaluate`: evaluate trained PFN model on more data and save HDF5s
 `plot_helper.py`: plotting scripts  
-`eval_helper.py`: functions used in evaluation
-`models.py`: models classes and functions to construct and compile models 
-`root_to_numpy.py`: loads data from nTuples
-`models_archive.py`: a place to save old code that might be used in small tests
-`svj_gvae.py`: specialized training script for probing PFN-AE latent spaces
+`root_to_numpy.py`: functions to load data from nTuples
+`svj_antelope.py`: train ANTELOPE (requires trained PFN)
+`svj_pfn.py`: train PFN
+`svj_vae.py`: train simple AE (defunct)

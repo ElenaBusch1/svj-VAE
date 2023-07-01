@@ -50,35 +50,27 @@ for bkg_file in files:
   print(bkg_file)
   my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
   
-  save_bkg = read_flat_vars("../v8.1/skim1/"+bkg_file, -1, my_variables, False)
-  save_bkg = save_bkg[save_bkg[:,0]>1000]
-  print(save_bkg)
-  print(type(save_bkg))
-  print(save_bkg.shape)
-  print(save_bkg[0,:].dtype)
- 
-  # ## evaluate bkg
-  # bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim1/"+bkg_file, my_variables, False)
-  # print(mT_bkg)
-  # print(type(mT_bkg))
-  # print(mT_bkg.shape)
-  # print(mT_bkg[0,:].dtype)
-  # #bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/user.ebusch.515491.root", my_variables, False)
-  # scaler = load(arch_dir+pfn_model+'_scaler.bin')
-  # bkg2,_ = apply_StandardScaling(bkg2,scaler,False) 
-  # phi_bkg = graph.predict(bkg2)
-  # pred_phi_bkg = classifier.predict(phi_bkg)
-  # # ## Classifier loss
-  # bkg_loss = pred_phi_bkg[:,1]
-  # my_variables.insert(0,"score")
-  # all_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
-  # save_bkg = all_bkg[all_bkg[:,0]>0.95]
+  ## evaluate bkg
+  bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim1/"+bkg_file, my_variables, False)
+  print(mT_bkg)
+  print(type(mT_bkg))
+  print(mT_bkg.shape)
+  print(mT_bkg[0,:].dtype)
+  #bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/user.ebusch.515491.root", my_variables, False)
+  scaler = load(arch_dir+pfn_model+'_scaler.bin')
+  bkg2,_ = apply_StandardScaling(bkg2,scaler,False) 
+  phi_bkg = graph.predict(bkg2)
+  pred_phi_bkg = classifier.predict(phi_bkg)
+  # ## Classifier loss
+  bkg_loss = pred_phi_bkg[:,1]
+  my_variables.insert(0,"score")
+  all_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+  save_bkg = all_bkg[all_bkg[:,0]>0.95]
   bkg_arrays.append(save_bkg)
   print("Mini bkg: ", save_bkg.shape)
-  print(save_bkg[0,-1].dtype)
   print()
-  if (i % 3 == 0 and i != 0):
-    tmp_bkg = np.concatenate(bkg_arrays[i-3:i],axis=0)
+  if (i % 10 == 0 and i != 0):
+    tmp_bkg = np.concatenate(bkg_arrays[i-10:i],axis=0)
     ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
     rec_tmp_bkg = np.rec.array(tmp_bkg, dtype=ds_dt)
     with h5py.File("v8p1_"+pfn_model+"_skim1_tmp"+str(i)+".hdf5","w") as h5f:
