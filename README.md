@@ -29,15 +29,15 @@ python pfn_evaluate.py
 **Note**: plot path is hardcoded in `plot_heler.py`
 
 ## File descriptions
-`antelope_evaluate.py`: evaluate trained ANTELOPE model on more data and save HDF5s
-`antelope_h5eval.py`: evaluate HDF5s (AUC, grid plots, sensitivity, etc)
-`eval_helper.py`: functions used in training and evaluation, including to read in and apply track selection to jets
-`evaluate.py`: evaluate simple AE (defunct)
-`models.py`: model architectures
-`models_archive.py`: old models that we might work on again (defunct)
-`pfn_evaluate`: evaluate trained PFN model on more data and save HDF5s
+`antelope_evaluate.py`: evaluate trained ANTELOPE model on more data and save HDF5s  
+`antelope_h5eval.py`: evaluate HDF5s (AUC, grid plots, sensitivity, etc)  
+`eval_helper.py`: functions used in training and evaluation, including to read in and apply track selection to jets  
+`evaluate.py`: evaluate simple AE (defunct)  
+`models.py`: model architectures  
+`models_archive.py`: old models that we might work on again (defunct)  
+`pfn_evaluate`: evaluate trained PFN model on more data and save HDF5s  
 `plot_helper.py`: plotting scripts  
-`root_to_numpy.py`: functions to load data from nTuples
-`svj_antelope.py`: train ANTELOPE (requires trained PFN)
-`svj_pfn.py`: train PFN
-`svj_vae.py`: train simple AE (defunct)
+`root_to_numpy.py`: functions to load data from nTuples  
+`svj_antelope.py`: train ANTELOPE (requires trained PFN)  
+`svj_pfn.py`: train PFN  
+`svj_vae.py`: train simple AE (defunct)  
