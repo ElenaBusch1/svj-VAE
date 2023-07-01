@@ -271,11 +271,11 @@ def do_roc(bkg_loss, sig_loss, plot_tag, make_transformed_plot=False):
     auc = roc_auc_score(truth_labels, eval_vals)
     print("AUC - "+plot_tag+": ", auc)
     #make_roc(fpr,tpr,auc,plot_tag)
-    sic_vals = make_sic(fpr,tpr,auc,plot_tag)
+    sic_vals = make_sic(fpr,tpr,auc,bkg_loss,plot_tag)
     sic_vals['auc'] = auc
     return sic_vals
 
-def do_grid_plots(sic_vals):
+def do_grid_plots(sic_vals, title):
     with open("dsids_grid_locations.json", "r") as f:
       dsid_coords = json.load(f)
     dsids = list(sic_vals.keys())
@@ -285,4 +285,4 @@ def do_grid_plots(sic_vals):
         for dsid in dsids:
             loc = tuple(dsid_coords[str(dsid)])
             values[loc] = sic_vals[dsid][val]
-        make_grid_plot(values, val)
+        make_grid_plot(values, val, title)

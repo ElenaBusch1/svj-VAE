@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "cms_sensitivity"
+tag = "cms_mTplot"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def my_metric(s,b):
@@ -78,16 +78,18 @@ def make_roc(fpr,tpr,auc,model=""):
   plt.clf()
   print("Saved ROC curve for model", model)
 
-def make_sic(fpr,tpr,auc, model=""):
+def make_sic(fpr,tpr,auc,bkg, model=""):
   y = tpr[1:]/np.sqrt(fpr[1:])
   good = (y != np.inf) & (tpr[1:] > 0.08)
   ymax = max(y[good])
   ymax_i = np.argmax(y[good])
   sigEff = tpr[1:][good][ymax_i]
   qcdEff = fpr[1:][good][ymax_i]
+  score_cut = np.percentile(bkg,100-(qcdEff*100))
   print("Max improvement: ", ymax)
   print("Sig eff: ", sigEff)
   print("Bkg eff: ", qcdEff)
+  print("Score selection: ", score_cut)
   plt.plot(tpr[1:],y,label="AUC = %0.2f" % auc)
   plt.axhline(y=1, color='0.8', linestyle='--')
   plt.xlabel("Signal Efficiency (TPR)")
@@ -97,23 +99,26 @@ def make_sic(fpr,tpr,auc, model=""):
   #plt.savefig(plot_dir+'sic_'+model+'_'+tag+'.png')
   plt.clf()
   print("Saved SIC for", model)
-  return {'sicMax':ymax, 'sigEff': sigEff, 'qcdEff': qcdEff}
+  return {'sicMax':ymax, 'sigEff': sigEff, 'qcdEff': qcdEff, 'score_cut': score_cut}
 
-def make_grid_plot(values,title):
+def make_grid_plot(values,title,method):
   #values must be 4 X 10
 
   fig,ax = plt.subplots(1,1)
-  if (title == "qcdEff"): img = ax.imshow(values,norm=colors.LogNorm(vmin=1e-7,vmax=1e-1))
-  elif (title == "sigEff"): img = ax.imshow(values,vmin=-0.1,vmax=0.7)
-  elif (title == "s_sqrtb_Inclusive" or title == "s_sqrtb_Max"): img = ax.imshow(values, norm=colors.LogNorm())
-  elif (title == "auc"): img = ax.imshow(values, vmin=0.7, vmax=1)
-  elif (title == "sicMax"): img = ax.imshow(values, vmin=-2, vmax=20)
-  else: img = ax.imshow(values)
+  if (method.find("compare") != -1): img = ax.imshow(values, cmap='PiYG',norm=colors.LogNorm(vmin=0.1,vmax=10))
+  else:
+    if (title == "qcdEff"): img = ax.imshow(values,norm=colors.LogNorm(vmin=1e-7,vmax=1e-1))
+    elif (title == "sigEff"): img = ax.imshow(values,vmin=-0.1,vmax=0.7)
+    elif (title == "sensitivity_Inclusive" or title == "sensitivity_mT"): img = ax.imshow(values, norm=colors.LogNorm(vmin=1e-5,vmax=1.5))
+    elif (title == "auc"): img = ax.imshow(values, vmin=0.7, vmax=1)
+    elif (title == "sicMax"): img = ax.imshow(values, vmin=-2, vmax=20)
+    else: img = ax.imshow(values)
 
   # add text to table
   for (j,i),label in np.ndenumerate(values):
     if label == 0.0: continue
-    if title == "qcdEff" or title == "s_sqrtb_Inclusive" or title == "s_sqrtb_Max": ax.text(i,j,'{0:.1e}'.format(label),ha='center', va='center', fontsize = 'x-small')
+    if title == "qcdEff" or title == "sensitivity_Inclusive" or title == "sensitivity_mT": ax.text(i,j,'{0:.1e}'.format(label),ha='center', va='center', fontsize = 'x-small')
+    elif title == "score_cut": ax.text(i,j,'{0:.3f}'.format(label),ha='center', va='center', fontsize = 'x-small')
     else: ax.text(i,j,'{0:.2f}'.format(label),ha='center', va='center', fontsize = 'x-small')
 
   # x-y labels for grid 
@@ -126,8 +131,8 @@ def make_grid_plot(values,title):
   ax.set_yticklabels(y_label_list)
   ax.set_ylabel('$R_{inv}$')
   
-  ax.set_title(title)
-  plt.savefig(plot_dir+'table_'+title+'_'+tag+'.png')
+  ax.set_title(method+"; "+title)
+  plt.savefig(plot_dir+'table_'+method+'_'+title+'_'+tag+'.png')
   print("Saved grid plot for", title)
 
 def make_single_roc(rocs,aucs,ylabel):
@@ -228,7 +233,7 @@ def plot_ratio(hists, weights, h_names, title, logy=False):
   #bin_min=np.min(hists_flat)
   #bin_max=np.max(hists_flat)
   #gap=(bin_max-bin_min)*0.05
-  bins=np.linspace(1500,6500,5)
+  bins=np.linspace(1500,6500,50)
   x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
   hists=list(hists)
   nTot = len(hists[0])
@@ -239,14 +244,13 @@ def plot_ratio(hists, weights, h_names, title, logy=False):
     if i ==0:
       y0=y # make sure the first of hists list has the most number of events
       continue
-    #axs[1].scatter(x_bins,my_metric(y,y0), marker="+", color=colors[i], label=f'{max(my_metric(y,y0)):.1E}')
-    axs[1].scatter(x_bins,my_metric(y,y0), marker="+", color=colors[i], label=f'{max(y):.1E}')
+    axs[1].scatter(x_bins,my_metric(y,y0), marker="+", color=colors[i], label=f'{max(my_metric(y,y0)):.1E}')
     #axs[1].scatter(x_bins,zero_div(y,y0))
 
   #axs[1].set_ylim(0.5,3.0)  
   axs[1].set_ylabel('Fig of Merit')
   axs[1].set_yscale('log')
-  axs[1].legend(loc='upper right', fontsize='x-small')
+  #axs[1].legend(loc='upper right', fontsize='x-small')
   plt.tick_params(axis='y', which='minor') 
   plt.grid()
  

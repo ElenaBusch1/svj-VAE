@@ -17,6 +17,16 @@ import h5py
 def my_metric(s,b):
     return np.sqrt(2*((s+b)*np.log(1+s/b)-s))
 
+def weighted_percentile(data, weights, perc):
+    """
+    perc : percentile in [0-1]!
+    """
+    ix = np.argsort(data)
+    data = data[ix] # sort data
+    weights = weights[ix] # sort weights
+    cdf = (np.cumsum(weights) - 0.5 * weights) / np.sum(weights) # 'like' a CDF function
+    return np.interp(perc, cdf, data)
+
 def get_weighted_elements_h5(my_weight_array, nEvents):
     np.random.seed(1)
     idx = np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
@@ -60,36 +70,25 @@ def mT_shape_compare():
     
 
 def cms_mT_plots():
-  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_1.hdf5","r") as f:
-    bkg_data1 = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_2.hdf5","r") as f:
-    bkg_data2 = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_3.hdf5","r") as f:
-    bkg_data3 = f.get('data')[:]
-
-  bkg_data = np.concatenate((bkg_data1,bkg_data2,bkg_data3))
-  
-  variables = [f_name for (f_name,f_type) in bkg_data.dtype.descr]
-  #bkg20 = np.percentile(bkg_loss,99.5)
-  
-  with h5py.File("../v8.1/v8p1_PFNv2_515499.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_CMS_QCDskim1.hdf5","r") as f:
+    bkg_data = f.get('data')[:]
+   
+  with h5py.File("../v8.1/v8p1_CMSskim1_515503.hdf5","r") as f:
     sig1_data = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv2_515507.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_CMSskim1_515506.hdf5","r") as f:
     sig2_data = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv2_515515.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_CMSskim1_515515.hdf5","r") as f:
     sig3_data = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv2_515504.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_CMSskim1_515518.hdf5","r") as f:
     sig4_data = f.get('data')[:]
   
-  selection0 = (bkg_data["rT"] > 0.25) & (bkg_data["dphi_min"] < 0.8) & (bkg_data["deta_12"] < 1.5)
-  selection1 = (sig1_data["rT"] > 0.25) & (sig1_data["dphi_min"] < 0.8) & (sig1_data["deta_12"] < 1.5)
-  selection2 = (sig2_data["rT"] > 0.25) & (sig2_data["dphi_min"] < 0.8) & (sig2_data["deta_12"] < 1.5)
-  selection3 = (sig3_data["rT"] > 0.25) & (sig3_data["dphi_min"] < 0.8) & (sig3_data["deta_12"] < 1.5)
-  selection4 = (sig4_data["rT"] > 0.25) & (sig4_data["dphi_min"] < 0.8) & (sig4_data["deta_12"] < 1.5)
-  
-  print(variables)
-  
-  w0 = 100*bkg_data["weight"][selection0] 
+  selection0 = (bkg_data["rT"] > 0.25) & (bkg_data["dphi_min"] < 0.8) & (bkg_data["deltaY_12"] < 1.5)
+  selection1 = (sig1_data["rT"] > 0.25) & (sig1_data["dphi_min"] < 0.8) & (sig1_data["deltaY_12"] < 1.5)
+  selection2 = (sig2_data["rT"] > 0.25) & (sig2_data["dphi_min"] < 0.8) & (sig2_data["deltaY_12"] < 1.5)
+  selection3 = (sig3_data["rT"] > 0.25) & (sig3_data["dphi_min"] < 0.8) & (sig3_data["deltaY_12"] < 1.5)
+  selection4 = (sig4_data["rT"] > 0.25) & (sig4_data["dphi_min"] < 0.8) & (sig4_data["deltaY_12"] < 1.5)
+   
+  w0 = 50*bkg_data["weight"][selection0] 
   w1 = sig1_data["weight"][selection1] 
   w2 = sig2_data["weight"][selection2] 
   w3 = sig3_data["weight"][selection3] 
@@ -97,7 +96,7 @@ def cms_mT_plots():
   
   w = [w0,w1,w2,w3,w4]
   
-  labels = ["QCD", "2000 GeV,0.2", "3000 GeV,0.2", "4000 GeV,0.6", "2500 GeV,0.4"]
+  labels = ["QCD", "2500 GeV,0.2", "2500 GeV,0.8", "4000 GeV,0.2", "2500 GeV,0.8"]
   for var in ["mT_jj"]:
     if (var=="weight" or var=="mcEventWeight"): continue
     bkg = bkg_data[var][selection0]
@@ -105,46 +104,36 @@ def cms_mT_plots():
     sig2 = sig2_data[var][selection2] 
     sig3 = sig3_data[var][selection3] 
     sig4 = sig4_data[var][selection4] 
-    labels[0] += "({0:.0%})".format(len(bkg)/len(bkg_data[var]))
-    labels[1] += "({0:.0%})".format(len(sig1)/len(sig1_data[var]))
-    labels[2] += "({0:.0%})".format(len(sig2)/len(sig2_data[var]))
-    labels[3] += "({0:.0%})".format(len(sig3)/len(sig3_data[var]))
-    labels[4] += "({0:.0%})".format(len(sig4)/len(sig4_data[var]))
+    labels[0] += " ({0:.1e}, {1:.1e})".format(len(bkg),np.sum(w0))
+    labels[1] += " ({0:.1e}, {1:.1e})".format(len(sig1),np.sum(w1))
+    labels[2] += " ({0:.1e}, {1:.1e})".format(len(sig2),np.sum(w2))
+    labels[3] += " ({0:.1e}, {1:.1e})".format(len(sig3),np.sum(w3))
+    labels[4] += " ({0:.1e}, {1:.1e})".format(len(sig4),np.sum(w4))
     d = [bkg, sig1, sig2, sig3, sig4]
     #plot_single_variable(d,w,labels, var, logy=True) 
     plot_ratio(d,w,labels, var, logy=True) 
 
-
 def score_cut_mT_plot():
-  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_1.hdf5","r") as f:
-    bkg_data1 = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_2.hdf5","r") as f:
-    bkg_data2 = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_3.hdf5","r") as f:
-    bkg_data3 = f.get('data')[:]
+  with h5py.File("../v8.1/v8p1_PFNv3_QCDskim3.hdf5","r") as f:
+    bkg_data = f.get('data')[:]
 
-  bkg_data = np.concatenate((bkg_data1,bkg_data2,bkg_data3))
-  
-  variables = [f_name for (f_name,f_type) in bkg_data.dtype.descr]
+  bkg20 = 0.92
   bkg_loss = bkg_data["score"]
-  bkg20 = np.percentile(bkg_loss,90)
   
-  with h5py.File("../v8.1/v8p1_PFNv2_515495.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_PFNv3_515503.hdf5","r") as f:
     sig1_data = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv2_515498.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_PFNv3_515506.hdf5","r") as f:
     sig2_data = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv2_515515.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_PFNv3_515515.hdf5","r") as f:
     sig3_data = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv2_515518.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_PFNv3_515518.hdf5","r") as f:
     sig4_data = f.get('data')[:]
   
   sig1_loss = sig1_data["score"]
   sig2_loss = sig2_data["score"]
   sig3_loss = sig3_data["score"]
   sig4_loss = sig4_data["score"]
-  
-  print(variables)
-  
+   
   w0 = 5*bkg_data["weight"][bkg_loss>bkg20] 
   w1 = sig1_data["weight"][sig1_loss>bkg20] 
   w2 = sig2_data["weight"][sig2_loss>bkg20] 
@@ -153,7 +142,7 @@ def score_cut_mT_plot():
   
   w = [w0,w1,w2,w3,w4]
   
-  labels = ["QCD", "1500 GeV,0.2", "1500 GeV,0.8", "4000 GeV,0.2", "4000 GeV,0.8"]
+  labels = ["QCD", "2500 GeV,0.2", "2500 GeV,0.8", "4000 GeV,0.2", "4000 GeV,0.8"]
   for var in ["mT_jj"]:
     if (var=="weight" or var=="mcEventWeight"): continue
     bkg = bkg_data[var][bkg_loss>bkg20]
@@ -161,42 +150,41 @@ def score_cut_mT_plot():
     sig2 = sig2_data[var][sig2_loss>bkg20] 
     sig3 = sig3_data[var][sig3_loss>bkg20] 
     sig4 = sig4_data[var][sig4_loss>bkg20] 
-    labels[0] += "({0:.0%})".format(len(bkg)/len(bkg_data[var]))
-    labels[1] += "({0:.0%})".format(len(sig1)/len(sig1_data[var]))
-    labels[2] += "({0:.0%})".format(len(sig2)/len(sig2_data[var]))
-    labels[3] += "({0:.0%})".format(len(sig3)/len(sig3_data[var]))
-    labels[4] += "({0:.0%})".format(len(sig4)/len(sig4_data[var]))
+    labels[0] += " ({0:.1e}, {1:.1e})".format(len(bkg),np.sum(w0))
+    labels[1] += " ({0:.1e}, {1:.1e})".format(len(sig1),np.sum(w1))
+    labels[2] += " ({0:.1e}, {1:.1e})".format(len(sig2),np.sum(w2))
+    labels[3] += " ({0:.1e}, {1:.1e})".format(len(sig3),np.sum(w3))
+    labels[4] += " ({0:.1e}, {1:.1e})".format(len(sig4),np.sum(w4))
     d = [bkg, sig1, sig2, sig3, sig4]
     #plot_single_variable(d,w,labels, var, logy=True) 
     plot_ratio(d,w,labels, var, logy=True) 
 
 
-def grid_scan():
+def grid_scan(title):
   #with h5py.File("../v8.1/v8p1_PFNv1_QCDskim.hdf5","r") as f:
   #  bkg_data = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_1.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_PFNv3_QCDskim3_1.hdf5","r") as f:
     bkg_data1 = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_2.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_PFNv3_QCDskim3_2.hdf5","r") as f:
     bkg_data2 = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_3.hdf5","r") as f:
-    bkg_data3 = f.get('data')[:]
+  #with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_3.hdf5","r") as f:
+  #  bkg_data3 = f.get('data')[:]
 
-  #bkg_data = np.concatenate((bkg_data1,bkg_data2))
-  bkg_data = np.concatenate((bkg_data1,bkg_data2, bkg_data3))
+  bkg_data = np.concatenate((bkg_data1,bkg_data2))
+  #bkg_data = np.concatenate((bkg_data1,bkg_data2, bkg_data3))
 
   variables = [f_name for (f_name,f_type) in bkg_data.dtype.descr]
   bkg_loss = bkg_data["score"]
   bkg_weights = np.reshape(bkg_data["weight"],len(bkg_data["weight"]))
   print("bkg events", len(bkg_loss))
-  bkg20 = np.percentile(bkg_loss, 80)
   
   sic_values = {}
   
-  dsids = range(515507,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
+  dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
     print()
     try:
-      with h5py.File("../v8.1/v1_hdf5/v8p1_PFN_"+str(dsid)+".hdf5","r") as f:
+      with h5py.File("../v8.1/v8p1_PFNv3_"+str(dsid)+".hdf5","r") as f:
         sig1_data = f.get('data')[:]
       sig1_loss = sig1_data["score"]
       bkg_idx = get_weighted_elements_h5(bkg_weights,len(sig1_loss))
@@ -213,60 +201,112 @@ def grid_scan():
   
   print("bkg events: ", len(bkg_loss))
   
-  do_grid_plots(sic_values)
+  do_grid_plots(sic_values, title)
 
-def grid_s_sqrt_b(bkg_percent):
-  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_1.hdf5","r") as f:
-    bkg_data1 = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_2.hdf5","r") as f:
-    bkg_data2 = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_3.hdf5","r") as f:
-    bkg_data3 = f.get('data')[:]
-
-  print(type(bkg_data1))  
-  #bkg_data = np.concatenate((bkg_data1,bkg_data2))
-  bkg_data = np.concatenate((bkg_data1,bkg_data2,bkg_data3))
+def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, cms=False):
+  with h5py.File("../v8.1/"+bkg_file,"r") as f:
+    bkg_data = f.get('data')[:]
   
-  bkg_loss = bkg_data["score"]
-  score_cut = np.percentile(bkg_loss,100.0-bkg_percent)
-  print(score_cut)
-  selection0 = (bkg_data["rT"] <= 0.25) & (bkg_data["rT"] > 0.15) & (bkg_data["dphi_min"] < 0.8) & (bkg_data["deta_12"] < 1.5)
-  bkg_mT = bkg_data["mT_jj"][selection0]
-  bkg_weight = bkg_data["weight"][selection0]
-  #bkg_mT = bkg_data["mT_jj"][bkg_loss>score_cut]
-  #bkg_weight = bkg_data["weight"][bkg_loss>score_cut]
-  bkg_weight = 100*bkg_weight
+  ## CMS selections
+  if cms:
+    selection0 = (bkg_data["rT"] > 0.25) & (bkg_data["dphi_min"] < 0.8) & (bkg_data["deltaY_12"] < 1.5)
+    bkg_mT = bkg_data["mT_jj"][selection0]
+    bkg_weight = bkg_data["weight"][selection0]
+    bkg_weight = bkg_scale*bkg_weight
 
-  bins=np.linspace(1500,6500,5)
-  y0,_,_ =plt.hist(bkg_mT, bins=bins, density=False, histtype='step', weights=bkg_weight)
-  y0_total = np.sum(y0)
+  ## ML selection
+  else:
+    bkg_loss = bkg_data["score"]
+    bkg_mT = bkg_data["mT_jj"][bkg_loss>score_cut]
+    bkg_weight = bkg_data["weight"][bkg_loss>score_cut]
+    bkg_weight = bkg_scale*bkg_weight
 
+  y0_total = np.sum(bkg_weight)
   sb_values = {}
   
-  dsids = range(515495,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
+  with open("dsid_masses.json", "r") as f:
+    dsid_mass = json.load(f)
+  dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
     try:
-      with h5py.File("../v8.1/v8p1_PFNv2_"+str(dsid)+".hdf5","r") as f:
+      with h5py.File("../v8.1/"+sig_file_prefix+str(dsid)+".hdf5","r") as f:
         sig1_data = f.get('data')[:]
-      sig1_loss = sig1_data["score"]
-      selection1 = (sig1_data["rT"] <= 0.25) & (sig1_data["rT"] > 0.15) & (sig1_data["dphi_min"] < 0.8) & (sig1_data["deta_12"] < 1.5)
-      sig1_mT = sig1_data["mT_jj"][selection1]
-      sig1_weight = sig1_data["weight"][selection1]
-      #sig1_mT = sig1_data["mT_jj"][sig1_loss>score_cut]
-      #sig1_weight = sig1_data["weight"][sig1_loss>score_cut]
-      y,_,_ =plt.hist(sig1_mT, bins=bins, density=False, histtype='step', weights=sig1_weight)
-      y_total = np.sum(y)
 
-      sb_values[dsid] = {"s_sqrtb_Inclusive": my_metric(y_total,y0_total), "s_sqrtb_Max": max(my_metric(y,y0))}
+      ## CMS selections
+      if cms:
+        selection1 = (sig1_data["rT"] > 0.25) & (sig1_data["dphi_min"] < 0.8) & (sig1_data["deltaY_12"] < 1.5)
+        sig1_mT = sig1_data["mT_jj"][selection1]
+        sig1_weight = sig1_data["weight"][selection1]
+
+      ## ML selection
+      else:
+        sig1_loss = sig1_data["score"]
+        sig1_weight = sig1_data["weight"][sig1_loss>score_cut]
+        sig1_mT = sig1_data["mT_jj"][sig1_loss>score_cut]
+
+      y_total = np.sum(sig1_weight) #inclusive total
+
+      sig1_mass_window = (sig1_mT < 6500) & (sig1_mT > 1500)
+      bkg_mass_window = (bkg_mT < 6500) & (bkg_mT > 1500)
+      sig1_restricted_mT = sig1_mT[sig1_mass_window]
+      bkg_restricted_mT = bkg_mT[bkg_mass_window]
+      sig1_restricted_weight = sig1_weight[sig1_mass_window]
+      bkg_restricted_weight = bkg_weight[bkg_mass_window]
+
+      sig1_mass = dsid_mass[str(dsid)]
+      sig_perc_below = np.sum(sig1_restricted_weight[sig1_restricted_mT<sig1_mass])/np.sum(sig1_restricted_weight)
+      if sig_perc_below > 0.6: 
+        sig1_mT_low_cut = weighted_percentile(sig1_restricted_mT[sig1_restricted_mT<sig1_mass], sig1_restricted_weight[sig1_restricted_mT<sig1_mass],sig_perc_below-0.6)
+        print("mass window: ", sig1_mT_low_cut, " - ", sig1_mass)
+        sig1_mT_window = (sig1_restricted_mT>sig1_mT_low_cut) & (sig1_restricted_mT<sig1_mass)
+        bkg_mT_window = (bkg_restricted_mT>sig1_mT_low_cut) & (bkg_restricted_mT<sig1_mass)
+        y_mT = np.sum(sig1_restricted_weight[sig1_mT_window])
+        y0_mT = np.sum(bkg_restricted_weight[bkg_mT_window])
+        sb_values[dsid] = {"sensitivity_Inclusive": my_metric(y_total,y0_total), "sensitivity_mT": my_metric(y_mT,y0_mT)}
+      else:
+        print("Cannot evaluate masspoint", sig1_mass)
+        sb_values[dsid] = {"sensitivity_Inclusive": my_metric(y_total,y0_total), "sensitivity_mT": 0}
+
     except Exception as e:
       print(e)
+      sb_values[dsid] = {"sensitivity_Inclusive": 0, "sensitivity_mT": 0}
 
-  do_grid_plots(sb_values)
+  do_grid_plots(sb_values,title)
+  return sb_values
+
+def compare_s_sqrt_b():
+  v2Inclusive = grid_s_sqrt_b(0.99, "v8p1_PFNv2_QCDskim1.hdf5", 50, "v8p1_PFNv2_", "PFN_NoPresel", False)
+  v3MET = grid_s_sqrt_b(0.92, "v8p1_PFNv3_QCDskim3.hdf5", 5, "v8p1_PFNv3_", "PFN_METPresel", False)
+  cms = grid_s_sqrt_b(0, "v8p1_CMS_QCDskim1.hdf5", 50, "v8p1_CMSskim1_", "CMS", cms=True)
+  v2_compare = {}
+  v3_compare = {}
+  for dsid in v2Inclusive.keys():
+    v2incl = v2Inclusive[dsid]["sensitivity_Inclusive"]
+    v3incl = v3MET[dsid]["sensitivity_Inclusive"]
+    cmsincl = cms[dsid]["sensitivity_Inclusive"]
+    v2mT = v2Inclusive[dsid]["sensitivity_mT"]
+    v3mT = v3MET[dsid]["sensitivity_mT"]
+    cmsmT = cms[dsid]["sensitivity_mT"]
+    if (cmsmT != 0):
+      v2_compare[dsid] = {"sensitivity_Inclusive": v2incl/cmsincl, "sensitivity_mT": v2mT/cmsmT, "mT_over_Incl": v2mT/v2incl}
+      if (v3incl != 0):
+        v3_compare[dsid] = {"sensitivity_Inclusive": v3incl/cmsincl, "sensitivity_mT": v3mT/cmsmT, "mT_over_Incl": v3mT/v3incl}
+      else:
+        v3_compare[dsid] = {"sensitivity_Inclusive": v3incl/cmsincl, "sensitivity_mT": v3mT/cmsmT, "mT_over_Incl": 0}
+    else:
+      v2_compare[dsid] = {"sensitivity_Inclusive": v2incl/cmsincl, "sensitivity_mT": 0, "mT_over_Incl": v2mT/v2incl}
+      if (v3incl != 0):
+        v3_compare[dsid] = {"sensitivity_Inclusive": v3incl/cmsincl, "sensitivity_mT": 0, "mT_over_Incl": v3mT/v3incl}
+      else:
+        v3_compare[dsid] = {"sensitivity_Inclusive": v3incl/cmsincl, "sensitivity_mT": 0, "mT_over_Incl": 0}
+  do_grid_plots(v2_compare, "v2_compare")  
+  do_grid_plots(v3_compare, "v3_compare")  
 
 def main():
   #mT_shape_compare()
-  #grid_scan()
-  #grid_s_sqrt_b(1)
+  #grid_scan("METPresel")
+  #compare_s_sqrt_b()
+  #grid_s_sqrt_b(0.99)
   cms_mT_plots()
   #score_cut_mT_plot()
 
