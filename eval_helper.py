@@ -39,6 +39,8 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array, e
     
     bkg_nz = bkg_nz0 & bkg_nz1
     # select events which have both valid leading and subleading jet tracks
+    
+     
     bkg_pt0 = bkg_in0[bkg_nz] 
     bkg_pt1 = bkg_in1[bkg_nz]
     bjet_sel = jet_bkg[bkg_nz]
@@ -70,7 +72,6 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array, e
     #x = bkg
     #sig = sig
 
-    print('*'*15,bkg.shape)
     #x = x_2D.reshape(bkg.shape[0],x_2D.shape[1]*4)
     #sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
     #plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
@@ -163,11 +164,9 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
     x[:,:,0] = (x_raw[:,:,0].T/x_totals[:,0]).T  #divide each pT entry by event pT total
     x[:,:,3] = (x_raw[:,:,3].T/x_totals[:,3]).T  #divide each E entry by event E total
     
-    cprint(f"{x.shape=},{x=}", 'red')
-    cprint(f"{x_totals=}", 'yellow')
+    cprint(f"{x.shape=}", 'red')
     #jet_phi_avs = np.zeros(x.shape[0])
-#    print('*'*30)
-    print(f'{jet.shape=}, {jet=}')
+    print(f'{jet.shape=}')
 #    print('x_raw', x_raw.shape, x_raw)
 #    print('jet_idx',  jet_idx)
     for e in range(x.shape[0]):
@@ -255,9 +254,23 @@ def get_single_loss(model_svj, x_test, y_test):
         if i%100 == 0: print("Processed", i, "events")
 
     return bkg_loss, sig_loss
+def equal_length(bkg_loss, sig_loss):
+#  np.random.seed(7)
+#  bkg_loss=np.random.shuffle(bkg_loss)
+#  sig_loss=np.random.shuffle(sig_loss)
+  if (len(bkg_loss) > len(sig_loss)): # necessary when computing AUC score
+    bkg_loss = bkg_loss[:len(sig_loss)]
+#    mT_bkg=mT_bkg[:len(sig_loss)] # added
+  else:
+    sig_loss = sig_loss[:len(bkg_loss)]
+#    mT_sig=mT_sig[:len(sig_loss)] # added
+  return bkg_loss,sig_loss
+
 
 def transform_loss(bkg_loss, sig_loss, make_plot=False, tag_file="", tag_title="", plot_dir=''):
-    nevents = len(sig_loss)
+    bkg_loss,sig_loss=equal_length(bkg_loss,sig_loss)
+    nevents = len(sig_loss) 
+    
     truth_sig = np.ones(nevents)
     truth_bkg = np.zeros(nevents)
     truth_labels = np.concatenate((truth_bkg, truth_sig))

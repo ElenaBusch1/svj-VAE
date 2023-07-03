@@ -63,6 +63,9 @@ class Param:
     else:self.weight_tag='nws'
     self.tag= f'{self.pfn_model}_2jAvg_MM_{self.weight_tag}'
 
+    self.auc=0
+
+
   def save_info(self):
     text=f'{vars(param1)}' # print all attributes of the class as dictionary
     print(text)
@@ -71,6 +74,20 @@ class Param:
       f.write(text)
      
     return f'saved info in {self.print_dir}\n {text}'
+
+  def open_print(self):
+    print('printing in\n', self.print_dir)
+    stdoutOrigin=sys.stdout
+    sys.stdout = open(self.print_dir+f'stdout.txt', 'w')
+    return stdoutOrigin
+
+  def close_print(self, stdoutOrigin):
+    sys.stdout.close()
+    sys.stdout =stdoutOrigin
+
+  def scan(self, var):
+    
+    return self.var
    
   def train(self):
     
@@ -98,6 +115,9 @@ class Param:
     # Plot inputs after the jet rotation
     plot_vectors(bkg,sig,tag_file=self.tag+"_NSYR", tag_title=self.weight_tag+"_NSYR", plot_dir=self.plot_dir)
 
+    bkg_events_num=bkg.shape[0]
+    sig_events_num=sig.shape[0]
+    print(bkg.shape,bkg_events_num, sig.shape,sig_events_num)
     # Create truth target
     input_data = np.concatenate((bkg,sig),axis=0)
 
@@ -165,19 +185,46 @@ class Param:
     n_test = min(len(sig_score),len(bkg_score))
     bkg_score = bkg_score[:n_test]
     sig_score = sig_score[:n_test]
-    do_roc(bkg_score, sig_score, tag_file=self.tag, tag_title=self.tag, make_transformed_plot=False,  plot_dir=self.plot_dir)
-     
-    return self.all_dir
+    auc=do_roc(bkg_score, sig_score, tag_file=self.tag, tag_title=self.tag, make_transformed_plot=False,  plot_dir=self.plot_dir)
+    print(self.all_dir)
+    return self.all_dir, auc, bkg_events_num,sig_events_num
 
-for latent_dim in [4]:
-  n_events=50000
+"""
+sig_events=915000
+bkg_events=665000
+"""
+sig_events=5000
+bkg_events=5000
+
+for latent_dim in [4,2,8]:
+#for latent_dim in [2,8,4]:
+  param1=Param( latent_dim=latent_dim, bkg_events=bkg_events, sig_events=sig_events)
+  stdoutOrigin=param1.open_print()
+  all_dir, auc,bkg_events_num,sig_events_num=param1.train()
+  setattr(param1, 'auc',auc )
+  setattr(param1, 'sig_events_num',sig_events_num )
+  setattr(param1, 'bkg_events_num',bkg_events_num )
+  print(param1.close_print(stdoutOrigin)) 
+  print(param1.save_info()) 
+"""
+for latent_dim in [2,8,4]:
+  n_events=500000
   param1=Param( latent_dim=latent_dim, bkg_events=n_events, sig_events=n_events)
-  print(param1.bkg_events, param1.phi_dim)  
   print(param1.save_info()) 
   print(param1.train())
-
+"""
   
-
+for nlayer in [75,40, 150]:
+  param1=Param( nlayer=nlayer, bkg_events=bkg_events, sig_events=sig_events)
+  stdoutOrigin=param1.open_print()
+  all_dir, auc,bkg_events_num,sig_events_num=param1.train()
+  setattr(param1, 'auc',auc )
+  setattr(param1, 'sig_events_num',sig_events_num )
+  setattr(param1, 'bkg_events_num',bkg_events_num )
+  print(param1.close_print(stdoutOrigin)) 
+  print(param1.save_info()) 
+ 
+  sys.exit()
 #original
 #element_size = 4 # change here
 
