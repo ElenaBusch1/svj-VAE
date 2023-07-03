@@ -11,6 +11,9 @@ tag = "pfn_zeros160"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 plot_dir = "/nevis/milne/files/gpm2117/WWW/SVJ/autoencoder/"
 
+def my_metric(s,b):
+    return np.sqrt(2*((s+b)*np.log(1+s/b)-s))
+
 def detect_outliers(x):
   z = np.abs(stats.zscore(x))
   print(max(z))
@@ -78,18 +81,62 @@ def make_roc(fpr,tpr,auc,model=""):
   plt.clf()
   print("Saved ROC curve for model", model)
 
-def make_sic(fpr,tpr,auc, model=""):
+def make_sic(fpr,tpr,auc,bkg, model=""):
   y = tpr[1:]/np.sqrt(fpr[1:])
+  good = (y != np.inf) & (tpr[1:] > 0.08)
+  ymax = max(y[good])
+  ymax_i = np.argmax(y[good])
+  sigEff = tpr[1:][good][ymax_i]
+  qcdEff = fpr[1:][good][ymax_i]
+  score_cut = np.percentile(bkg,100-(qcdEff*100))
+  print("Max improvement: ", ymax)
+  print("Sig eff: ", sigEff)
+  print("Bkg eff: ", qcdEff)
+  print("Score selection: ", score_cut)
   plt.plot(tpr[1:],y,label="AUC = %0.2f" % auc)
   plt.axhline(y=1, color='0.8', linestyle='--')
   plt.xlabel("Signal Efficiency (TPR)")
   plt.ylabel("Signal Sensitivity ($TPR/\sqrt{FPR}$)")
   plt.title("Significance Improvement Characteristic: "+model )
   plt.legend()
-  plt.savefig(plot_dir+'sic_'+model+'_'+tag+'.png')
+  #plt.savefig(plot_dir+'sic_'+model+'_'+tag+'.png')
   plt.clf()
   print("Saved SIC for", model)
+  return {'sicMax':ymax, 'sigEff': sigEff, 'qcdEff': qcdEff, 'score_cut': score_cut}
 
+def make_grid_plot(values,title,method):
+  #values must be 4 X 10
+
+  fig,ax = plt.subplots(1,1)
+  if (method.find("compare") != -1): img = ax.imshow(values, cmap='PiYG',norm=colors.LogNorm(vmin=0.1,vmax=10))
+  else:
+    if (title == "qcdEff"): img = ax.imshow(values,norm=colors.LogNorm(vmin=1e-7,vmax=1e-1))
+    elif (title == "sigEff"): img = ax.imshow(values,vmin=-0.1,vmax=0.7)
+    elif (title == "sensitivity_Inclusive" or title == "sensitivity_mT"): img = ax.imshow(values, norm=colors.LogNorm(vmin=1e-5,vmax=1.5))
+    elif (title == "auc"): img = ax.imshow(values, vmin=0.7, vmax=1)
+    elif (title == "sicMax"): img = ax.imshow(values, vmin=-2, vmax=20)
+    else: img = ax.imshow(values)
+
+  # add text to table
+  for (j,i),label in np.ndenumerate(values):
+    if label == 0.0: continue
+    if title == "qcdEff" or title == "sensitivity_Inclusive" or title == "sensitivity_mT": ax.text(i,j,'{0:.1e}'.format(label),ha='center', va='center', fontsize = 'x-small')
+    elif title == "score_cut": ax.text(i,j,'{0:.3f}'.format(label),ha='center', va='center', fontsize = 'x-small')
+    else: ax.text(i,j,'{0:.2f}'.format(label),ha='center', va='center', fontsize = 'x-small')
+
+  # x-y labels for grid 
+  x_label_list = ['1.0', '1.25', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '5.0', '6.0']
+  y_label_list = ['0.2', '0.4', '0.6', '0.8']
+  ax.set_xticks([0,1,2,3,4,5,6,7,8,9])
+  ax.set_xticklabels(x_label_list)
+  ax.set_xlabel('Z\' Mass [TeV]')
+  ax.set_yticks([0,1,2,3])
+  ax.set_yticklabels(y_label_list)
+  ax.set_ylabel('$R_{inv}$')
+  
+  ax.set_title(method+"; "+title)
+  plt.savefig(plot_dir+'table_'+method+'_'+title+'_'+tag+'.png')
+  print("Saved grid plot for", title)
 
 def make_single_roc(rocs,aucs,ylabel):
   plt.plot(rocs[0],rocs[1],label=str(np.round(r,4))+", $\sigma$="+str(sigs)+": AUC="+str(np.round(aucs,3)))
@@ -164,15 +211,60 @@ def plot_inputs(bkg, sig, variable_array):
       plt.savefig(plot_dir+'input_vars_'+str(i)+tag+'.png')
       plt.clf()
 
-def plot_single_variable(hists, h_names, title, logy=False):
-  for data,name, in zip(hists,h_names):
-    plt.hist(data, bins=50, alpha=0.5, label=name)
-  plt.legend()
+def plot_single_variable(hists, weights, h_names, title, logy=False):
+  nbins=50
+  hists_flat=np.concatenate(hists)
+  bin_min=np.min(hists_flat)
+  bin_max=np.max(hists_flat)
+  bins=np.linspace(bin_min,bin_max,nbins)
+  if(title=="mT_jj"): bins=np.linspace(500,6500, 80)
+  for data,weight,name in zip(hists,weights,h_names):
+    plt.hist(data, bins=bins, histtype='step', label=name, density=True, weights=weight)
+  plt.legend(loc='lower center', fontsize='x-small')
   if (logy): plt.yscale("log")
   plt.title(title)
-  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
+  plt.savefig(plot_dir+'histlin_'+title.replace(" ","")+'_'+tag+'.png')
   plt.clf()
   print("Saved plot",title)
+
+def plot_ratio(hists, weights, h_names, title, logy=False):
+  colors = ['black', 'darkblue', 'deepskyblue', 'firebrick', 'orange']
+
+  f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
+  nbins=20
+  hists_flat=np.concatenate(hists)
+  #bin_min=np.min(hists_flat)
+  #bin_max=np.max(hists_flat)
+  #gap=(bin_max-bin_min)*0.05
+  bins=np.linspace(1500,6500,50)
+  x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
+  hists=list(hists)
+  nTot = len(hists[0])
+  for data,weight,name,i in zip(hists,weights,h_names, range(len(hists))):
+    y,_, _=axs[0].hist(data, bins=bins, label=f'{name}', density=False, histtype='step', weights=weight, color=colors[i])
+    #print(i, len(bins), len(y), bins, y) 
+    #if i ==len(hists)-1:
+    if i ==0:
+      y0=y # make sure the first of hists list has the most number of events
+      continue
+    axs[1].scatter(x_bins,my_metric(y,y0), marker="+", color=colors[i], label=f'{max(my_metric(y,y0)):.1E}')
+    #axs[1].scatter(x_bins,zero_div(y,y0))
+
+  #axs[1].set_ylim(0.5,3.0)  
+  axs[1].set_ylabel('Fig of Merit')
+  axs[1].set_yscale('log')
+  #axs[1].legend(loc='upper right', fontsize='x-small')
+  plt.tick_params(axis='y', which='minor') 
+  plt.grid()
+ 
+  axs[0].set_ylabel('Event Number')
+  if (logy): axs[0].set_yscale("log")
+  axs[0].legend(loc='upper right', fontsize='x-small')
+  #axs[1].legend(loc='upper right')
+  axs[0].set_title(title)
+  plt.savefig(plot_dir+'ratio_'+title.replace(" ","")+'_'+tag+'.png')
+  plt.clf()
+  print("Saved rato plot",title)
 
 def get_nTracks(x):
   n_tracks = []

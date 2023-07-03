@@ -9,7 +9,7 @@ def get_weighted_elements(tree, nEvents):
     weight_array=["weight"]
     my_weight_array = tree.arrays(weight_array, library = "np")
     my_weight_array = my_weight_array[weight_array[0]]
-    np.random.seed(0)
+    np.random.seed(1)
     idx = np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
     return idx
 
@@ -20,10 +20,11 @@ def read_flat_vars(infile, nEvents, variable_array, use_weight=True):
     
     # Read flat branches from nTuple
     my_array = tree.arrays(variable_array, library="np")
+    if (nEvents == -1): nEvents = len(my_array[variable_array[0]])
     if (use_weight):
         idx = get_weighted_elements(tree, nEvents)
     else:
-        idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
+          idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
 
     #print('Flat variable index:', idx.shape, idx)
     selected_array = np.array([val[idx] for _,val in my_array.items()]).T
@@ -41,6 +42,7 @@ def read_vectors(infile, nEvents, jet_array, use_weight=True):
 
     # Read vector branches from nTuple
     my_jet_array = tree.arrays(jet_array, library = "np")
+    if (nEvents == -1): nEvents = len(my_jet_array[jet_array[0]])
     if (use_weight):
         idx = get_weighted_elements(tree, nEvents)
     else:

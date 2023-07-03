@@ -11,6 +11,7 @@ from plot_helper import *
 from models import *
 from models_archive import *
 from eval_helper import *
+import h5py
 
 ## ---------- USER PARAMETERS ----------
 ## Model options:
@@ -43,36 +44,38 @@ ae.compile(optimizer=keras.optimizers.Adam())
 print ("Loaded model")
 
 ## Load testing data
-#x_events = 95000
-#y_events = 35000
-x_events = 50000
-y_events = 18000
-bkg2, sig2 = getTwoJetSystem(x_events, y_events)
-scaler = load(arch_dir+pfn_model+'_scaler.bin')
-bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
-sig2,_ = apply_StandardScaling(sig2,scaler,False)
-plot_vectors(bkg2,sig2,"ANTELOPE")
+x_events = -1 ## -1 for all events
+dsids = [515487, 515488, 515489, 515490, 515491, 515492, 515493, 515494, 515504, 515507, 515508, 515509, 515510, 515511, 515514, 515515, 515516, 515518, 515520, 515521, 515522, 515523, 515525, 515526]
+for dsid in dsids:
+  my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
+  bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim.user.ebusch."+str(dsid)+".mc20e.root", my_variables)
+  scaler = load(arch_dir+pfn_model+'_scaler.bin')
+  bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
+  
+  phi_bkg = graph.predict(bkg2)
+  
+  ## Scale phis - values from v1 training
+  eval_min = 0.0
+  eval_max = 167.20311
+  phi_bkg = (phi_bkg - eval_min)/(eval_max-eval_min)
+  
+  pred_phi_bkg = ae.predict(phi_bkg)['reconstruction']
+  
+  # ## AE loss
+  bkg_loss = np.array(keras.losses.mse(phi_bkg, pred_phi_bkg))
+  
+  my_variables.insert(0,"score")
+  print(my_variables)
+  save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+  #print(save_bkg)
+  ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
+  rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
+  
+  with h5py.File("v8p1_"+str(dsid)+".hdf5","w") as h5f:
+    dset = h5f.create_dataset("data",data=rec_bkg)
+  print("Saved hdf5 for ", dsid)
 
-phi_bkg = graph.predict(bkg2)
-phi_sig = graph.predict(sig2)
-
-## Scale phis - for now by hand
-eval_min = 0.0
-#eval_max = 29.119692 
-eval_max = 167.20311
-phi_bkg = (phi_bkg - eval_min)/(eval_max-eval_min)
-phi_sig = (phi_sig - eval_min)/(eval_max-eval_min)
-
-pred_phi_bkg = ae.predict(phi_bkg)['reconstruction']
-pred_phi_sig = ae.predict(phi_sig)['reconstruction']
-
-# ## Classifier loss
-# bkg_loss = pred_phi_bkg[:,1]
-# sig_loss = pred_phi_sig[:,1]
-
-# ## AE loss
-bkg_loss = keras.losses.mse(phi_bkg, pred_phi_bkg)
-sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
+quit()
 
 ##  #--- Grid test
 ##  scores = np.zeros((10,4))
@@ -106,16 +109,28 @@ sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
 ##      plot_saved_loss(h, ae_model, "reco_loss")
 # 2. Anomaly score
 #plot_score(bkg_loss, sig_loss, False, False, ae_model)
-bkg_loss = np.log(bkg_loss)
-sig_loss = np.log(sig_loss)
-#plot_score(bkg_loss, sig_loss, False, False, ae_model+'logx')
+#bkg_loss = np.log(bkg_loss)
+#sig_loss = np.log(sig_loss)
+#plot_score(bkg_loss, sig_loss, False, True, ae_model)
+bkg20 = np.percentile(bkg_loss, 80)
+bkg10 = np.percentile(bkg_loss, 90)
+bkg05 = np.percentile(bkg_loss, 95)
+bkg01 = np.percentile(bkg_loss, 99)
 
-#print(mT)
-#print(bkg_loss > -11)
-#mT_in = mT[bkg_loss > -11]
-#print(mT_in)
-#plot_score(mT, mT_in, False, False, "mTSel")
-#quit()
+print("Cuts: ", bkg20, bkg10, bkg05,bkg01)
+
+mT_jj20 = mT_bkg[bkg_loss > bkg20]
+mT_jj10 = mT_bkg[bkg_loss > bkg10]
+mT_jj05 = mT_bkg[bkg_loss > bkg05]
+mT_jj01 = mT_bkg[bkg_loss > bkg01]
+print(len(mT_jj20), len(mT_jj10), len(mT_jj05), len(mT_jj01))
+plot_single_variable([mT_bkg, mT_jj20,mT_jj10,mT_jj05,mT_jj01], ["100% QCD", "20% QCD", "10% QCD", "5% QCD", "1% QCD"], "mT Shape Check", logy=True) 
+
+if (len(bkg_loss) > len(sig_loss)):
+   bkg_loss = bkg_loss[:len(sig_loss)]
+else:
+   sig_loss = sig_loss[:len(bkg_loss)]
+#do_roc(bkg_loss, sig_loss, ae_model, False)
 
 #transform_loss_ex(bkg_loss, sig_loss, True)
 ##  #plot_score(bkg_loss, sig_loss, False, True, ae_model+"_xlog")
@@ -126,17 +141,9 @@ sig_loss = np.log(sig_loss)
 ##  score = getSignalSensitivityScore(bkg_loss, sig_loss)
 ##  print("95 percentile score = ",score)
 # 4. ROCs/AUCs using sklearn functions imported above  
-if (len(bkg_loss) > len(sig_loss)):
-   bkg_loss = bkg_loss[:len(sig_loss)]
-else:
-   sig_loss = sig_loss[:len(bkg_loss)]
 
 #bkg_loss, sig_loss = vrnn_transform(bkg_loss, sig_loss, True)
 
-do_roc(bkg_loss, sig_loss, ae_model, True)
-if ae_model.find('VAE') > -1:
-    do_roc(bkg_reco_loss, sig_reco_loss, ae_model+'_Reco', True)
-    do_roc(bkg_kl_loss, sig_kl_loss, ae_model+'_KLD', True)
 ## 5. Plot Phi's
 ## plot_phi(phi_bkg, 'QCD', pfn_model)
 

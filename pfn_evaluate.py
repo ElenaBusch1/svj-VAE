@@ -11,11 +11,12 @@ from plot_helper import *
 from models import *
 from models_archive import *
 from eval_helper import *
+import h5py
 
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-pfn_model = 'PFNv1'
+pfn_model = 'PFNv3'
 arch_dir = "architectures_saved/"
 
 ## ---------- Load graph model ----------
@@ -37,76 +38,102 @@ classifier.compile()
 print ("Loaded model")
 
 ## Load testing data
-x_events = 5000
-y_events = 5000
-bkg2, sig2, mT_bkg, mT_sig = getTwoJetSystem(x_events,y_events, ["mT_jj"])
+x_events = -1 ## -1 for all events
+my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
+
+## evaluate bkg
+bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim3.user.ebusch.QCDskim.root", my_variables, False, True)
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
-bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
-sig2,_ = apply_StandardScaling(sig2,scaler,False)
-#plot_vectors(bkg2,sig2,"PFN")
-
+bkg2,_ = apply_StandardScaling(bkg2,scaler,False) 
 phi_bkg = graph.predict(bkg2)
-phi_sig = graph.predict(sig2)
-
 pred_phi_bkg = classifier.predict(phi_bkg)
-pred_phi_sig = classifier.predict(phi_sig)
-
-## Classifier loss
+# ## Classifier loss
 bkg_loss = pred_phi_bkg[:,1]
-sig_loss = pred_phi_sig[:,1]
+my_variables.insert(0,"score")
+print(my_variables)
+save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+#print(save_bkg)
+ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
+rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
+with h5py.File("v8p1_PFNv3_QCDskim3.hdf5","w") as h5f:
+  dset = h5f.create_dataset("data",data=rec_bkg)
+print("Saved hdf5 for QCDskim")
 
-if (len(bkg_loss) > len(sig_loss)):
-   bkg_loss = bkg_loss[:len(sig_loss)]
-else:
-   sig_loss = sig_loss[:len(bkg_loss)]
-do_roc(bkg_loss, sig_loss, pfn_model, True)
+
+## evaluate signals
+dsids = range(515486,515527)
+for dsid in dsids:
+  my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
+  try:
+    bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim3.user.ebusch."+str(dsid)+".root", my_variables, False, False)
+  except:
+    continue
+  scaler = load(arch_dir+pfn_model+'_scaler.bin')
+  bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
+  
+  phi_bkg = graph.predict(bkg2)
+   
+  pred_phi_bkg = classifier.predict(phi_bkg)
+  
+  # ## Classifier loss
+  bkg_loss = pred_phi_bkg[:,1]
+  
+  my_variables.insert(0,"score")
+  print(my_variables)
+  save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+  #print(save_bkg)
+  ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
+  rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
+  
+  with h5py.File("v8p1_PFNv3_"+str(dsid)+".hdf5","w") as h5f:
+    dset = h5f.create_dataset("data",data=rec_bkg)
+  print("Saved hdf5 for ", dsid)
 
 
-##  #--- Grid test
-##  scores = np.zeros((10,4))
-##  aucs = np.zeros((10,4))
-##  j = -1
-##  for i in range(487,527):
-##    k = i%4-3
-##    if k == 0: j+=1
-##    if i in [488,511,514,517,520,522]:continue
-##    sig_raw = read_vectors("../v6.4/user.ebusch.515"+str(i)+".root", nevents)
-##    sig = apply_EventScaling(sig_raw)
-##    phi_sig = graph.predict(sig)
-##    pred_phi_sig = ae.predict(phi_sig)['reconstruction']
-##    sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
+####### - VERSION FOR PARALLEL EVAL ON SMALL QCD FILES - ########
+
+##  ## Load testing data
+##  x_events = -1 ## -1 for all events
+##  bkg_arrays = []
+##  with open("test.txt", "r") as f:
+##    files = []
+##    for line in f:
+##      line = line.strip()
+##      files.append(line)
+##  i=0
+##  for bkg_file in files:
+##    print(bkg_file)
+##    my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
+##    
+##    ## evaluate bkg
+##    bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim1/"+bkg_file, my_variables, False)
+##    scaler = load(arch_dir+pfn_model+'_scaler.bin')
+##    bkg2,_ = apply_StandardScaling(bkg2,scaler,False) 
+##    phi_bkg = graph.predict(bkg2)
+##    pred_phi_bkg = classifier.predict(phi_bkg)
+##    # ## Classifier loss
+##    bkg_loss = pred_phi_bkg[:,1]
+##    my_variables.insert(0,"score")
+##    all_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+##    save_bkg = all_bkg[all_bkg[:,0]>0.95]
+##    bkg_arrays.append(save_bkg)
+##    print("Mini bkg: ", save_bkg.shape)
+##    print()
+##    if (i % 10 == 0 and i != 0):
+##      tmp_bkg = np.concatenate(bkg_arrays[i-10:i],axis=0)
+##      ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
+##      rec_tmp_bkg = np.rec.array(tmp_bkg, dtype=ds_dt)
+##      with h5py.File("v8p1_"+pfn_model+"_skim1_tmp"+str(i)+".hdf5","w") as h5f:
+##        dset = h5f.create_dataset("data",data=rec_tmp_bkg)
+##      print("Saved hdf5 for tmp"+str(i))
+##    i+=1
 ##  
-##    score = getSignalSensitivityScore(bkg_loss, sig_loss)
-##    #print("95 percentile score = ",score)
-##    auc = do_roc(bkg_loss, sig_loss, ae_model, False)
-##    print(auc,score)
-##    scores[j,k] = score
-##    aucs[j,k] = auc
-##  
-##  print(scores)
-##  print(aucs)
+##  total_bkg = np.concatenate(bkg_arrays,axis=0)
+##  print("Total bkg: ", total_bkg.shape)
+##  #print(save_bkg)
+##  ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
+##  rec_bkg = np.rec.array(total_bkg, dtype=ds_dt)
+##  with h5py.File("v8p1_"+pfn_model+"_skim1.hdf5","w") as h5f:
+##    dset = h5f.create_dataset("data",data=rec_bkg)
+##  print("Saved hdf5 for skim1")
 
-##  #--- Eval plots 
-##  # 1. Loss vs. epoch 
-##  plot_saved_loss(h, ae_model, "loss")
-##  if model.find('VAE') > -1:
-##      plot_saved_loss(h, ae_model, "kl_loss")
-##      plot_saved_loss(h, ae_model, "reco_loss")
-# 2. Anomaly score
-#plot_score(bkg_loss, sig_loss, False, False, ae_model)
-
-#print(mT)
-#print(bkg_loss > -11)
-#mT_in = mT[bkg_loss > -11]
-#print(mT_in)
-#plot_score(mT, mT_in, False, False, "mTSel")
-#quit()
-
-#transform_loss_ex(bkg_loss, sig_loss, True)
-##  #plot_score(bkg_loss, sig_loss, False, True, ae_model+"_xlog")
-##  if ae_model.find('VAE') > -1:
-##      plot_score(bkg_kl_loss, sig_kl_loss, remove_outliers=False, xlog=True, extra_tag=model+"_KLD")
-##      plot_score(bkg_reco_loss, sig_reco_loss, False, False, model_name+'_Reco')
-##  # 3. Signal Sensitivity Score
-##  score = getSignalSensitivityScore(bkg_loss, sig_loss)
-##  print("95 percentile score = ",score)
