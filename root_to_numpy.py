@@ -4,6 +4,7 @@ import awkward as ak
 
 import os
 from termcolor import cprint
+import sys
 variable_array = ["jet1_pt", "met_met", "dphi_min", "pt_balance_12", "mT_jj", "rT", "dR_12", "deltaY_12", "deta_12", "hT", "maxphi_minphi", "n_r04_jets"]
 #jet_array = ["all_jets_pt", "all_jets_eta", "all_jets_phi", "all_jets_E"]
 ## Track array
@@ -67,8 +68,24 @@ def read_hlvs(infile, nEvents, variable_array, bool_weight=False): # different f
       length=len(my_array[variable_array[0]])
       idx=list(range(length))
 
-    cprint(f'given events{nEvents}, selecting events {len(idx)}','green')
     selected_array = np.array([val[idx] for _,val in my_array.items()]).T
+#    """ 
+    cprint(f'{bool_weight=}', 'magenta')
+    cprint(f'{len(idx)=}{idx=}', 'magenta') 
+    cprint(f'{idx[0]=}', 'magenta') 
+    a=idx[0]
+    cprint(f'{my_array["jet1_eta"]=}', 'blue') 
+    cprint(f'{selected_array=}', 'blue')
+    cprint(f'{my_array["jet1_eta"][a]=}', 'magenta') # my_array[var][nth event]= val # a single value instead of an array of [0th track, 1st track, ...] 
+    cprint(f'{selected_array[a,0]=}', 'magenta') # selected_array[nth event, nth var]= val # a single value instead of an array of [0th track, 1st track, ...] 
+    cprint(f'{my_array["jet1_phi"][a]=}', 'blue') 
+    cprint(f'{selected_array[a,1]=}', 'blue')
+    #cprint(f'{selected_array[a,2]=}', 'blue')
+    
+    cprint(f'{my_array["jet1_eta"].shape=}', 'yellow') 
+    cprint(f'{selected_array.shape=}', 'yellow') 
+#    """ 
+    cprint(f'given events{nEvents}, selecting events {len(idx)}','green')
 	#print("My array:")
 	#print(selected_array)
 	#print(type(selected_array))
@@ -100,11 +117,18 @@ def read_hlvs(infile, nEvents, variable_array, bool_weight=False): # different f
     length=2 # b/c eta and phi
     padded_array=selected_array.reshape(selected_array.shape[0],size, length).transpose(0,2,1)
     pad_width =((0,0),(0, max_jets-size), (0,0))
-    padded_array=np.pad(padded_array,pad_width=pad_width, constant_values= 0)
+    padded_array=np.pad(padded_array,pad_width=pad_width, constant_values= 0) # (nth event, nth jet, nth var)
 #    print('!'*50)
-#    print(f'{infile}\n{padded_array.shape}\n{padded_array}')
+#    """ 
+    cprint(f'{padded_array[a,:,0]=}', 'blue') # should all be the same 
+    cprint(f'{padded_array[a,:,1]=}', 'blue') # should all be the same
+    #cprint(f'{padded_array[a,:,1]=}', 'blue') # should all be the same
+    print(f'{padded_array.shape=}\n{padded_array=}')
+ #   """ 
+    #sys.exit() 
     #return selected_array
 
+    
     ##############
 
     return padded_array
@@ -174,11 +198,28 @@ def read_vectors(infile, nEvents,jet_array, bool_weight=True,bool_select_all=Fal
      
 #      idx=list(range(len(my_jet_array))) # this is wrong and gives an error gives (7,15, 7) instead of something like (631735, 15, 7) 
 
-
+    
     selected_jet_array = np.array([val[idx] for _,val in my_jet_array.items()]).T
     j=idx[0] # REMOVE this line
     k=j+1
-   
+    cprint(f'{bool_weight=}', 'magenta')
+    cprint(f'{len(idx)=}{idx=}', 'magenta') 
+    a=idx[0]
+    """
+    try:  
+      cprint(f'{my_jet_array["jet0_GhostTrack_pt"][a]=}', 'magenta') # my_jet_array[var][nth event]=[ 0th track, 1st track, ...] 
+      cprint(f'{selected_jet_array[a,0]=}', 'magenta') # selected_jet_array[nth event, nth var]=[0th track, 1st track, ...] 
+      cprint(f'{my_jet_array["jet0_GhostTrack_eta"][a]=}', 'blue') 
+      cprint(f'{selected_jet_array[a,1]=}', 'blue') 
+      cprint(f'{my_jet_array["jet0_GhostTrack_pt"].shape=}', 'yellow') 
+    except:
+      cprint(f'{my_jet_array["jet1_GhostTrack_pt"][a]=}', 'magenta') # my_jet_array[var][nth event]=[ 0th track, 1st track, ...] 
+      cprint(f'{selected_jet_array[a,0]=}', 'magenta') # selected_jet_array[nth event, nth var]=[0th track, 1st track, ...] 
+      cprint(f'{my_jet_array["jet1_GhostTrack_eta"][a]=}', 'blue') 
+      cprint(f'{selected_jet_array[a,1]=}', 'blue')
+      cprint(f'{my_jet_array["jet1_GhostTrack_pt"].shape=}', 'yellow') 
+    cprint(f'{selected_jet_array.shape=}', 'yellow')
+    """ 
     """
     print(f'my_jet_array[jet_array[0]], {my_jet_array[jet_array[0]]}') #dict  {'jet_GhostTrack_pt_0': array([array([ 1.0182312,...
     print(j)
@@ -197,7 +238,11 @@ def read_vectors(infile, nEvents,jet_array, bool_weight=True,bool_select_all=Fal
         zeros[:jet_ar.shape[0], :jet_ar.shape[1]] = jet_ar
 
 #    print('-'*50)
-#    print(f'{infile}\n{padded_jet_array.shape}\n{padded_jet_array}')
+    """ 
+    cprint(f'{padded_jet_array[a,:,0]=}', 'blue')
+    cprint(f'{padded_jet_array[a,:,1]=}', 'blue')
+    print(f'{padded_jet_array.shape=}\n{padded_jet_array=}')
+    """ 
     return padded_jet_array
 
 def read_vectors_MET(infile, nEvents, flatten=True):
@@ -218,7 +263,7 @@ def read_vectors_MET(infile, nEvents, flatten=True):
     selected_jet_array = np.array([val[idx] for _,val in my_jet_array.items()]).T
 
     # create jet matrix
-    padded_jet_array = np.zeros((len(selected_jet_array),max_jets+1,4))
+    padded_jet_array = np.zeros((len(selected_jet_array),max_jets+1,4)) # (nth event, nth track, nth var)
     for jets,zeros,met in zip(selected_jet_array,padded_jet_array,selected_met_array):
         jet_ar = np.stack(jets, axis=1)[:max_jets,:]
         zeros[0,0] = met[0] #pt energy

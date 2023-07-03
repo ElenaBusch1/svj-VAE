@@ -19,10 +19,14 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array, e
     cprint(f'reading {input_file}','red')
     read_dir='/nevis/katya01/data/users/ebusch/SVJ/autoencoder/v8.1/'
     input_file=read_dir+input_file
-    
+   
+    print('bkg_in0') 
     bkg_in0 = read_vectors(input_file, nevents, track_array0, bool_weight=bool_weight)
+    print('bkg_in1') 
     bkg_in1 = read_vectors(input_file, nevents, track_array1, bool_weight=bool_weight)
-    jet_bkg = read_hlvs(input_file, nevents, jet_array, bool_weight=bool_weight)  # select with weight??
+    print('jet_bkg') 
+    jet_bkg = read_flat_vars(input_file, nevents, jet_array, bool_weight=bool_weight)  # select with weight??
+    #jet_bkg = read_hlvs(input_file, nevents, jet_array, bool_weight=bool_weight)  # select with weight??
 
     if getExtraVars: 
       vars_bkg = read_flat_vars(input_file, nevents, extraVars, bool_weight=bool_weight)
@@ -34,15 +38,17 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array, e
     _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
     
     bkg_nz = bkg_nz0 & bkg_nz1
-
     # select events which have both valid leading and subleading jet tracks
-    bkg_pt0 = bkg_in0[bkg_nz]
+    bkg_pt0 = bkg_in0[bkg_nz] 
     bkg_pt1 = bkg_in1[bkg_nz]
     bjet_sel = jet_bkg[bkg_nz]
+    cprint(f"{bkg_pt0.shape=}", 'red')
+    cprint(f"{bkg_pt1.shape=}", 'blue')
     if getExtraVars:
       vars_bkg = vars_bkg[bkg_nz]    
 
     bkg_sel = np.concatenate((bkg_pt0,bkg_pt1),axis=1)
+    cprint(f"{bkg_sel.shape=}", 'blue')
     
 #    print('bkg_sel0, bkg_sel1',bkg_sel.shape, bkg_sel1.shape)
 # ADDED 5/22/23 
@@ -147,35 +153,57 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
     
     x = np.copy(x_raw) #copy
     x_totals = x_raw.sum(axis=1) #get sum total pt, eta, phi, E for each event
-    cprint(x_raw,'yellow')
-    cprint(x_totals[:,0], 'blue')
+    """
+    cprint(f'{x_raw}=','yellow')
+    cprint(f'{x_totals[:,0]}=', 'blue')
+    """
+    print(f'{x_raw.shape}=')
+
 
     x[:,:,0] = (x_raw[:,:,0].T/x_totals[:,0]).T  #divide each pT entry by event pT total
     x[:,:,3] = (x_raw[:,:,3].T/x_totals[:,3]).T  #divide each E entry by event E total
     
+    cprint(f"{x.shape=},{x=}", 'red')
+    cprint(f"{x_totals=}", 'yellow')
     #jet_phi_avs = np.zeros(x.shape[0])
 #    print('*'*30)
-    print('jet shape for apply_JetScalingRotation',jet.shape, jet)
+    print(f'{jet.shape=}, {jet=}')
 #    print('x_raw', x_raw.shape, x_raw)
 #    print('jet_idx',  jet_idx)
     for e in range(x.shape[0]):
+        """
         jet_eta_av = (jet[e,0,0] + jet[e,1,0])/2.0 
         jet_phi_av = (jet[e,0,1] + jet[e,1,1])/2.0 
+        cprint(f"{jet_eta_av=}", 'blue')
+        cprint(f"{jet_phi_av=}", 'red')
+        """
+    
 #        print('jet_eta_av',jet[e,0,0],jet[e,1,0], jet_eta_av)
 # change
-#        jet_eta_av = (jet[e,0] + jet[e,1])/2.0 
-#        jet_phi_av = (jet[e,2] + jet[e,3])/2.0 
+        jet_eta_av = (jet[e,0] + jet[e,2])/2.0 
+        #jet_eta_av = (jet[e,0] + jet[e,1])/2.0 
+        #jet_phi_av = (jet[e,2] + jet[e,3])/2.0 
+        jet_phi_av = (jet[e,1] + jet[e,3])/2.0 
 
         #jet_phi_avs[e] = jet_phi_av
         for t in range(x.shape[1]):
             if not x[e,t,:].any():
-                #print(x[e,t,:])
+                #cprint(f'{x[e,t,:]=}', 'magenta')
                 continue
             #if not jet[e,jet_idx,:].any():
             #    x[e,t,:] = 0
             else:
                 x[e,t,1] = x_raw[e,t,1] - jet_eta_av # subtrack subleading jet eta from each track
                 x[e,t,2] = get_dPhi(x_raw[e,t,2],jet_phi_av) # subtrack subleading jet phi from each track
+                """
+                cprint(f'{x_raw[e,t,1]=}', 'yellow')
+                cprint(f'{jet_eta_av=}', 'blue')
+                cprint(f'{x[e,t,1]=}', 'red')
+                cprint(f'{x_raw[e,t,2]=}', 'yellow')
+                cprint(f'{jet_phi_av=}', 'blue')
+                cprint(f'{get_dPhi(x_raw[e,t,2],jet_phi_av)=}', 'magenta')
+                cprint(f'{x[e,t,2]=}', 'red')
+                """
                 #x[e,t,1] = x_raw[e,t,1] - jet[e,jet_idx,0] # subtrack subleading jet eta from each track
                 #x[e,t,2] = get_dPhi(x_raw[e,t,2],jet[e,jet_idx,1]) # subtrack subleading jet phi from each track
     #plt.hist(jet_phi_avs)

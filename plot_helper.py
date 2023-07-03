@@ -281,8 +281,10 @@ def plot_vectors_jet(train,sig,jet_array, tag_file="", tag_title="", bool_jet=Fa
   n=2
   for i in range(size):
     #train_v= train[:,i,0]
-    train_v= train[:,i%n,i//n]
-    sig_v= sig[:,i%n,i//n]
+    train_v=train[:, i]
+    #train_v= train[:,i%n,i//n]
+    sig_v= sig[:,i]
+    #sig_v= sig[:,i%n,i//n]
     bins=np.histogram(np.hstack((train_v,sig_v)),bins=60)[1] 
     plt.hist(train_v, alpha=0.5, label=f"bkg ({len(train_v)})", bins=bins, density=False)
     plt.hist(sig_v, alpha=0.5, label=f"sig ({len(sig_v)})", bins=bins, density=False)
