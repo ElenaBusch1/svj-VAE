@@ -17,7 +17,7 @@ import time
 class Param:
   def __init__(self,  arch_dir="architectures_saved/",print_dir='',plot_dir='plots/', 
       pfn_model='PFN', ae_model='PFN', bkg_events=500000, sig_events=500000, 
-      num_elements=100, element_size=7, encoding_dim=32, latent_dim=4, phi_dim=64, nepochs=100, nlayer=75, learning_rate=0.001,  
+      num_elements=100, element_size=7, encoding_dim=32, latent_dim=4, phi_dim=64, nepochs=100, n_neuron=75, learning_rate=0.001, nlayer=3, 
       batchsize_pfn=500,batchsize_ae=32,
       sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim3.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=[]):
       #sig_file="user.ebusch.SIGskim.mc20e.root", bkg_file="user.ebusch.QCDskim.mc20e.root",  bool_weight=True, extraVars=[]):
@@ -47,8 +47,9 @@ class Param:
     self.latent_dim=latent_dim
     self.phi_dim=phi_dim
     self.nepochs=nepochs
-    self.nlayer=nlayer
+    self.n_neuron=n_neuron
     self.learning_rate=learning_rate
+    self.nlayer=nlayer
 
     self.batchsize_pfn=batchsize_pfn
     self.batchsize_ae=batchsize_ae
@@ -134,7 +135,7 @@ class Param:
     print(input_data.shape, truth.shape)
 
     # Load the model
-    pfn,graph_orig = get_full_PFN([self.num_elements,self.element_size], self.phi_dim, self.nlayer, self.learning_rate)
+    pfn,graph_orig = get_full_PFN([self.num_elements,self.element_size], self.phi_dim, self.n_neuron, self.learning_rate, self.nlayer)
     #pfn = get_dnn(160)
 
    # Split the data 
@@ -189,13 +190,13 @@ class Param:
     print(self.all_dir)
     return self.all_dir, auc, bkg_events_num,sig_events_num
 
-"""
 sig_events=915000
 bkg_events=665000
 """
 sig_events=5000
 bkg_events=5000
-
+"""
+"""
 for latent_dim in [4,2,8]:
 #for latent_dim in [2,8,4]:
   param1=Param( latent_dim=latent_dim, bkg_events=bkg_events, sig_events=sig_events)
@@ -207,15 +208,15 @@ for latent_dim in [4,2,8]:
   print(param1.close_print(stdoutOrigin)) 
   print(param1.save_info()) 
 """
+"""
 for latent_dim in [2,8,4]:
   n_events=500000
   param1=Param( latent_dim=latent_dim, bkg_events=n_events, sig_events=n_events)
   print(param1.save_info()) 
   print(param1.train())
-"""
   
-for nlayer in [75,40, 150]:
-  param1=Param( nlayer=nlayer, bkg_events=bkg_events, sig_events=sig_events)
+for n_neuron in [75,40, 150]:
+  param1=Param( n_neuron=n_neuron, bkg_events=bkg_events, sig_events=sig_events)
   stdoutOrigin=param1.open_print()
   all_dir, auc,bkg_events_num,sig_events_num=param1.train()
   setattr(param1, 'auc',auc )
@@ -223,8 +224,69 @@ for nlayer in [75,40, 150]:
   setattr(param1, 'bkg_events_num',bkg_events_num )
   print(param1.close_print(stdoutOrigin)) 
   print(param1.save_info()) 
- 
-  sys.exit()
+
+# tested n_neuron: 07_03_23_11_05 07_03_23_11_35 07_03_23_11_5for phi_dim in [32,64, 128]:
+#for phi_dim in [32, 128]:
+for phi_dim in [ 128]:
+  param1=Param( phi_dim=phi_dim, bkg_events=bkg_events, sig_events=sig_events)
+  stdoutOrigin=param1.open_print()
+  all_dir, auc,bkg_events_num,sig_events_num=param1.train()
+  setattr(param1, 'auc',auc )
+  setattr(param1, 'sig_events_num',sig_events_num )
+  setattr(param1, 'bkg_events_num',bkg_events_num )
+  print(param1.close_print(stdoutOrigin)) 
+  print(param1.save_info())
+for batchsize_pfn in [250, 1000]:
+  param1=Param( batchsize_pfn=batchsize_pfn, bkg_events=bkg_events, sig_events=sig_events)
+  stdoutOrigin=param1.open_print()
+  all_dir, auc,bkg_events_num,sig_events_num=param1.train()
+  setattr(param1, 'auc',auc )
+  setattr(param1, 'sig_events_num',sig_events_num )
+  setattr(param1, 'bkg_events_num',bkg_events_num )
+  print(param1.close_print(stdoutOrigin)) 
+  print(param1.save_info())
+for nepochs in [50, 200]:
+  param1=Param( nepochs=nepochs, bkg_events=bkg_events, sig_events=sig_events)
+  stdoutOrigin=param1.open_print()
+  all_dir, auc,bkg_events_num,sig_events_num=param1.train()
+  setattr(param1, 'auc',auc )
+  setattr(param1, 'sig_events_num',sig_events_num )
+  setattr(param1, 'bkg_events_num',bkg_events_num )
+  print(param1.close_print(stdoutOrigin)) 
+  print(param1.save_info())
+"""
+# half the statistics
+sig_events=90000
+bkg_events=66000
+param1=Param(  bkg_events=bkg_events, sig_events=sig_events)
+stdoutOrigin=param1.open_print()
+all_dir, auc,bkg_events_num,sig_events_num=param1.train()
+setattr(param1, 'auc',auc )
+setattr(param1, 'sig_events_num',sig_events_num )
+setattr(param1, 'bkg_events_num',bkg_events_num )
+print(param1.close_print(stdoutOrigin)) 
+print(param1.save_info())
+sys.exit() 
+for learning_rate in [0.0005,0.002]:
+  param1=Param( learning_rate=learning_rate, bkg_events=bkg_events, sig_events=sig_events)
+  stdoutOrigin=param1.open_print()
+  all_dir, auc,bkg_events_num,sig_events_num=param1.train()
+  setattr(param1, 'auc',auc )
+  setattr(param1, 'sig_events_num',sig_events_num )
+  setattr(param1, 'bkg_events_num',bkg_events_num )
+  print(param1.close_print(stdoutOrigin)) 
+  print(param1.save_info())
+"""
+for nlayer in [6, 12]:
+  param1=Param( nlayer=nlayer, bkg_events=bkg_events, sig_events=sig_events)
+  stdoutOrigin=param1.open_print()
+  all_dir, auc,bkg_events_num,sig_events_num=param1.train()
+  setattr(param1, 'auc',auc )
+  setattr(param1, 'sig_events_num',sig_events_num )
+  setattr(param1, 'bkg_events_num',bkg_events_num )
+  print(param1.close_print(stdoutOrigin)) 
+  print(param1.save_info())
+"""
 #original
 #element_size = 4 # change here
 

@@ -3,6 +3,7 @@ from tensorflow import keras
 from keras import backend as K
 from keras.layers import Dense, Dropout, LeakyReLU
 from sklearn.svm import OneClassSVM
+from termcolor import cprint
 arch_dir = "architectures_saved/"
 
 ## ------------------------------------------------------------------------------------
@@ -146,9 +147,9 @@ def pfn_mask_func(X, mask_val=0):
   return K.cast(K.any(K.not_equal(X, mask_val), axis=-1), K.dtype(X))
 
 ## ------------------------------------------------------------------------------------
-def get_full_PFN(input_dim, phi_dim, nlayer, learning_rate):
-#  nlayer=100 # 50 
-#  nlayer=75# 50 
+def get_full_PFN(input_dim, phi_dim, n_neuron, learning_rate, nlayer):
+#  n_neuron=100 # 50 
+#  n_neuron=75# 50 
 # https://wandb.ai/ayush-thakur/dl-question-bank/reports/Input-Keras-Layer-Explanation-With-Code-Samples--VmlldzoyMDIzMDU
   initializer = keras.initializers.HeUniform() # samples from uniform distribution
   loss = keras.losses.CategoricalCrossentropy() # computes crossentropy loss btwn labels and predictions
@@ -162,16 +163,30 @@ def get_full_PFN(input_dim, phi_dim, nlayer, learning_rate):
   masked = keras.layers.Lambda(pfn_mask_func, name="mask")(pfn_inputs) 
 
   # Phi network
-  dense1 = keras.layers.Dense(nlayer, kernel_initializer=initializer, name="pfn1") # 1st hidden layer: the # of units = 50
+  dense_dict={}
+  
+  """
+  for i in range(nlayer-1): #nlayer should be at least 2
+    
+    dense_dict[i]=keras.layers.Dense(n_neuron, kernel_initializer=initializer, name=f'pfn{i+1}') # 1st hidden layer: the # of units = n_neuron e.g. 50
+    x = keras.layers.TimeDistributed(dense_dict[i], name=f"tdist_{i}")(pfn_inputs)
+    x = keras.layers.Activation('relu')(x)
+    cprint(f"{i=}", 'magenta')
+
+  dense_phi=keras.layers.Dense(phi_dim, kernel_initializer=initializer, name="phi") 
+  x = keras.layers.TimeDistributed(dense_phi, name=f"tdist_{i+1}")(x)
+  phi_outputs = keras.layers.Activation('relu')(x)
+  
+  """
+  dense1 = keras.layers.Dense(n_neuron, kernel_initializer=initializer, name="pfn1") # 1st hidden layer: the # of units = 50
   x = keras.layers.TimeDistributed(dense1, name="tdist_0")(pfn_inputs)
   x = keras.layers.Activation('relu')(x)
-  dense2 = keras.layers.Dense(nlayer, kernel_initializer=initializer, name="pfn2") 
+  dense2 = keras.layers.Dense(n_neuron, kernel_initializer=initializer, name="pfn2") 
   x = keras.layers.TimeDistributed(dense2, name="tdist_1")(x)
   x = keras.layers.Activation('relu')(x)
   dense3 = keras.layers.Dense(phi_dim, kernel_initializer=initializer, name="phi") 
   x = keras.layers.TimeDistributed(dense3, name="tdist_2")(x)
   phi_outputs = keras.layers.Activation('relu')(x)
-
   # latent space
   sum_phi = keras.layers.Dot(1, name="sum")([masked,phi_outputs])
   graph = keras.Model(inputs=pfn_inputs, outputs=sum_phi, name="graph")
@@ -180,11 +195,11 @@ def get_full_PFN(input_dim, phi_dim, nlayer, learning_rate):
   # F network
   classifier_inputs = keras.Input(shape=(phi_dim,))
   x = classifier_inputs
-  x = keras.layers.Dense(nlayer, kernel_initializer=initializer, name = "F1")(classifier_inputs)
+  x = keras.layers.Dense(n_neuron, kernel_initializer=initializer, name = "F1")(classifier_inputs)
   x = keras.layers.Activation('relu')(x)
-  x = keras.layers.Dense(nlayer, kernel_initializer=initializer, name = "F2")(x)
+  x = keras.layers.Dense(n_neuron, kernel_initializer=initializer, name = "F2")(x)
   x = keras.layers.Activation('relu')(x)
-  x = keras.layers.Dense(nlayer, kernel_initializer=initializer, name="F3")(x)
+  x = keras.layers.Dense(n_neuron, kernel_initializer=initializer, name="F3")(x)
   x = keras.layers.Activation('relu')(x)
 
   # output

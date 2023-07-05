@@ -33,8 +33,9 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array, e
 
 
     #plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
-     
+    print('for leading jet') 
     _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
+    print('for subleading jet') 
     _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
     
     bkg_nz = bkg_nz0 & bkg_nz1
@@ -44,11 +45,12 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array, e
     bkg_pt0 = bkg_in0[bkg_nz] 
     bkg_pt1 = bkg_in1[bkg_nz]
     bjet_sel = jet_bkg[bkg_nz]
+    cprint('for both leading and subleading jet')
     cprint(f"{bkg_pt0.shape=}", 'red')
     cprint(f"{bkg_pt1.shape=}", 'blue')
     if getExtraVars:
       vars_bkg = vars_bkg[bkg_nz]    
-
+    sys.exit()
     bkg_sel = np.concatenate((bkg_pt0,bkg_pt1),axis=1)
     cprint(f"{bkg_sel.shape=}", 'blue')
     
@@ -110,11 +112,33 @@ def pt_sort(x):
 
 def apply_TrackSelection(x_raw, jets):
     x = np.copy(x_raw)
+    
     x[x[:,:,0] < 10] = 0
     print("Input track shape: ", x.shape)
     # require at least 3 tracks
+    cprint(f'{x[:,:,0]=}', 'red')
+    cprint(f'{x[:,:,0].shape=}', 'red')
+
+    x_orig=np.copy(x)
     x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 3 for jet in x])
     x = x[x_nz]
+   
+    x_nz_not=np.invert(x_nz) 
+    x_not = x_orig[x_nz_not]
+    
+    cprint(f'passing track selections {x[:,:,0].shape=}', 'red')
+    cprint(f'indices {x_nz=}', 'red')
+    cprint(f' {x[:,:,0]=}', 'red')
+    cprint(f' the first event {x[0,:,0]=}', 'red')
+    for i in range(4):
+      cprint(f'  the ith event{x[i,:,0]=}', 'red')
+    print('*'*50)
+    cprint(f'NOT passing track selections {x_not[:,:,0].shape=}', 'blue')
+    cprint(f'indices {x_nz_not=}', 'blue')
+    cprint(f' {x_not[:,:,0]=}', 'blue')
+    cprint(f'  the first event{x_not[0,:,0]=}', 'blue')
+    for i in range(4):
+      cprint(f'  the ith event{x_not[i,:,0]=}', 'blue')
     jets = jets[x_nz]
     print("Track selections")
     print("Selected track shape: ", x.shape)
