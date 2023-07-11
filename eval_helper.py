@@ -11,7 +11,7 @@ from plot_helper import *
 from models import *
 from termcolor import cprint
 #def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_file,bkg_file="user.ebusch.QCDskim.mc20e.root",extraVars=[], plot_dir=''):
-def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array, extraVars=[], bool_weight=True):
+def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,seed, plot_dir,extraVars=[], bool_weight=True):
     
     getExtraVars = len(extraVars) > 0
 
@@ -20,37 +20,94 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array, e
     read_dir='/nevis/katya01/data/users/ebusch/SVJ/autoencoder/v8.1/'
     input_file=read_dir+input_file
    
+#    if not os.path.exists(path):
     print('bkg_in0') 
-    bkg_in0 = read_vectors(input_file, nevents, track_array0, bool_weight=bool_weight)
+    bkg_in0 = read_vectors(input_file, nevents, track_array0,seed=seed, bool_weight=bool_weight)
     print('bkg_in1') 
-    bkg_in1 = read_vectors(input_file, nevents, track_array1, bool_weight=bool_weight)
+    bkg_in1 = read_vectors(input_file, nevents, track_array1, seed=seed,bool_weight=bool_weight)
     print('jet_bkg') 
-    jet_bkg = read_flat_vars(input_file, nevents, jet_array, bool_weight=bool_weight)  # select with weight??
+    jet_bkg = read_flat_vars(input_file, nevents, jet_array,seed=seed, bool_weight=bool_weight)  # select with weight??
     #jet_bkg = read_hlvs(input_file, nevents, jet_array, bool_weight=bool_weight)  # select with weight??
 
     if getExtraVars: 
-      vars_bkg = read_flat_vars(input_file, nevents, extraVars, bool_weight=bool_weight)
+      vars_bkg = read_flat_vars(input_file, nevents, extraVars,seed=seed, bool_weight=bool_weight)
 
-
+    #bkg_in0, x0, bkg_in1, x1
     #plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
     print('for leading jet') 
-    _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
-    print('for subleading jet') 
-    _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
+    tag0="jet1"
+    tag1="jet2"
+    tag3="jet12"
+    tag2=input_file.split('.')[-2]
+       
     
-    bkg_nz = bkg_nz0 & bkg_nz1
+    x_0_0, _, bkg_nz0_0,x_pt_0_0 = apply_TrackSelection(bkg_in0, jet_bkg, ntrack=0)
+    x_1_0, _, bkg_nz1_0,x_pt_1_0 = apply_TrackSelection(bkg_in1, jet_bkg, ntrack=0)
+    bkg_nz_0 = bkg_nz0_0 & bkg_nz1_0 
+    
+    
+    x_0_1, _, bkg_nz0_1,x_pt_0_1  = apply_TrackSelection(bkg_in0, jet_bkg, ntrack=1)
+    x_1_1, _, bkg_nz1_1,x_pt_1_1 = apply_TrackSelection(bkg_in1, jet_bkg, ntrack=1)
+    bkg_nz_1 = bkg_nz0_1 & bkg_nz1_1 
+
+    x_0_2, _, bkg_nz0_2,x_pt_0_2 = apply_TrackSelection(bkg_in0, jet_bkg, ntrack=2)
+    x_1_2, _, bkg_nz1_2,x_pt_1_2  = apply_TrackSelection(bkg_in1, jet_bkg, ntrack=2)
+    bkg_nz_2 = bkg_nz0_2 & bkg_nz1_2 
+    """
+
+    """
     # select events which have both valid leading and subleading jet tracks
+    #with pt requirement and track selection
+    x_0, _, bkg_nz0,x_pt_0 = apply_TrackSelection(bkg_in0, jet_bkg)
+    x_1, _, bkg_nz1, x_pt_1 = apply_TrackSelection(bkg_in1, jet_bkg)
+    bkg_nz = bkg_nz0 & bkg_nz1
+    cprint(f'{x_0.shape=}, {x_1.shape=}, {x_pt_0.shape=}, {x_pt_1.shape=},{bkg_nz.shape=}, {bkg_nz0.shape=}, {bkg_nz1.shape=}')
+    bkg_pt0 = x_pt_0[bkg_nz]  # with pt and track requirement
+    #bkg_pt0 = bkg_in0[bkg_nz]  # with pt and track requirement
+
+    """
+    # WHAT ABOUT JETS? PT SELECTION? 
+    hist0=[x_0_0, x_0_0[bkg_nz0_0], x_0_0[bkg_nz0_1],x_0_0[bkg_nz0_2], x_0_0[bkg_nz0]] # leading jet ntrack comparison
+    hist1=[x_1_0, x_1_0[bkg_nz1_0], x_1_0[bkg_nz1_1],x_1_0[bkg_nz1_2], x_1_0[bkg_nz1]] # leading jet ntrack comparison
+    hist2=[x_0_0, x_0_0[bkg_nz_0], x_0_0[bkg_nz_1],x_0_0[bkg_nz_2], bkg_pt0] # leading jet ntrack comparison
+    """
+
+    hist0=[x_pt_0_0, x_pt_0_0[bkg_nz0_0], x_pt_0_0[bkg_nz0_1],x_pt_0_0[bkg_nz0_2], x_pt_0_0[bkg_nz0]] # leading jet ntrack comparison
+    hist1=[x_pt_1_0, x_pt_1_0[bkg_nz1_0], x_pt_1_0[bkg_nz1_1],x_pt_1_0[bkg_nz1_2], x_pt_1_0[bkg_nz1]] # leading jet ntrack comparison
+    hist2=[x_pt_0_0, x_pt_0_0[bkg_nz_0], x_pt_0_0[bkg_nz_1],x_pt_0_0[bkg_nz_2], bkg_pt0] # leading jet ntrack comparison
+
+    plot_ntrack(hist1,  tag_file=tag1+tag2, tag_title=tag1+tag2, plot_dir=plot_dir)
+    plot_ntrack(hist0,  tag_file=tag0+tag2, tag_title=tag0+tag2, plot_dir=plot_dir)
+    plot_ntrack(hist2,  tag_file=tag3+tag2, tag_title=tag3+tag2, plot_dir=plot_dir)
+
+
+    """
+    # with no pt requirement but with track selection
+    _, _, bkg_nz0_b = apply_TrackSelection(bkg_in0, jet_bkg, bool_pt=False)
+    _, _, bkg_nz1_b = apply_TrackSelection(bkg_in1, jet_bkg, bool_pt=False)
+    bkg_nz_b = bkg_nz0_b & bkg_nz1_b 
+    bkg_pt0_b = bkg_in0[bkg_nz_b]  # with pt and track requirement
     
-     
-    bkg_pt0 = bkg_in0[bkg_nz] 
-    bkg_pt1 = bkg_in1[bkg_nz]
+    bkg_nz_c = bkg_nz0 & bkg_nz1_b # just the leading jet has pt requirement, both have track selection 
+    bkg_pt0_c = bkg_in0[bkg_nz_c]
+
+    hist=[bkg_in0, bkg_pt0_b,bkg_pt0_c, bkg_pt0] 
+    
+    #plot_ntrack(hist,  tag_file=tag1+'_'+tag2, tag_title=tag1+'_'+tag2, plot_dir=plot_dir)
+    plot_ntrack(hist,  tag_file=tag1+tag2, tag_title=tag1+tag2, plot_dir=plot_dir)
+
+    """
+
+    #bkg_pt1 = bkg_in1[bkg_nz]
+    bkg_pt1 = x_pt_1[bkg_nz]
+
     bjet_sel = jet_bkg[bkg_nz]
     cprint('for both leading and subleading jet')
     cprint(f"{bkg_pt0.shape=}", 'red')
     cprint(f"{bkg_pt1.shape=}", 'blue')
     if getExtraVars:
       vars_bkg = vars_bkg[bkg_nz]    
-    sys.exit()
+#    sys.exit()
     bkg_sel = np.concatenate((bkg_pt0,bkg_pt1),axis=1)
     cprint(f"{bkg_sel.shape=}", 'blue')
     
@@ -78,6 +135,7 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array, e
     #sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
     #plot_vectors(remove_zero_padding(x_2D),remove_zero_padding(sig_2D),"AEscaled")
     #plot_vectors(x,sig,"AEWithZeroRotated")
+
 
     if getExtraVars: return bkg, vars_bkg, bkg_sel, jet_bkg
     else: return bkg, np.array([]), bkg_sel, jet_bkg
@@ -110,22 +168,56 @@ def pt_sort(x):
         x[i] = ev[ev[:,0].argsort()]
     return x
 
-def apply_TrackSelection(x_raw, jets):
+def apply_TrackSelection(x_raw, jets, bool_pt=True, bool_track=True, pt=10, ntrack=3):
     x = np.copy(x_raw)
-    
-    x[x[:,:,0] < 10] = 0
+ 
+    if bool_pt:
+      x[x[:,:,0] < pt] = 0
+      # should this be enforced in jets as well? and return the new jets
+
+    x_pt=x.copy() # KEEP THIS -> IMPT
+    print("important that the order of variables is such that pt is the first for this pt selection to work")
     print("Input track shape: ", x.shape)
     # require at least 3 tracks
     cprint(f'{x[:,:,0]=}', 'red')
     cprint(f'{x[:,:,0].shape=}', 'red')
+    x_test=x.copy()
+    if bool_track:
+#      for ntrack in ntracks:
 
-    x_orig=np.copy(x)
-    x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 3 for jet in x])
-    x = x[x_nz]
+      x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= ntrack for jet in x])
+      x = x[x_nz]
+    else: 
+      x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 0 for jet in x])
+      print(f'{x_nz=}')
+    """
+    first_var=x[:,:,0]
+    nevent=first_var.shape[0]
+    count=np.count_nonzero(first_var, axis = 1)
+
+    first_var1=x_test[:,:,0]
+    nevent1=first_var1.shape[0]
+    count1=np.count_nonzero(first_var1, axis = 1)
+
+    bin_min=0
+    bin_max=np.max(count)
+    print(f'{bin_max=}')
+    bins=np.array(range(bin_min-1,bin_max+2))
+    x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
+
+    label=[f'NJ={int(np.sum(count))}, NE={int(nevent)}', f'NJ={int(np.sum(count1))}, NE={int(nevent1)}']
+    plt.hist([count,count1], bins=x_bins, label=label, histtype='step')
+    plt.title(f'ntrack>={ntrack}')
+    plt.legend()
+     
+    plt.show()
+    """
    
+    
+    """
+
     x_nz_not=np.invert(x_nz) 
     x_not = x_orig[x_nz_not]
-    
     cprint(f'passing track selections {x[:,:,0].shape=}', 'red')
     cprint(f'indices {x_nz=}', 'red')
     cprint(f' {x[:,:,0]=}', 'red')
@@ -139,11 +231,15 @@ def apply_TrackSelection(x_raw, jets):
     cprint(f'  the first event{x_not[0,:,0]=}', 'blue')
     for i in range(4):
       cprint(f'  the ith event{x_not[i,:,0]=}', 'blue')
+    """
+    
     jets = jets[x_nz]
     print("Track selections")
     print("Selected track shape: ", x.shape)
     print("Selected jet shape: ", jets.shape)
-    return x, jets, x_nz
+    
+    
+    return x, jets, x_nz,x_pt
 
 def apply_StandardScaling(x_raw, scaler=MinMaxScaler(), doFit=True):
     x= np.zeros(x_raw.shape)

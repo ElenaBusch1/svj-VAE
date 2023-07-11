@@ -11,19 +11,37 @@ from eval_helper import *
 
 import sys
 import time
+import pandas as pd
 #plot_dir='/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun29/' 
 # Example usage
 #added
+"""import matplotlib.pyplot as plt
+a=[1,1,3]
+bin_min=0
+bin_max=np.max(a)
+print(bin_max)
+bins=np.array(range(bin_min-1,bin_max+2))
+print(bins)
+x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
+print(x_bins)
+
+count=plt.hist(a, bins=x_bins)
+plt.show()
+print(count)
+sys.exit()
+"""
 class Param:
   def __init__(self,  arch_dir="architectures_saved/",print_dir='',plot_dir='plots/', 
       pfn_model='PFN', ae_model='PFN', bkg_events=500000, sig_events=500000, 
       num_elements=100, element_size=7, encoding_dim=32, latent_dim=4, phi_dim=64, nepochs=100, n_neuron=75, learning_rate=0.001, nlayer=3, 
-      batchsize_pfn=500,batchsize_ae=32,
-      sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim3.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=[]):
+      batchsize_pfn=512,batchsize_ae=32, # batchsize_pfn=500 -> 512 or any power of 2
+      sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim3.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=[],seed=0):
       #sig_file="user.ebusch.SIGskim.mc20e.root", bkg_file="user.ebusch.QCDskim.mc20e.root",  bool_weight=True, extraVars=[]):
      
     self.time=time.strftime("%m_%d_%y_%H_%M", time.localtime())
     self.time_dir=time.strftime("%m_%d/", time.localtime())
+#    self.all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/stats/'+self.time+'/' # for statistics
+#    self.all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/test/'+self.time+'/' # for statistics
     self.all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/'+self.time+'/'
 
     self.arch_dir=self.all_dir+arch_dir
@@ -59,6 +77,7 @@ class Param:
 
     self.bool_weight=bool_weight
     self.extraVars=extraVars
+    self.seed=seed
 
     if self.bool_weight:self.weight_tag='ws'
     else:self.weight_tag='nws'
@@ -67,14 +86,22 @@ class Param:
     self.auc=0
 
 
-  def save_info(self):
+  def save_info(self, bool_csv=True): # always saves info.txt -> info.csv is optional
+    if bool_csv: # save in csv
+      info_dict=[self.__dict__]
+      print(info_dict) # print all the attributes as a dictionary
+      print('printing in', self.print_dir)
+      df= pd.DataFrame.from_dict(info_dict)
+      df.to_csv(self.print_dir+f'info.csv', index=False) 
+     # save in textfile
     text=f'{vars(param1)}' # print all attributes of the class as dictionary
     print(text)
     print('printing in', self.print_dir)
     with open(self.print_dir+f'info.txt', 'w') as f: 
       f.write(text)
-     
-    return f'saved info in {self.print_dir}\n {text}'
+#    return f'saved info in {self.print_dir}\n {text}'
+
+    return f'saved info in {self.print_dir}\n {df}'
 
   def open_print(self):
     print('printing in\n', self.print_dir)
@@ -102,12 +129,14 @@ class Param:
 #    bkg, sig, mT_bkg, mT_sig = getTwoJetSystem(self.x_events,self.y_events,tag_file=self.tag+"_NSNR", tag_title=self.weight_tag+"_NSNR", bool_weight=self.bool_weight, sig_file=self.sig_file,bkg_file=self.bkg_file, extraVars=self.extraVars, plot_dir=self.plot_dir)
 
     bool_weight_sig=False
+
+    
     sig, mT_sig, sig_sel, jet_sig = getTwoJetSystem(nevents=self.sig_events,input_file=self.sig_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
-      bool_weight=bool_weight_sig,  extraVars=self.extraVars)
+      bool_weight=bool_weight_sig,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed)
     bkg, mT_bkg, bkg_sel, jet_bkg = getTwoJetSystem(nevents=self.bkg_events,input_file=self.bkg_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
-      bool_weight=self.bool_weight,  extraVars=self.extraVars)
+      bool_weight=self.bool_weight,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed)
 
     print(jet_bkg)
 #    plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=self.tag+"_NSNR", tag_title=self.weight_tag+"_NSNR", plot_dir=self.plot_dir)
@@ -190,9 +219,9 @@ class Param:
     print(self.all_dir)
     return self.all_dir, auc, bkg_events_num,sig_events_num
 
+"""
 sig_events=915000
 bkg_events=665000
-"""
 sig_events=5000
 bkg_events=5000
 """
@@ -256,17 +285,59 @@ for nepochs in [50, 200]:
   print(param1.save_info())
 """
 # half the statistics
-sig_events=90000
-bkg_events=66000
-param1=Param(  bkg_events=bkg_events, sig_events=sig_events)
-stdoutOrigin=param1.open_print()
-all_dir, auc,bkg_events_num,sig_events_num=param1.train()
-setattr(param1, 'auc',auc )
-setattr(param1, 'sig_events_num',sig_events_num )
-setattr(param1, 'bkg_events_num',bkg_events_num )
-print(param1.close_print(stdoutOrigin)) 
-print(param1.save_info())
-sys.exit() 
+sig_events=1151555
+bkg_events=3234186
+
+# read all the files in the directory
+# load all the dictionaries
+# find seed and auc pair
+# get rid of duplicates of seed
+# 
+# make a histogram
+# write into hdf5 for an average with the format compatible with the grid_scan 
+# grid_scan 
+import json
+def read_auc(filedir):
+  dict_ls={}
+  
+  onlydirs = [f for f in os.listdir(filedir) if os.path.isdir(os.path.join(filedir, f))]
+  for subdir in onlydirs:
+    filepath=filedir+'/'+subdir+'/info.csv'
+    print(f'{filepath=}')
+    df_each=pd.read_csv(filepath)
+    print(f'{df_each=}')
+    sys.exit()
+      
+  
+    print("Data type after reconstruction : ", type(dict_ls[filename]))
+  print(dict_ls.keys())
+  return dict_ls
+
+#read_auc('/nevis/katya01/data/users/kpark/svj-vae/results/test')
+#sig_events=900
+#sig_events=90000
+#bkg_events=600
+#bkg_events=66000
+#sig_events=915000
+#bkg_events=665000
+#seeds=np.random.randint(0,300,100)
+#seeds=np.arange(1,100, dtype=int)
+seeds=np.arange(0,100, dtype=int)
+
+for seed in seeds:
+  param1=Param(  bkg_events=bkg_events, sig_events=sig_events,seed=seed)
+#  sys.exit()
+  stdoutOrigin=param1.open_print()
+  all_dir, auc,bkg_events_num,sig_events_num=param1.train()
+  setattr(param1, 'auc',auc )
+  setattr(param1, 'sig_events_num',sig_events_num )
+  setattr(param1, 'bkg_events_num',bkg_events_num )
+  print(param1.close_print(stdoutOrigin)) 
+  print(param1.save_info())
+
+  sys.exit()
+
+ 
 for learning_rate in [0.0005,0.002]:
   param1=Param( learning_rate=learning_rate, bkg_events=bkg_events, sig_events=sig_events)
   stdoutOrigin=param1.open_print()

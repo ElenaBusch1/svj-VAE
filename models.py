@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras
-from keras import backend as K
-from keras.layers import Dense, Dropout, LeakyReLU
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import Dense, Dropout, LeakyReLU
 from sklearn.svm import OneClassSVM
 from termcolor import cprint
 arch_dir = "architectures_saved/"

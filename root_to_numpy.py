@@ -14,11 +14,11 @@ variable_array = ["jet1_pt", "met_met", "dphi_min", "pt_balance_12", "mT_jj", "r
 def get_spaced_elements(arr_len,nElements):
     return np.round(np.linspace(0,arr_len-1, nElements)).astype(int)
 
-def get_weighted_elements(tree, nEvents):
+def get_weighted_elements(tree, nEvents, seed=0):
     weight_array=["weight"]
     my_weight_array = tree.arrays(weight_array, library = "np")
     my_weight_array = my_weight_array[weight_array[0]]
-    np.random.seed(0)
+    np.random.seed(seed)
     idx = np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
     idx = np.sort(idx)
     return idx
@@ -36,7 +36,7 @@ def read_test_variables(infile, nEvents, variables):
         my_dict[key] = my_dict[key][idx]
     return my_dict
 
-def read_hlvs(infile, nEvents, variable_array, bool_weight=False): # different from variable_array on the top of this file
+def read_hlvs(infile, nEvents, variable_array, seed, bool_weight=False): # different from variable_array on the top of this file
     file = uproot.open(infile)
 	
 	
@@ -49,7 +49,7 @@ def read_hlvs(infile, nEvents, variable_array, bool_weight=False): # different f
           
     try:
       if bool_weight:
-        idx=get_weighted_elements(tree, nEvents)
+        idx=get_weighted_elements(tree, nEvents, seed)
 #      print('weighted sampling idx', idx.shape, idx)
 
       else: 
@@ -133,7 +133,7 @@ def read_hlvs(infile, nEvents, variable_array, bool_weight=False): # different f
 
     return padded_array
  
-def read_flat_vars(infile, nEvents, variable_array, bool_weight=True):
+def read_flat_vars(infile, nEvents, variable_array,seed, bool_weight=True):
     file = uproot.open(infile)
     
     tree = file["PostSel"]
@@ -142,7 +142,7 @@ def read_flat_vars(infile, nEvents, variable_array, bool_weight=True):
     my_array = tree.arrays(variable_array, library="np")
     try:
       if (bool_weight):
-          idx = get_weighted_elements(tree, nEvents)
+          idx = get_weighted_elements(tree, nEvents,seed)
       else:
           idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
 
@@ -156,7 +156,7 @@ def read_flat_vars(infile, nEvents, variable_array, bool_weight=True):
 
 #def read_vectors(infile, nEvents, jet_array, bool_weight=True):
 #def read_vectors(infile, nEvents, bool_weight=True, flatten=True):
-def read_vectors(infile, nEvents,jet_array, bool_weight=True,bool_select_all=False):
+def read_vectors(infile, nEvents,jet_array,seed,bool_weight=True,bool_select_all=False):
     file = uproot.open(infile)
     
     #print("File keys: ", file.keys())
@@ -186,7 +186,7 @@ def read_vectors(infile, nEvents,jet_array, bool_weight=True,bool_select_all=Fal
     try:
       if bool_weight:
 
-        idx = get_weighted_elements(tree, nEvents)
+        idx = get_weighted_elements(tree, nEvents,seed)
 
       else: 
 #      print('*'*30)

@@ -12,6 +12,50 @@ from termcolor import cprint
 #plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/sig_elena/jun12_sig/'
 #plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/bkg_elena/jun12_bkg/'
 plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun29/lala/'
+def plot_ntrack(h_ls,  tag_file="", tag_title="", plot_dir=""):
+  #label=['no cuts','ntrack >= 3','pt > 10 GeV in leading jet','pt > 10 GeV in subleading jet']
+  label=['no cuts','ntrack >= 0','ntrack >= 1', 'ntrack >= 2', 'ntrack >= 3']
+  for i,h in enumerate(h_ls):
+  #print(h.history)
+    first_var=h[:,:,0]
+    nevent=first_var.shape[0]
+    count=np.count_nonzero(first_var, axis = 1)
+    print(f'{first_var=}')
+    print(f'{nevent=}')
+    print(f'{label[i]=}')
+    print(f'{count.shape=}')
+    print(f'{count.max()}')
+    print(f'{count.min()}')
+    if i==0:
+      
+      bin_min=0
+      bin_max=np.max(count)
+      print(f'{bin_max=}')
+      bins=np.array(range(bin_min-1,bin_max+2))
+      """
+      bins=np.array(range(bin_min,bin_max))
+      """
+      x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
+      print(f'{x_bins=}')
+#      c, bins=plt.hist(count, label=f'{np.sum(count)}',alpha=.6,log=True) # set the bins for consistency
+#    else:
+    plt.hist(count, label=f'NJ={int(np.sum(count))}, NE={int(nevent)}, {label[i]}',align='right', bins=x_bins,histtype='step',log=True) # use the set bins
+ 
+  plt.title(f' Number of tracks ({tag_title})')
+  plt.xlabel('ntrack')
+  plt.ylabel('count')
+  plt.legend(loc='lower right')
+#  plt.savefig(plot_dir+loss+'VsEpoch_'+model+'_'+tag+'.png')
+  plt.savefig(plot_dir+'/ntrack'+tag_file+'.png')
+  #plt.show()
+  plt.clf()
+  print("Saved ntrack plot for ", tag_file)
+  
+def plot_hist(dict_ls, var='auc'):
+    
+  for key in dict_ls:
+    dict_ls[key][var]
+    
 def detect_outliers(x):
   z = np.abs(stats.zscore(x))
   print(max(z))
