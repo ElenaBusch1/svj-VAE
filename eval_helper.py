@@ -58,7 +58,7 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
     """
     # select events which have both valid leading and subleading jet tracks
     #with pt requirement and track selection
-    x_0, _, bkg_nz0,x_pt_0 = apply_TrackSelection(bkg_in0, jet_bkg)
+    x_0, _, bkg_nz0,x_pt_0 = apply_TrackSelection(bkg_in0, jet_bkg) #x_0 is leading jet 1 indices applied, x_pt_0 only pt selection applied -> so should use x_pt_0 for the compatibility of dimension with bkg_nz
     x_1, _, bkg_nz1, x_pt_1 = apply_TrackSelection(bkg_in1, jet_bkg)
     bkg_nz = bkg_nz0 & bkg_nz1
     cprint(f'{x_0.shape=}, {x_1.shape=}, {x_pt_0.shape=}, {x_pt_1.shape=},{bkg_nz.shape=}, {bkg_nz0.shape=}, {bkg_nz1.shape=}')
@@ -106,7 +106,7 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
     cprint(f"{bkg_pt0.shape=}", 'red')
     cprint(f"{bkg_pt1.shape=}", 'blue')
     if getExtraVars:
-      vars_bkg = vars_bkg[bkg_nz]    
+      vars_bkg = vars_bkg[bkg_nz]   # vars_bkg -> be careful if there's pt for track selection 
 #    sys.exit()
     bkg_sel = np.concatenate((bkg_pt0,bkg_pt1),axis=1)
     cprint(f"{bkg_sel.shape=}", 'blue')

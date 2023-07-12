@@ -34,7 +34,9 @@ class Param:
   def __init__(self,  arch_dir="architectures_saved/",print_dir='',plot_dir='plots/', 
       pfn_model='PFN', ae_model='PFN', bkg_events=500000, sig_events=500000, 
       num_elements=100, element_size=7, encoding_dim=32, latent_dim=4, phi_dim=64, nepochs=100, n_neuron=75, learning_rate=0.001, nlayer=3, 
-      batchsize_pfn=512,batchsize_ae=32, # batchsize_pfn=500 -> 512 or any power of 2
+      #batchsize_pfn=512,
+      batchsize_pfn=500,
+      batchsize_ae=32, # batchsize_pfn=500 -> 512 or any power of 2
       sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim3.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=[],seed=0):
       #sig_file="user.ebusch.SIGskim.mc20e.root", bkg_file="user.ebusch.QCDskim.mc20e.root",  bool_weight=True, extraVars=[]):
      
@@ -117,7 +119,7 @@ class Param:
     
     return self.var
    
-  def train(self):
+  def train(self, dsid=0):
     
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e","jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
     track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e","jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
@@ -216,15 +218,36 @@ class Param:
     bkg_score = bkg_score[:n_test]
     sig_score = sig_score[:n_test]
     auc=do_roc(bkg_score, sig_score, tag_file=self.tag, tag_title=self.tag, make_transformed_plot=False,  plot_dir=self.plot_dir)
+
+    # save hdf5 file
+    extraVars=self.extraVars
+    extraVars.insert(0,"score")
+    print(extraVars, self.extraVars, 'check: the latter should not include score')
+    save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+  #print(save_bkg)
+    ds_dt = np.dtype({'names':extraVars,'formats':[(float)]*len(extraVars)})
+    rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
+ 
+    h5path=self.print_dir+'/'+"v8p1_"+str(dsid)+".hdf5"  
+    with h5py.File(h5path,"w") as h5f:
+      dset = h5f.create_dataset("data",data=rec_bkg)
+    print("Saved hdf5 for ", dsid)
+
+
+    with h5py.File(h5path,"r") as f:
+   #with h5py.File("../v8.1/v8p1_PFNv2_"+str(dsid)+".hdf5","r") as f:
+      sigv2_data = f.get('data')[:]
+    sigv1_loss = sigv1_data["score"]
+    print(sigv1_loss, auc, 'check if these are the same')
     print(self.all_dir)
     return self.all_dir, auc, bkg_events_num,sig_events_num
 
 """
 sig_events=915000
 bkg_events=665000
+"""
 sig_events=5000
 bkg_events=5000
-"""
 """
 for latent_dim in [4,2,8]:
 #for latent_dim in [2,8,4]:
@@ -285,8 +308,10 @@ for nepochs in [50, 200]:
   print(param1.save_info())
 """
 # half the statistics
+"""
 sig_events=1151555
 bkg_events=3234186
+"""
 
 # read all the files in the directory
 # load all the dictionaries
@@ -323,12 +348,15 @@ def read_auc(filedir):
 #seeds=np.random.randint(0,300,100)
 #seeds=np.arange(1,100, dtype=int)
 seeds=np.arange(0,100, dtype=int)
-
+#seed=seeds[0]
+  #sig_file="skim3.user.ebusch.SIGskim.root"
 for seed in seeds:
   param1=Param(  bkg_events=bkg_events, sig_events=sig_events,seed=seed)
+  #setattr(param1, 'sig_file',sig_file ) # change sig_file
+  #setattr(param1, 'bkg_file',bkg_file )
 #  sys.exit()
   stdoutOrigin=param1.open_print()
-  all_dir, auc,bkg_events_num,sig_events_num=param1.train()
+  all_dir, auc,bkg_events_num,sig_events_num=param1.train(dsid=dsid)
   setattr(param1, 'auc',auc )
   setattr(param1, 'sig_events_num',sig_events_num )
   setattr(param1, 'bkg_events_num',bkg_events_num )
@@ -336,7 +364,16 @@ for seed in seeds:
   print(param1.save_info())
 
   sys.exit()
+#title=
+# evaluate on each file
 
+dsids = [515487, 515488, 515489, 515490, 515491, 515492, 515493, 515494, 515504, 515507, 515508, 515509, 515510, 515511, 515514, 515515, 515516, 515518, 515520, 515521, 515522, 515523, 515525, 515526]
+for dsid in dsids:
+  
+  sig_file="skim3.user.ebusch."+str(dsid)+".root"
+  bkg_file="skim3.user.ebusch."+str(dsid)+".root"
+
+#grid_scan(title)
  
 for learning_rate in [0.0005,0.002]:
   param1=Param( learning_rate=learning_rate, bkg_events=bkg_events, sig_events=sig_events)
