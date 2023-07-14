@@ -10,8 +10,9 @@ from sklearn.preprocessing import MinMaxScaler
 from plot_helper import *
 from models import *
 from termcolor import cprint
+import json
 #def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_file,bkg_file="user.ebusch.QCDskim.mc20e.root",extraVars=[], plot_dir=''):
-def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,seed, plot_dir,extraVars=[], bool_weight=True):
+def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,seed,max_track, plot_dir,extraVars=[], bool_weight=True, bool_pt=True):
     
     getExtraVars = len(extraVars) > 0
 
@@ -19,18 +20,26 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
     cprint(f'reading {input_file}','red')
     read_dir='/nevis/katya01/data/users/ebusch/SVJ/autoencoder/v8.1/'
     input_file=read_dir+input_file
-   
+    cprint(nevents, 'red')
 #    if not os.path.exists(path):
     print('bkg_in0') 
-    bkg_in0 = read_vectors(input_file, nevents, track_array0,seed=seed, bool_weight=bool_weight)
+    bkg_in0 = read_vectors(input_file, nevents, track_array0,seed=seed, max_track=max_track,bool_weight=bool_weight)
     print('bkg_in1') 
-    bkg_in1 = read_vectors(input_file, nevents, track_array1, seed=seed,bool_weight=bool_weight)
+    bkg_in1 = read_vectors(input_file, nevents, track_array1, seed=seed,max_track=max_track,bool_weight=bool_weight)
     print('jet_bkg') 
-    jet_bkg = read_flat_vars(input_file, nevents, jet_array,seed=seed, bool_weight=bool_weight)  # select with weight??
+
+
+
+    memoryissue=True
+    if memoryissue: return [],[],[],[], bkg_in0, bkg_in1
+
+
+
+    jet_bkg = read_flat_vars(input_file, nevents, jet_array,seed=seed, bool_weight=bool_weight)  # select with weight??, no need for max_track info
     #jet_bkg = read_hlvs(input_file, nevents, jet_array, bool_weight=bool_weight)  # select with weight??
 
     if getExtraVars: 
-      vars_bkg = read_flat_vars(input_file, nevents, extraVars,seed=seed, bool_weight=bool_weight)
+      vars_bkg = read_flat_vars(input_file, nevents, extraVars,seed=seed, bool_weight=bool_weight) # no need for max_track info
 
     #bkg_in0, x0, bkg_in1, x1
     #plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
@@ -40,36 +49,38 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
     tag3="jet12"
     tag2=input_file.split('.')[-2]
        
+    cprint(jet_bkg, 'yellow') 
+    cprint(f'{jet_bkg.shape=}', 'yellow') 
+    cprint(f'{bkg_in0.shape=}', 'yellow') 
+    cprint(f'{bkg_in1.shape=}', 'yellow') 
+     
+    """
     
-    x_0_0, _, bkg_nz0_0,x_pt_0_0 = apply_TrackSelection(bkg_in0, jet_bkg, ntrack=0)
-    x_1_0, _, bkg_nz1_0,x_pt_1_0 = apply_TrackSelection(bkg_in1, jet_bkg, ntrack=0)
+    x_0_0, _, bkg_nz0_0,x_pt_0_0 = apply_TrackSelection(bkg_in0, jet_bkg, ntrack=0, bool_pt=bool_pt)
+    x_1_0, _, bkg_nz1_0,x_pt_1_0 = apply_TrackSelection(bkg_in1, jet_bkg, ntrack=0, bool_pt=bool_pt)
     bkg_nz_0 = bkg_nz0_0 & bkg_nz1_0 
     
     
-    x_0_1, _, bkg_nz0_1,x_pt_0_1  = apply_TrackSelection(bkg_in0, jet_bkg, ntrack=1)
-    x_1_1, _, bkg_nz1_1,x_pt_1_1 = apply_TrackSelection(bkg_in1, jet_bkg, ntrack=1)
+    x_0_1, _, bkg_nz0_1,x_pt_0_1  = apply_TrackSelection(bkg_in0, jet_bkg, ntrack=1, bool_pt=bool_pt)
+    x_1_1, _, bkg_nz1_1,x_pt_1_1 = apply_TrackSelection(bkg_in1, jet_bkg, ntrack=1, bool_pt=bool_pt)
     bkg_nz_1 = bkg_nz0_1 & bkg_nz1_1 
 
-    x_0_2, _, bkg_nz0_2,x_pt_0_2 = apply_TrackSelection(bkg_in0, jet_bkg, ntrack=2)
-    x_1_2, _, bkg_nz1_2,x_pt_1_2  = apply_TrackSelection(bkg_in1, jet_bkg, ntrack=2)
+    x_0_2, _, bkg_nz0_2,x_pt_0_2 = apply_TrackSelection(bkg_in0, jet_bkg, ntrack=2, bool_pt=bool_pt)
+    x_1_2, _, bkg_nz1_2,x_pt_1_2  = apply_TrackSelection(bkg_in1, jet_bkg, ntrack=2, bool_pt=bool_pt)
     bkg_nz_2 = bkg_nz0_2 & bkg_nz1_2 
     """
 
-    """
     # select events which have both valid leading and subleading jet tracks
     #with pt requirement and track selection
-    x_0, _, bkg_nz0,x_pt_0 = apply_TrackSelection(bkg_in0, jet_bkg) #x_0 is leading jet 1 indices applied, x_pt_0 only pt selection applied -> so should use x_pt_0 for the compatibility of dimension with bkg_nz
-    x_1, _, bkg_nz1, x_pt_1 = apply_TrackSelection(bkg_in1, jet_bkg)
+    x_0, _, bkg_nz0,x_pt_0 = apply_TrackSelection(bkg_in0, jet_bkg, bool_pt=bool_pt) #x_0 is leading jet 1 indices applied, x_pt_0 only pt selection applied -> so should use x_pt_0 for the compatibility of dimension with bkg_nz
+    x_1, _, bkg_nz1, x_pt_1 = apply_TrackSelection(bkg_in1, jet_bkg, bool_pt=bool_pt)
     bkg_nz = bkg_nz0 & bkg_nz1
     cprint(f'{x_0.shape=}, {x_1.shape=}, {x_pt_0.shape=}, {x_pt_1.shape=},{bkg_nz.shape=}, {bkg_nz0.shape=}, {bkg_nz1.shape=}')
     bkg_pt0 = x_pt_0[bkg_nz]  # with pt and track requirement
     #bkg_pt0 = bkg_in0[bkg_nz]  # with pt and track requirement
 
-    """
+   
     # WHAT ABOUT JETS? PT SELECTION? 
-    hist0=[x_0_0, x_0_0[bkg_nz0_0], x_0_0[bkg_nz0_1],x_0_0[bkg_nz0_2], x_0_0[bkg_nz0]] # leading jet ntrack comparison
-    hist1=[x_1_0, x_1_0[bkg_nz1_0], x_1_0[bkg_nz1_1],x_1_0[bkg_nz1_2], x_1_0[bkg_nz1]] # leading jet ntrack comparison
-    hist2=[x_0_0, x_0_0[bkg_nz_0], x_0_0[bkg_nz_1],x_0_0[bkg_nz_2], bkg_pt0] # leading jet ntrack comparison
     """
 
     hist0=[x_pt_0_0, x_pt_0_0[bkg_nz0_0], x_pt_0_0[bkg_nz0_1],x_pt_0_0[bkg_nz0_2], x_pt_0_0[bkg_nz0]] # leading jet ntrack comparison
@@ -80,23 +91,8 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
     plot_ntrack(hist0,  tag_file=tag0+tag2, tag_title=tag0+tag2, plot_dir=plot_dir)
     plot_ntrack(hist2,  tag_file=tag3+tag2, tag_title=tag3+tag2, plot_dir=plot_dir)
 
-
     """
-    # with no pt requirement but with track selection
-    _, _, bkg_nz0_b = apply_TrackSelection(bkg_in0, jet_bkg, bool_pt=False)
-    _, _, bkg_nz1_b = apply_TrackSelection(bkg_in1, jet_bkg, bool_pt=False)
-    bkg_nz_b = bkg_nz0_b & bkg_nz1_b 
-    bkg_pt0_b = bkg_in0[bkg_nz_b]  # with pt and track requirement
-    
-    bkg_nz_c = bkg_nz0 & bkg_nz1_b # just the leading jet has pt requirement, both have track selection 
-    bkg_pt0_c = bkg_in0[bkg_nz_c]
 
-    hist=[bkg_in0, bkg_pt0_b,bkg_pt0_c, bkg_pt0] 
-    
-    #plot_ntrack(hist,  tag_file=tag1+'_'+tag2, tag_title=tag1+'_'+tag2, plot_dir=plot_dir)
-    plot_ntrack(hist,  tag_file=tag1+tag2, tag_title=tag1+tag2, plot_dir=plot_dir)
-
-    """
 
     #bkg_pt1 = bkg_in1[bkg_nz]
     bkg_pt1 = x_pt_1[bkg_nz]
@@ -137,8 +133,9 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
     #plot_vectors(x,sig,"AEWithZeroRotated")
 
 
-    if getExtraVars: return bkg, vars_bkg, bkg_sel, jet_bkg
-    else: return bkg, np.array([]), bkg_sel, jet_bkg
+    if getExtraVars: return bkg, vars_bkg, bkg_sel, jet_bkg, bkg_in0, bkg_in1
+    #if getExtraVars: return bkg, vars_bkg, bkg_sel, jet_bkg
+    else: return bkg, np.array([]), bkg_sel, jet_bkg, bkg_in0, bkg_in1
 
 def get_dPhi(x1,x2):
     dPhi = x1 - x2
@@ -174,13 +171,12 @@ def apply_TrackSelection(x_raw, jets, bool_pt=True, bool_track=True, pt=10, ntra
     if bool_pt:
       x[x[:,:,0] < pt] = 0
       # should this be enforced in jets as well? and return the new jets
-
+    
+    
     x_pt=x.copy() # KEEP THIS -> IMPT
     print("important that the order of variables is such that pt is the first for this pt selection to work")
     print("Input track shape: ", x.shape)
     # require at least 3 tracks
-    cprint(f'{x[:,:,0]=}', 'red')
-    cprint(f'{x[:,:,0].shape=}', 'red')
     x_test=x.copy()
     if bool_track:
 #      for ntrack in ntracks:
@@ -189,7 +185,10 @@ def apply_TrackSelection(x_raw, jets, bool_pt=True, bool_track=True, pt=10, ntra
       x = x[x_nz]
     else: 
       x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 0 for jet in x])
-      print(f'{x_nz=}')
+    print(f'{x_nz=}')
+    print(f'{x_nz.shape=}')
+    print(f'{jets=}')
+    print(f'{jets.shape=}')
     """
     first_var=x[:,:,0]
     nevent=first_var.shape[0]
@@ -419,4 +418,18 @@ def do_roc(bkg_loss, sig_loss, tag_file, tag_title, make_transformed_plot=False,
     make_roc(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
     make_sic(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
     return auc
+
+def do_grid_plots(sic_vals, title, plot_dir=''):
+    with open("dsids_grid_locations.json", "r") as f:
+      dsid_coords = json.load(f)
+    dsids = list(sic_vals.keys())
+    print(f'{dsids=}')
+    vals = list(sic_vals[dsids[0]].keys())
+    print(f'{sic_vals=}')
+    for val in vals:
+        values = np.zeros([4,10])
+        for dsid in dsids:
+            loc = tuple(dsid_coords[str(dsid)])
+            values[loc] = sic_vals[dsid][val]
+        make_grid_plot(values, val, title, plot_dir)
 

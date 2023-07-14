@@ -9,12 +9,13 @@ from sklearn.preprocessing import StandardScaler
 from joblib import dump, load
 from plot_helper import *
 from models import *
-from models_archive import *
+#from models_archive import *
 from eval_helper import *
 import h5py
 import sys
 from termcolor import cprint
 from helper import Label
+from antelope_h5eval import *
 ###########functions
 def extract_tag(filename):
   filename=filename.split(".")
@@ -27,28 +28,9 @@ def extract_tag(filename):
   else: tag=''+filename[2]
   return tag
 
-def read_hdf5(x_events, y_events,sig_file, tag, h5path, bool_rewrite, extraVars_short):
-  cprint(h5path, 'yellow')
-  cprint(extraVars_short, 'yellow')
-  data={}
-  if bool_rewrite or (not(os.path.exists(h5path))):
-    print('will write files b/c the files donot exist or bool_rewrite is set to be True'+ h5path)
-    rec_bkg, rec_sig=call_functions(x_events,y_events, tag, bool_weight=bool_weight, sig_file=sig_file, extraVars=extraVars_short) # here the input extraVars and output are different b/c the out put includes 'score'
-    sys.exit()
-    with h5py.File(h5path, 'w') as f:
-      ar_sig = f.create_dataset("default", data = rec_sig)
-
-  else:print('file exists and not rewrite')
-# read the files anyway even after writing b/c otherwise throws an error that it's not a dataset
-  with h5py.File(h5path, 'r') as f:
-#    data_bkg = f["default"]['mT_jj'][()]
-    for var in extraVars_short+["score"]:
-      ar=f["default"][var]
-      data[var] = ar[:,0]
-  return data
-## ---------- Load graph model ----------
-def call_functions(x_events,y_events, tag, bool_weight, sig_file,extraVars):
-  cprint(extraVars, 'red')
+# ---------- Load graph model ----------
+def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, h5dir,h5path, bool_pt):
+  cprint(f'{extraVars=}', 'red')
   graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
   graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
   graph.compile()
@@ -65,274 +47,118 @@ def call_functions(x_events,y_events, tag, bool_weight, sig_file,extraVars):
 # print(type(h))
 
   print ("Loaded model")
-  plot_dir='lala'
-  print(' edit plot_dir')
-  bkg_file="user.ebusch.QCDskim.mc20e.root"
-  bkg2, mT_bkg, bkg_sel, jet_bkg = getTwoJetSystem(nevents=x_events,input_file=bkg_file,
-      track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
-      bool_weight=bool_weight,  extraVars=extraVars)
-  sig2, mT_sig, sig_sel, jet_sig = getTwoJetSystem(nevents=y_events,input_file=sig_file,
-      track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
-      bool_weight=bool_weight,  extraVars=extraVars)
-
-
   
+
+
+#change here -> file and other changes
+
+  track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e","jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
+  track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e","jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
+  jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"] # order is important in apply_JetScalingRotation
+ 
+  seed=0
+  
+  plot_dir=h5dir+'/plots_dsid/'
+  if not os.path.exists(plot_dir):
+      
+    os.mkdir(plot_dir)
+
+  cprint(f'{extraVars=}', 'magenta')
+  bkg2, mT_bkg, bkg_sel, jet_bkg = getTwoJetSystem(nevents=bkg_events,input_file=bkg_file,
+      track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
+      bool_weight=bool_weight,  extraVars=extraVars, plot_dir=plot_dir,seed=seed, bool_pt=bool_pt)
+
+
   scaler = load(arch_dir+pfn_model+'_scaler.bin')
   bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
-  sig2,_ = apply_StandardScaling(sig2,scaler,False)
+
 # plot_vectors(bkg2,sig2,"PFN")
 
   phi_bkg = graph.predict(bkg2)
-  phi_sig = graph.predict(sig2)
+
 
 # each event has a pfn score 
   pred_phi_bkg = classifier.predict(phi_bkg)
-  pred_phi_sig = classifier.predict(phi_sig)
+
 
 # write on html
 
 
 ## Classifier loss
   bkg_loss = pred_phi_bkg[:,1]
-  sig_loss = pred_phi_sig[:,1]
- 
-  print(extraVars) 
-  cprint('pred_phi_sig','magenta')
-  cprint(pred_phi_sig, 'magenta')
-  cprint('sig_loss', 'blue')
-  cprint(sig_loss, 'blue')
-  cprint('mT_sig', 'yellow')
-  cprint(mT_sig, 'yellow')
-  cprint('pred_phi_sig','magenta')
-  cprint(pred_phi_sig.shape, 'magenta')
-  cprint('sig_loss', 'blue')
-  cprint(sig_loss.shape, 'blue')
-  cprint('mT_sig', 'yellow')
-  cprint(mT_sig.shape, 'yellow')
+  newVars=['score']
+  newVars+=extraVars
   
-  print('extraVars')
-  print(extraVars)
-  print(len(extraVars))
-  print('sig_loss')
-  print(sig_loss[:,None].shape)
-  print(sig_loss[:,None])
-  print(mT_sig)
-  print(mT_sig.shape)
-  print(mT_sig)
-  #"""
-  extraVars.insert(0,"score")
+#  newVars=extraVars.insert(0,"score")
   save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
-  save_sig = np.concatenate((sig_loss[:,None], mT_sig),axis=1)
-  print(save_sig.shape)
-  print(save_sig)
-  ds_dt = np.dtype({'names':extraVars,'formats':[(float)]*len(extraVars)})
+
+
+
+  ds_dt = np.dtype({'names':newVars,'formats':[(float)]*len(newVars)})
   rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
-  rec_sig = np.rec.array(save_sig, dtype=ds_dt)
-  cprint(extraVars,'green') 
-  return rec_bkg, rec_sig
+
+  with h5py.File(h5path,"w") as h5f:
+    dset = h5f.create_dataset("data",data=rec_bkg)
+
+  """
+  with h5py.File(h5path,"r") as f:
+   #with h5py.File("../v8.1/v8p1_PFNv2_"+str(dsid)+".hdf5","r") as f:
+    sigv1_data = f.get('data')[:]
+  sigv1_loss = sigv1_data["score"]
+  print(sigv1_loss)
+  """
+
+  return rec_bkg
+  #return rec_bkg, rec_sig
 
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-#pfn_model = 'PFN'
-pfn_model = 'PFNv1'
-#arch_dir = "/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/"
+title='July12'
+myVars= ["mT_jj", "weight"]# if this is empty
+pfn_model = 'PFN'
 ## Load testing data
-#x_events = 2464544
-x_events = 5
-#y_events = 631735
-#x_events = 50000
-#y_events = 50000
+sig_events = 10000000000
+bkg_events = 10000000000
 bool_weight=True
 if bool_weight:weight_tag='ws'
 else:weight_tag='nws'
-#tag= f'{pfn_model}_2jAvg_MM_{weight_tag}_NE={x_events}'
 #tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
-#my_variables= ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
-#my_variables=["mT_jj"]
 #bool_rewrite=False
 bool_rewrite=True
-h5dir='h5dir/'
-#sig_file="user.ebusch.SIGskim.mc20e.root"
 
+bool_pt=True
 
-#filename_bkg=f'{tag}_'+extract_tag(filename=bkg_file)
-#arch_dir="architectures_saved_old/architectures_saved_jun5/"
-arch_dir="architectures_saved_elena/"
-#arch_dir="architectures_saved/"
-#file_ls=['skim.user.ebusch.515498.mc20e.root']
-#file_ls=['skim.user.ebusch.515495.mc20e.root', 'skim.user.ebusch.515498.mc20e.root', 'skim.user.ebusch.515515.mc20e.root', 'skim.user.ebusch.515518.mc20e.root']
-#file_ls=["user.ebusch.SIGskim.mc20e.root"]
-#file_ls+=["user.ebusch.QCDskim.mc20e.root"]
-file_ls=["user.ebusch.QCDskim.mc20e.root"]
-#enumber_ls=[6809]
-#enumber_ls=[28033,6809, 38352, 15813]
-#enumber_ls=[631735]
-#enumber_ls+=[2464544] 
-enumber_ls=[2464544] 
-data_dict={}
+dir_all='/nevis/katya01/data/users/kpark/svj-vae/results/07_12_23_08_47/' # change
+h5dir=dir_all+'h5dir/'
+if not os.path.exists(h5dir):
+  os.mkdir(h5dir)
+arch_dir=dir_all+'architectures_saved/'
+dsids=list(range(515487,515527))
+corrupt_files=[515508, 515511,515493]
+dsids=[x for x in dsids if x not in corrupt_files ]
+file_ls=[]
+for dsid in dsids:
+  file_ls.append("skim3.user.ebusch."+str(dsid)+".root")
+
 filetag_ls=[extract_tag(filename=fl) for fl in file_ls]
-for fl, enumber,filetag in zip(file_ls,enumber_ls,filetag_ls):
 
-  my_variables= ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
-  tag= f'{pfn_model}_2jAvg_MM_{weight_tag}_xNE={x_events}_yNE={enumber}'
+for fl in file_ls:
+  dsid=fl.split('.')[-2]
+  print('*'*30)
+  print(fl) 
+  h5path=h5dir+'/'+"v8p1_"+str(dsid)+".hdf5" 
+  cprint(f'{dsid=}, {h5path=}', 'green')
+ # my_variables= ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
+  tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
   cprint(fl,'blue')
-  cprint(my_variables, 'blue')
-  filename=f'{tag}_'+filetag
-#  if ('QCD' in fl) or ('SIG' in fl):h5path=h5dir+'/bkg_elena/'+'PFN_2jAvg_MM_ws_xNE=2464544_yNE=631735_bkg.h5'
-  #if 'QCD' in fl:h5path=h5dir+'/bkg/'+filename+'.h5'
-  if ('QCD' in fl):h5path=h5dir+'/bkg_elena/'+filename+'.h5'
-  else:h5path=h5dir+'/sig_elena/'+filename+'.h5'
-  cprint(filetag, 'magenta')
    
-  #if 'QCD' in fl:  
-   # data_dict[filetag]=read_hdf5(x_events=enumber,y_events= enumber,sig_file=fl, tag=tag,h5path= h5path, bool_rewrite=bool_rewrite, extraVars_short=my_variables, bool_sig=True)
-  #else:
-  data_dict[filetag]=read_hdf5(x_events=x_events,y_events= enumber,sig_file=fl, tag=tag,h5path= h5path, bool_rewrite=bool_rewrite, extraVars_short=my_variables)
-  cprint(f"{fl} {enumber} {filetag} {h5path} {len(data_dict[filetag]['mT_jj'])}", 'magenta')
-  print(filetag)
-#  data_bkg=f["default"][()]
-#  data_sig=f["default"][()]
-####################################
+  cprint(f'{dsid=},', 'green')
+  rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,h5dir=h5dir, h5path=h5path, bool_pt=bool_pt)
+#for background 
+bkg_file="skim3.user.ebusch.QCDskim.root"
+tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
+   
+rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=bkg_file.split('.')[-2],h5dir=h5dir, h5path=h5path, bool_pt=bool_pt)
 #"""
-#"""
-#data_bkg=np.array(data_bkg)
-#data_bkg2=data_bkg2
-#print(data_bkg['mT_jj'][:,0],data_bkg['mT_jj'].size)
-
-
-#bkg_loss=data_bkg[0,None]
-#sig_loss=data_sig[0,None]
-
-#var_bkg=data_bkg[0,None]
-"""
-save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
-save_sig = np.concatenate((sig_loss[:,None], mT_sig),axis=1)
-"""
-
-#cut on each event depending on a pfn score
-#find which score gives us signal to percentile of background
-#percentile_ls=[20, 30, 60, 100]
-
-"""percentile_ls=[0, 0.5, 5, 20]
-cuts=[]
-for percentile in percentile_ls:
-  score = getSignalSensitivityScore(data_bkg['score'], data_sig['score'], percentile=100-percentile)
-  #score = getSignalSensitivityScore(bkg_loss, sig_loss, percentile=percentile)
-  cuts.append(round(score,3))
-print(f'{percentile}% -score {score}')
-"""
-def equal_length(bkg_loss, sig_loss):
-  if (len(bkg_loss) > len(sig_loss)): # necessary when computing AUC score
-    bkg_loss = bkg_loss[:len(sig_loss)]
-#    mT_bkg=mT_bkg[:len(sig_loss)] # added
-  else:
-    sig_loss = sig_loss[:len(bkg_loss)]
-#    mT_sig=mT_sig[:len(sig_loss)] # added
-  return bkg_loss,sig_loss
-#bkg_loss,sig_loss=equal_length(bkg_loss=data_bkg['score'],sig_loss=data_sig['score'])
-#make_transformed_plot=False
-#auc=do_roc(bkg_loss, sig_loss, tag_file=tag, tag_title=tag, make_transformed_plot=make_transformed_plot)
-
-#cuts=[0, .6,.9,.98]
-#var_ls=['rT']
-var_ls=my_variables
-#var_ls=['mT_jj','rT']
-bkg_len_ls=[]
- 
-
-#######plot the same file
-
-################# plot different files
-for var in var_ls:
-#for var in data_rel:
-  #data_rel=data_dict[key]
-  hist_tag=f' '
-  #hist_tag=f' {key}'
-  bkg_ls=[]
-  bkg_weight_ls=[]
-  h_names=[]
-  #for i, cut in enumerate(cuts):
-  for i, key in enumerate(data_dict):
-    cprint(key, 'blue')
-    data_rel=data_dict[key]
-    bkg_loss_arr=np.array(data_rel['score'])
-    bkg_len=len(bkg_loss_arr)
-    if key =="sig":
-#    if key =="bkg":
-    #if key =="user.ebusch.QCDskim.mc20e.root":
-#    if key =="user.ebusch.SIGskim.mc20e.root":
-      cut_ls=[0]
-#      cut_ls=[0.9]
-#    else: cut_ls=[ 0.9]
-    #else: cut_ls=[ 0.9]
-    else: cut_ls=[0,.5, .9]
-    for cut in cut_ls: 
-      
-      bkg_len_ls.append(bkg_len) # added here to match the lengths of bkg_len_ls and bkg_ls
-#    cut=0
-      bkg_cut_idx=np.argwhere(bkg_loss_arr>=cut)
-      bkg_cut=data_rel[var][bkg_cut_idx]  
-      bkg_cut_weight=data_rel['weight'][bkg_cut_idx]  
-#  bkg_cut=bkg_loss_arr[bkg_cut_idx]
-      bkg_cut=bkg_cut.flatten()
-      print(i, cut, len(bkg_cut))
-      bkg_ls.append(bkg_cut)
-      bkg_weight_ls.append(bkg_cut_weight)
-      h_names.append(f'{cut}, {Label(key).get_label()}')
-#plot mT distribution
-#plot_single_variable([bkg_loss_arr,bkg_cut], cuts, "mT distribution", logy=True) 
-  #plot_single_variable(bkg_ls, cuts,title= f"{key} distribution"+hist_tag,weights_ls=bkg_weight_ls, density_top=True,logy=True)
-  plot_single_variable_ratio(bkg_ls, h_names=h_names,len_ls=bkg_len_ls,title= f"{var} distribution "+hist_tag,weights_ls=bkg_weight_ls, density_top=True,logy=True, plot_dir=plot_dir)
- 
-
-#plot_single_variable([bkg_loss,sig_loss], ["Background", "Signal"], "mT distribution", logy=True) 
-print('done')
-##  #--- Grid test
-##  scores = np.zeros((10,4))
-##  aucs = np.zeros((10,4))
-##  j = -1
-##  for i in range(487,527):
-##    k = i%4-3
-##    if k == 0: j+=1
-##    if i in [488,511,514,517,520,522]:continue
-##    sig_raw = read_vectors("../v6.4/user.ebusch.515"+str(i)+".root", nevents)
-##    sig = apply_EventScaling(sig_raw)
-##    phi_sig = graph.predict(sig)
-##    pred_phi_sig = ae.predict(phi_sig)['reconstruction']
-##    sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
-##  
-##    score = getSignalSensitivityScore(bkg_loss, sig_loss)
-##    #print("95 percentile score = ",score)
-##    auc = do_roc(bkg_loss, sig_loss, ae_model, False)
-##    print(auc,score)
-##    scores[j,k] = score
-##    aucs[j,k] = auc
-##  
-##  print(scores)
-##  print(aucs)
-
-##  #--- Eval plots 
-##  # 1. Loss vs. epoch 
-##  plot_saved_loss(h, ae_model, "loss")
-##  if model.find('VAE') > -1:
-##      plot_saved_loss(h, ae_model, "kl_loss")
-##      plot_saved_loss(h, ae_model, "reco_loss")
-# 2. Anomaly score
-#plot_score(bkg_loss, sig_loss, False, False, ae_model)
-
-#print(mT)
-#print(bkg_loss > -11)
-#mT_in = mT[bkg_loss > -11]
-#print(mT_in)
-#plot_score(mT, mT_in, False, False, "mTSel")
-#quit()
-
-#transform_loss_ex(bkg_loss, sig_loss, True)
-##  #plot_score(bkg_loss, sig_loss, False, True, ae_model+"_xlog")
-##  if ae_model.find('VAE') > -1:
-##      plot_score(bkg_kl_loss, sig_kl_loss, remove_outliers=False, xlog=True, extra_tag=model+"_KLD")
-##      plot_score(bkg_reco_loss, sig_reco_loss, False, False, model_name+'_Reco')
-##  # 3. Signal Sensitivity Score
-##  score = getSignalSensitivityScore(bkg_loss, sig_loss)
-##  print("95 percentile score = ",score)
+grid_scan(title)

@@ -12,34 +12,35 @@ from termcolor import cprint
 #plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/sig_elena/jun12_sig/'
 #plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/bkg_elena/jun12_bkg/'
 plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun29/lala/'
-def plot_ntrack(h_ls,  tag_file="", tag_title="", plot_dir=""):
+def plot_ntrack(h_ls,  tag_file="", tag_title="", plot_dir="", bin_max=0):
   #label=['no cuts','ntrack >= 3','pt > 10 GeV in leading jet','pt > 10 GeV in subleading jet']
-  label=['no cuts','ntrack >= 0','ntrack >= 1', 'ntrack >= 2', 'ntrack >= 3']
+  if len(h_ls)==5:
+    label=['no cuts','ntrack >= 0','ntrack >= 1', 'ntrack >= 2', 'ntrack >= 3']
+  else:label=['signal', 'QCD']
+  bin_max_ls=[]
+  count_ls=[]
+  nevent_ls=[]
   for i,h in enumerate(h_ls):
   #print(h.history)
     first_var=h[:,:,0]
     nevent=first_var.shape[0]
     count=np.count_nonzero(first_var, axis = 1)
-    print(f'{first_var=}')
-    print(f'{nevent=}')
-    print(f'{label[i]=}')
-    print(f'{count.shape=}')
-    print(f'{count.max()}')
-    print(f'{count.min()}')
-    if i==0:
-      
-      bin_min=0
-      bin_max=np.max(count)
-      print(f'{bin_max=}')
-      bins=np.array(range(bin_min-1,bin_max+2))
-      """
-      bins=np.array(range(bin_min,bin_max))
-      """
-      x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
-      print(f'{x_bins=}')
-#      c, bins=plt.hist(count, label=f'{np.sum(count)}',alpha=.6,log=True) # set the bins for consistency
-#    else:
-    plt.hist(count, label=f'NJ={int(np.sum(count))}, NE={int(nevent)}, {label[i]}',align='right', bins=x_bins,histtype='step',log=True) # use the set bins
+   
+    bin_min=0
+    bin_max_ls.append(np.max(count))
+    nevent_ls.append(nevent) 
+    count_ls.append(count) 
+
+  if bin_max==0:
+    bin_max=np.max(np.array(bin_max_ls))     # this ensures that we are not cutting out any events 
+  
+  bins=np.array(range(bin_min-1,bin_max+2))
+  x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
+  print(f'{bin_max_ls=},{bin_max=}')
+
+  for i,h in enumerate(h_ls):
+    plt.hist(count_ls[i], label=f'NE={int(nevent_ls[i])}, {label[i]}',align='right', bins=x_bins,histtype='step',log=True) # use the set bins
+    #plt.hist(count, label=f'NE={int(nevent)}, {label[i]}',align='right', bins=x_bins,histtype='step',log=True) # use the set bins
  
   plt.title(f' Number of tracks ({tag_title})')
   plt.xlabel('ntrack')
@@ -136,6 +137,41 @@ def make_sic(fpr,tpr,auc,  tag_file="", tag_title="",  plot_dir=""):
   plt.savefig(plot_dir+'sic_'+tag_file+'.png')
   plt.clf()
   print("Saved SIC for", tag_file)
+
+def make_grid_plot(values,title,method,plot_dir,tag=''):
+  #values must be 4 X 10
+
+  fig,ax = plt.subplots(1,1)
+  if (method.find("compare") != -1): img = ax.imshow(values, cmap='PiYG',norm=colors.LogNorm(vmin=0.1,vmax=10))
+  else:
+    if (title == "qcdEff"): img = ax.imshow(values,norm=colors.LogNorm(vmin=1e-7,vmax=1e-1))
+    elif (title == "sigEff"): img = ax.imshow(values,vmin=-0.1,vmax=0.7)
+    elif (title == "sensitivity_Inclusive" or title == "sensitivity_mT"): img = ax.imshow(values, norm=colors.LogNorm(vmin=1e-5,vmax=1.5))
+    elif (title == "auc"): img = ax.imshow(values, vmin=0.7, vmax=1)
+    elif (title == "sicMax"): img = ax.imshow(values, vmin=-2, vmax=20)
+    else: img = ax.imshow(values)
+
+  # add text to table
+  for (j,i),label in np.ndenumerate(values):
+    if label == 0.0: continue
+    if title == "qcdEff" or title == "sensitivity_Inclusive" or title == "sensitivity_mT": ax.text(i,j,'{0:.1e}'.format(label),ha='center', va='center', fontsize = 'x-small')
+    elif title == "score_cut": ax.text(i,j,'{0:.3f}'.format(label),ha='center', va='center', fontsize = 'x-small')
+    else: ax.text(i,j,'{0:.2f}'.format(label),ha='center', va='center', fontsize = 'x-small')
+
+  # x-y labels for grid 
+  x_label_list = ['1.0', '1.25', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '5.0', '6.0']
+  y_label_list = ['0.2', '0.4', '0.6', '0.8']
+  ax.set_xticks([0,1,2,3,4,5,6,7,8,9])
+  ax.set_xticklabels(x_label_list)
+  ax.set_xlabel('Z\' Mass [TeV]')
+  ax.set_yticks([0,1,2,3])
+  ax.set_yticklabels(y_label_list)
+  ax.set_ylabel('$R_{inv}$')
+  
+  ax.set_title(method+"; "+title)
+  plt.savefig(plot_dir+'table_'+method+'_'+title+'_'+tag+'.png')
+  print("Saved grid plot for", title)
+
 
 
 def make_single_roc(rocs,aucs,ylabel, tag_file="", tag_title="",  plot_dir=""):
@@ -293,7 +329,6 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
   plt.savefig(plot_dir+'hist_'+title.replace(" ","").replace('(','')+'_weighted'+'.png')
   plt.clf()
   print("Saved plot",title)
-
 
 
 def get_nTracks(x):

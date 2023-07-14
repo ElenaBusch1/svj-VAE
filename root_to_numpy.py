@@ -36,7 +36,7 @@ def read_test_variables(infile, nEvents, variables):
         my_dict[key] = my_dict[key][idx]
     return my_dict
 
-def read_hlvs(infile, nEvents, variable_array, seed, bool_weight=False): # different from variable_array on the top of this file
+def read_hlvs(infile, nEvents, variable_array, seed, max_track, bool_weight=False): # different from variable_array on the top of this file
     file = uproot.open(infile)
 	
 	
@@ -94,7 +94,7 @@ def read_hlvs(infile, nEvents, variable_array, seed, bool_weight=False): # diffe
 
 #    print('before-'*50)
 #    print(f'{infile}\n{selected_array.shape}\n{selected_array}')
-    max_jets=15 
+    #max_jets=15 
     unique_variable_array=list(set([x.split("_")[-1] for x in variable_array])) # unique variable name without 'jetx_' 
  #   print('&'*50)
  #   print( f'{infile}\n{selected_array.shape}\n{selected_array}')
@@ -116,7 +116,7 @@ def read_hlvs(infile, nEvents, variable_array, seed, bool_weight=False): # diffe
     size=2  # b/c jet1_pt and jet2_pt
     length=2 # b/c eta and phi
     padded_array=selected_array.reshape(selected_array.shape[0],size, length).transpose(0,2,1)
-    pad_width =((0,0),(0, max_jets-size), (0,0))
+    pad_width =((0,0),(0, max_track,-size), (0,0))
     padded_array=np.pad(padded_array,pad_width=pad_width, constant_values= 0) # (nth event, nth jet, nth var)
 #    print('!'*50)
 #    """ 
@@ -147,7 +147,8 @@ def read_flat_vars(infile, nEvents, variable_array,seed, bool_weight=True):
           idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
 
     except:
-      idx=list(range(len(my_array)))
+      length=len(my_array[variable_array[0]])
+      idx=list(range(length))
     #print('Flat variable index:', idx.shape, idx)
     selected_array = np.array([val[idx] for _,val in my_array.items()]).T
  
@@ -156,11 +157,11 @@ def read_flat_vars(infile, nEvents, variable_array,seed, bool_weight=True):
 
 #def read_vectors(infile, nEvents, jet_array, bool_weight=True):
 #def read_vectors(infile, nEvents, bool_weight=True, flatten=True):
-def read_vectors(infile, nEvents,jet_array,seed,bool_weight=True,bool_select_all=False):
+def read_vectors(infile, nEvents,jet_array,seed,max_track,bool_weight=True,bool_select_all=False):
     file = uproot.open(infile)
     
     #print("File keys: ", file.keys())
-    max_jets = 15
+#    max_jets = 15
 
     try:tree = file["PostSel"]
     except:   tree = file["outTree"]
@@ -202,8 +203,6 @@ def read_vectors(infile, nEvents,jet_array,seed,bool_weight=True,bool_select_all
     selected_jet_array = np.array([val[idx] for _,val in my_jet_array.items()]).T
     j=idx[0] # REMOVE this line
     k=j+1
-    cprint(f'{bool_weight=}', 'magenta')
-    cprint(f'{len(idx)=}{idx=}', 'magenta') 
     a=idx[0]
     """
     try:  
@@ -232,9 +231,9 @@ def read_vectors(infile, nEvents,jet_array,seed,bool_weight=True,bool_select_all
     sys.exit()
     """
     # create jet matrix
-    padded_jet_array = np.zeros((len(selected_jet_array),max_jets,len(jet_array)))
+    padded_jet_array = np.zeros((len(selected_jet_array),max_track,len(jet_array)))
     for jets,zeros in zip(selected_jet_array,padded_jet_array):
-        jet_ar = np.stack(jets, axis=1)[:max_jets,:]
+        jet_ar = np.stack(jets, axis=1)[:max_track,:]
         zeros[:jet_ar.shape[0], :jet_ar.shape[1]] = jet_ar
 
 #    print('-'*50)
@@ -249,7 +248,7 @@ def read_vectors_MET(infile, nEvents, flatten=True):
     file = uproot.open(infile)
     
     #print("File keys: ", file.keys())
-    max_jets = 15    
+    max_track = 15    
 
     tree = file["PostSel"]
     #print("Tree Variables: ", tree.keys())
@@ -263,16 +262,16 @@ def read_vectors_MET(infile, nEvents, flatten=True):
     selected_jet_array = np.array([val[idx] for _,val in my_jet_array.items()]).T
 
     # create jet matrix
-    padded_jet_array = np.zeros((len(selected_jet_array),max_jets+1,4)) # (nth event, nth track, nth var)
+    padded_jet_array = np.zeros((len(selected_jet_array),max_track+1,4)) # (nth event, nth track, nth var)
     for jets,zeros,met in zip(selected_jet_array,padded_jet_array,selected_met_array):
-        jet_ar = np.stack(jets, axis=1)[:max_jets,:]
+        jet_ar = np.stack(jets, axis=1)[:max_track,:]
         zeros[0,0] = met[0] #pt energy
         zeros[0,2] = met[1] #phi
         zeros[0,3] = met[0] #total energy = pt
         zeros[1:jet_ar.shape[0]+1, :jet_ar.shape[1]] = jet_ar
 
     if (flatten):
-        padded_jet_array = padded_jet_array.reshape(len(selected_jet_array),(max_jets+1)*4)
+        padded_jet_array = padded_jet_array.reshape(len(selected_jet_array),(max_track+1)*4)
     #print(padded_jet_array)
 
     return padded_jet_array
