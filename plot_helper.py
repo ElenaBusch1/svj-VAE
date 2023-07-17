@@ -45,7 +45,7 @@ def plot_ntrack(h_ls,  tag_file="", tag_title="", plot_dir="", bin_max=0):
   plt.title(f' Number of tracks ({tag_title})')
   plt.xlabel('ntrack')
   plt.ylabel('count')
-  plt.legend(loc='lower right')
+  plt.legend(loc='upper right')
 #  plt.savefig(plot_dir+loss+'VsEpoch_'+model+'_'+tag+'.png')
   plt.savefig(plot_dir+'/ntrack'+tag_file+'.png')
   #plt.show()

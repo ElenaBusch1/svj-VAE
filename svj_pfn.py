@@ -33,7 +33,9 @@ sys.exit()
 class Param:
   def __init__(self,  arch_dir="architectures_saved/",print_dir='',plot_dir='plots/', 
       pfn_model='PFN', ae_model='PFN', bkg_events=500000, sig_events=500000, 
-      num_elements=100, element_size=7, encoding_dim=32, latent_dim=4, phi_dim=64, nepochs=100, n_neuron=75, learning_rate=0.001, nlayer=3, max_track=15, 
+      num_elements=100, element_size=7, encoding_dim=32, latent_dim=4, phi_dim=64, nepochs=100, n_neuron=75, learning_rate=0.001,
+      nlayer_phi=3, nlayer_F=3,
+      max_track=15, 
       batchsize_pfn=512,
 #      batchsize_pfn=500,
       batchsize_ae=32, # batchsize_pfn=500 -> 512 or any power of 2
@@ -70,7 +72,9 @@ class Param:
     self.nepochs=nepochs
     self.n_neuron=n_neuron
     self.learning_rate=learning_rate
-    self.nlayer=nlayer
+
+    self.nlayer_phi=nlayer_phi
+    self.nlayer_F=nlayer_F
     self.max_track=max_track
 
     self.batchsize_pfn=batchsize_pfn
@@ -145,7 +149,7 @@ class Param:
     plot_ntrack([sig_in1, bkg_in1],  tag_file='_jet2', tag_title=' subleading jet', plot_dir=self.plot_dir, bin_max=self.max_track)
     plot_ntrack([sig_in0, bkg_in0],  tag_file='_jet1_exp', tag_title=' leading jet', plot_dir=self.plot_dir)
     plot_ntrack([sig_in1, bkg_in1],  tag_file='_jet2_exp', tag_title=' subleading jet', plot_dir=self.plot_dir)
-    sys.exit()
+   # sys.exit()
     print(jet_bkg)
 #    plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=self.tag+"_NSNR", tag_title=self.weight_tag+"_NSNR", plot_dir=self.plot_dir)
     plot_vectors(bkg_sel,sig_sel,tag_file=self.tag+"_NSNR", tag_title=self.weight_tag+"_NSNR", plot_dir=self.plot_dir)
@@ -172,7 +176,7 @@ class Param:
     print(input_data.shape, truth.shape)
 
     # Load the model
-    pfn,graph_orig = get_full_PFN([self.num_elements,self.element_size], self.phi_dim, self.n_neuron, self.learning_rate, self.nlayer)
+    pfn,graph_orig = get_full_PFN([self.num_elements,self.element_size], self.phi_dim, self.n_neuron, self.learning_rate, self.nlayer_phi, self.nlayer_F)
     #pfn = get_dnn(160)
 
    # Split the data 
@@ -296,14 +300,14 @@ seeds=np.arange(0,100, dtype=int)
 """
 sig_events=915000 # change before pt >10 per track
 bkg_events=665000
-sig_events=502000 # change after no pt requirement
-bkg_events=502000
-"""
 sig_events=1151555
 bkg_events=3234186
-#sig_events=5000
-#bkg_events=5000
-max_track=160
+"""
+#sig_events=502000 # change after no pt requirement
+#bkg_events=502000
+sig_events=5000
+bkg_events=5000
+max_track=15 #160
 """
 for seed in seeds:
   param1=Param(  bkg_events=bkg_events, sig_events=sig_events,seed=seed, max_track=max_track)
@@ -320,6 +324,16 @@ for seed in seeds:
   sys.exit()
  
 """
+for nlayer in [3]:
+  param1=Param(  bkg_events=bkg_events, sig_events=sig_events, nlayer_phi=nlayer, nlayer_F=nlayer)
+  stdoutOrigin=param1.open_print()
+  all_dir, auc,bkg_events_num,sig_events_num=param1.train()
+  setattr(param1, 'auc',auc )
+  setattr(param1, 'sig_events_num',sig_events_num )
+  setattr(param1, 'bkg_events_num',bkg_events_num )
+  print(param1.close_print(stdoutOrigin)) 
+  print(param1.save_info())
+  sys.exit()
 for max_t in [max_track]:
   param1=Param(  bkg_events=bkg_events, sig_events=sig_events, max_track=max_t)
 #  sys.exit()
@@ -394,15 +408,6 @@ for batchsize_pfn in [256, 1024]:
   print(param1.save_info())
 
 
-for nlayer in [6, 12]:
-  param1=Param( nlayer=nlayer, bkg_events=bkg_events, sig_events=sig_events)
-  stdoutOrigin=param1.open_print()
-  all_dir, auc,bkg_events_num,sig_events_num=param1.train()
-  setattr(param1, 'auc',auc )
-  setattr(param1, 'sig_events_num',sig_events_num )
-  setattr(param1, 'bkg_events_num',bkg_events_num )
-  print(param1.close_print(stdoutOrigin)) 
-  print(param1.save_info())
 #original
 #element_size = 4 # change here
 

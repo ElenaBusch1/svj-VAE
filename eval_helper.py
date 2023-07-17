@@ -30,7 +30,7 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
 
 
 
-    memoryissue=True
+    memoryissue=False
     if memoryissue: return [],[],[],[], bkg_in0, bkg_in1
 
 
