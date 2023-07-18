@@ -7,7 +7,8 @@ from math import ceil
 
 #tag = "PFN_2jAvg_MM"
 #tag = "pfnEvalTest"
-tag = "pfn_zeros160"
+#tag = "BKGONLY_PFNv3"
+tag = "vANTELOPE_PFNv3"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 plot_dir = "/nevis/milne/files/gpm2117/WWW/SVJ/autoencoder/"
 
@@ -99,7 +100,7 @@ def make_sic(fpr,tpr,auc,bkg, model=""):
   plt.ylabel("Signal Sensitivity ($TPR/\sqrt{FPR}$)")
   plt.title("Significance Improvement Characteristic: "+model )
   plt.legend()
-  #plt.savefig(plot_dir+'sic_'+model+'_'+tag+'.png')
+  plt.savefig(plot_dir+'sic_'+model+'_'+tag+'.png')
   plt.clf()
   print("Saved SIC for", model)
   return {'sicMax':ymax, 'sigEff': sigEff, 'qcdEff': qcdEff, 'score_cut': score_cut}

@@ -11,7 +11,9 @@ from plot_helper import *
 from models import *
 import json
 
-def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True):
+data_path = "/data/users/ebusch/SVJ/autoencoder/"
+
+def getTwoJetSystem(x_events, input_file, extraVars=[], use_weight=True):
     getExtraVars = len(extraVars) > 0
     
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e", "jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
@@ -87,9 +89,9 @@ def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True):
 
 def check_weights(x_events):
     #bkg_nw1 = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 10000, ["jet1_pt"], use_weight=False)
-    bkg_nw = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 500000, ["mT_jj"], use_weight=True)
-    bkg_w = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 100000, ["mT_jj"], use_weight=True)
-    sig_nw = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 10000, ["mT_jj"], use_weight=True)
+    bkg_nw = read_flat_vars(data_path + "v8.1/user.ebusch.QCDskim.mc20e.root", 500000, ["mT_jj"], use_weight=True)
+    bkg_w = read_flat_vars(data_path + "v8.1/user.ebusch.QCDskim.mc20e.root", 100000, ["mT_jj"], use_weight=True)
+    sig_nw = read_flat_vars(data_path + "v8.1/user.ebusch.QCDskim.mc20e.root", 10000, ["mT_jj"], use_weight=True)
     #sig_nw2 = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 5000, ["jet1_pt"], use_weight=True)
     plot_single_variable([bkg_nw,bkg_w, sig_nw], ["QCD - 500k", "QCD - 100k", "QCD - 10k"], "mT Stat Check", logy=True) 
 
@@ -307,7 +309,7 @@ def do_roc(bkg_loss, sig_loss, plot_tag, make_transformed_plot=False):
     fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
     auc = roc_auc_score(truth_labels, eval_vals)
     print("AUC - "+plot_tag+": ", auc)
-    #make_roc(fpr,tpr,auc,plot_tag)
+    make_roc(fpr,tpr,auc,plot_tag)
     sic_vals = make_sic(fpr,tpr,auc,bkg_loss,plot_tag)
     sic_vals['auc'] = auc
     return sic_vals

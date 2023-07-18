@@ -17,9 +17,10 @@ phi_dim = 64
 nepochs=50
 batchsize_vae=32
 
-pfn_model = 'PFNv1'
+pfn_model = 'PFNv3'
 vae_model = 'vANTELOPE'
 arch_dir = "architectures_saved/"
+data_path = "/data/users/ebusch/SVJ/autoencoder/"
 
 ################### Train the VAE ###############################
 graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
@@ -29,7 +30,14 @@ graph.compile()
 ## AE events
 x_events = 200000
 y_events = 20000
-bkg2, sig2 = getTwoJetSystem(x_events,y_events)
+#z_events = 199899
+
+bkg_file = data_path + "v8.1/skim3.user.ebusch.QCDskim.root"
+sig_file = data_path + "v8.1/skim3.user.ebusch.SIGskim.root"
+bkg2 = getTwoJetSystem(x_events,bkg_file,[],use_weight=True)
+sig2 = getTwoJetSystem(y_events,sig_file,[],use_weight=False)
+#sig2 = getTwoJetSystem(y_events,bkg_file,[],use_weight=True)
+
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
 sig2,_ = apply_StandardScaling(sig2,scaler,False)
@@ -52,7 +60,7 @@ print("Min: ", eval_min)
 print("Max: ", eval_max)
 if (sig_max > eval_max): eval_max = sig_max
 print("Final Max: ", eval_max)
-quit()
+#quit()
 
 phi_evalb = (phi_evalb - eval_min)/(eval_max-eval_min)
 phi_testb = (phi_testb - eval_min)/(eval_max-eval_min)
@@ -90,7 +98,7 @@ vae.get_layer('decoder').save(arch_dir+vae_model+'_decoder_arch')
 # # --- Eval plots 
 # 1. Loss vs. epoch 
 plot_loss(h2, vae_model, 'loss')
-plot_loss(h2, vae_model, "kl_loss")
+#plot_loss(h2, vae_model, "kl_loss")
 plot_loss(h2, vae_model, "reco_loss")
 
 #2. Get loss
@@ -105,7 +113,7 @@ sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
 bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss, sig_reco_loss = get_multi_loss(vae, phi_testb, phi_sig)
 
 plot_score(bkg_loss, sig_loss, False, False, vae_model)
-plot_score(bkg_kl_loss, sig_kl_loss, False, False, vae_model+"_KLD")
+#plot_score(bkg_kl_loss, sig_kl_loss, False, False, vae_model+"_KLD")
 plot_score(bkg_reco_loss, sig_reco_loss, False, False, vae_model+"_Reco")
 
 # # 3. Signal Sensitivity Score
@@ -114,7 +122,7 @@ print("95 percentile score = ",score)
 # # 4. ROCs/AUCs using sklearn functions imported above  
 do_roc(bkg_loss, sig_loss, vae_model, True)
 do_roc(bkg_reco_loss, sig_reco_loss, vae_model+"_Reco", True)
-do_roc(bkg_kl_loss, sig_kl_loss, vae_model+"_KLD", True)
+#do_roc(bkg_kl_loss, sig_kl_loss, vae_model+"_KLD", True)
 
 print("Taking log of score...")
 bkg_loss = np.log(bkg_loss)

@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras
-from keras import backend as K
-from keras.layers import Dense, Dropout, LeakyReLU
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import Dense, Dropout, LeakyReLU
 from sklearn.svm import OneClassSVM
 arch_dir = "architectures_saved/"
 
@@ -87,7 +87,8 @@ class VAE(keras.Model):
 
             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
             kl_loss = tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1))
-            kl_loss *= 100
+            #kl_loss *= 100
+            kl_loss *= 0
             total_loss = reconstruction_loss + kl_loss
         grads = tape.gradient(total_loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
@@ -107,7 +108,8 @@ class VAE(keras.Model):
 
         kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
         kl_loss = tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1))
-        kl_loss *= 100
+        #kl_loss *= 100
+        kl_loss *= 0
         total_loss = reconstruction_loss + kl_loss
         return {
             "loss": total_loss,
@@ -326,7 +328,7 @@ def get_vae(input_dim, encoding_dim, latent_dim):
   decoder = get_decoder(input_dim, encoding_dim, latent_dim)
 
   vae = VAE(encoder, decoder)
-  vae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001))
+  vae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.00001))
   return vae
 
 ## ------------------------------------------------------------------------------------
