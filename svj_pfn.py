@@ -8,30 +8,15 @@ from models import *
 from root_to_numpy import *
 from plot_helper import *
 from eval_helper import *
-
+#from numba import jit
 import sys
 import time
 import pandas as pd
 #plot_dir='/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun29/' 
 # Example usage
 #added
-"""import matplotlib.pyplot as plt
-a=[1,1,3]
-bin_min=0
-bin_max=np.max(a)
-print(bin_max)
-bins=np.array(range(bin_min-1,bin_max+2))
-print(bins)
-x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
-print(x_bins)
-
-count=plt.hist(a, bins=x_bins)
-plt.show()
-print(count)
-sys.exit()
-"""
 class Param:
-  def __init__(self,  arch_dir="architectures_saved/",print_dir='',plot_dir='plots/', 
+  def __init__(self,  arch_dir="architectures_saved/",print_dir='',plot_dir='plots/',h5_dir='h5dir/jul18/', 
       pfn_model='PFN', ae_model='PFN', bkg_events=500000, sig_events=500000, 
       num_elements=100, element_size=7, encoding_dim=32, latent_dim=4, phi_dim=64, nepochs=100, n_neuron=75, learning_rate=0.001,
       nlayer_phi=3, nlayer_F=3,
@@ -46,12 +31,14 @@ class Param:
     self.time=time.strftime("%m_%d_%y_%H_%M", time.localtime())
     self.time_dir=time.strftime("%m_%d/", time.localtime())
 #    self.all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/stats/'+self.time+'/' # for statistics
-    self.all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/paramscan/'+self.time+'/' # for statistics
+    self.parent_dir='/nevis/katya01/data/users/kpark/svj-vae/'
+    self.all_dir=self.parent_dir+'results/paramscan/'+self.time+'/' # for statistics
 #    self.all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/'+self.time+'/'
 
     self.arch_dir=self.all_dir+arch_dir
     self.print_dir=self.all_dir+print_dir
     self.plot_dir=self.all_dir+plot_dir
+    self.h5_dir=self.parent_dir+h5_dir
 
     dir_ls =[self.all_dir, self.arch_dir, self.print_dir, self.plot_dir] 
     for d in dir_ls:
@@ -139,17 +126,25 @@ class Param:
 
     bool_weight_sig=False # important that this is False for sig 
 
+    start = time.time()
+
     sig, mT_sig, sig_sel, jet_sig, sig_in0, sig_in1 = getTwoJetSystem(nevents=self.sig_events,input_file=self.sig_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
-      bool_weight=bool_weight_sig,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed,max_track=self.max_track, bool_pt=self.bool_pt)
+      bool_weight=bool_weight_sig,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed,max_track=self.max_track, bool_pt=self.bool_pt,h5_dir=self.h5_dir)
     bkg, mT_bkg, bkg_sel, jet_bkg,bkg_in0, bkg_in1 = getTwoJetSystem(nevents=self.bkg_events,input_file=self.bkg_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
-      bool_weight=self.bool_weight,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed, max_track=self.max_track,bool_pt=self.bool_pt)
+      bool_weight=self.bool_weight,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed, max_track=self.max_track,bool_pt=self.bool_pt,h5_dir=self.h5_dir)
+
+    end = time.time()
+    print("Elapsed (with getTwoJetSystem) = %s" % (end - start))
+
+    """
     plot_ntrack([sig_in0, bkg_in0],  tag_file='_jet1', tag_title=' leading jet', plot_dir=self.plot_dir, bin_max=self.max_track)
     plot_ntrack([sig_in1, bkg_in1],  tag_file='_jet2', tag_title=' subleading jet', plot_dir=self.plot_dir, bin_max=self.max_track)
     plot_ntrack([sig_in0, bkg_in0],  tag_file='_jet1_exp', tag_title=' leading jet', plot_dir=self.plot_dir)
     plot_ntrack([sig_in1, bkg_in1],  tag_file='_jet2_exp', tag_title=' subleading jet', plot_dir=self.plot_dir)
-   # sys.exit()
+    sys.exit()
+    """
     print(jet_bkg)
 #    plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=self.tag+"_NSNR", tag_title=self.weight_tag+"_NSNR", plot_dir=self.plot_dir)
     plot_vectors(bkg_sel,sig_sel,tag_file=self.tag+"_NSNR", tag_title=self.weight_tag+"_NSNR", plot_dir=self.plot_dir)
@@ -303,15 +298,15 @@ bkg_events=665000
 sig_events=1151555
 bkg_events=3234186
 """
-#sig_events=502000 # change after no pt requirement
-#bkg_events=502000
-sig_events=5000
-bkg_events=5000
-max_track=15 #160
+sig_events=502000 # change after no pt requirement
+bkg_events=502000
+#sig_events=500
+#bkg_events=500
+max_track=80 #160
+#max_track=15 #160
 """
 for seed in seeds:
   param1=Param(  bkg_events=bkg_events, sig_events=sig_events,seed=seed, max_track=max_track)
-  setattr(param1, 'bkg_file',bkg_file )
 #  sys.exit()
   stdoutOrigin=param1.open_print()
   all_dir, auc,bkg_events_num,sig_events_num=param1.train()
@@ -326,7 +321,7 @@ for seed in seeds:
 """
 for nlayer in [3]:
   param1=Param(  bkg_events=bkg_events, sig_events=sig_events, nlayer_phi=nlayer, nlayer_F=nlayer)
-  stdoutOrigin=param1.open_print()
+#  stdoutOrigin=param1.open_print()
   all_dir, auc,bkg_events_num,sig_events_num=param1.train()
   setattr(param1, 'auc',auc )
   setattr(param1, 'sig_events_num',sig_events_num )
