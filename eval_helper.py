@@ -25,20 +25,25 @@ def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True):
         vars_bkg = read_flat_vars(input_file, x_events, extraVars, use_weight=use_weight)
 
     print("Selecting tracks & rotating...")
-    _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
-    _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
+    plot_nTracks(bkg_in1, "j2_presel")
+    x0, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
+    x1, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
     
     bkg_nz = bkg_nz0 & bkg_nz1
 
+    print("total selection shape: ", bkg_nz.shape)
+
     # select events which have both valid leading and subleading jet tracks
-    bkg_pt0 = bkg_in0[bkg_nz]
-    bkg_pt1 = bkg_in1[bkg_nz]
+    bkg_pt0 = x0[bkg_nz]
+    bkg_pt1 = x1[bkg_nz]
+    print("bkg_pt0: ", bkg_pt0.shape)
+    print("bkg_pt1: ", bkg_pt1.shape)
     bjet_sel = jet_bkg[bkg_nz]
     if getExtraVars:
         vars_bkg = vars_bkg[bkg_nz]    
 
     #plot_nTracks(bkg_pt0, sig_pt0, "j1")
-    #plot_nTracks(bkg_pt1, sig_pt1, "j2")
+    plot_nTracks(bkg_pt1, "j2_sel")
 
     bkg_sel = np.concatenate((bkg_pt0,bkg_pt1),axis=1)
     #bkg_sel = pt_sort(bkg_sel)
@@ -113,14 +118,13 @@ def pt_sort(x):
 
 def apply_TrackSelection(x_raw, jets):
     x = np.copy(x_raw)
-    x[x[:,:,0] < 10] = 0 # apply pT requirement
-    #print("Input track shape: ", x.shape)
+    x[x[:,:,0] < 1] = 0 # apply pT requirement
+    print("Input track shape: ", x.shape)
     # require at least 3 tracks
     x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 3 for jet in x])
-    x = x[x_nz]
-    jets = jets[x_nz]
-    #print("Selected track shape: ", x.shape)
-    #print("Selected jet shape: ", jets.shape)
+    #x = x[x_nz]
+    #jets = jets[x_nz]
+    print("selection shape: ", x_nz.shape)
     #print()
     return x, jets, x_nz
 

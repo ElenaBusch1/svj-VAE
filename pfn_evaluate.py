@@ -13,6 +13,10 @@ from models_archive import *
 from eval_helper import *
 import h5py
 
+my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
+bkg2,mT_bkg = getTwoJetSystem(-1,"../v8.1/skim3.user.ebusch.515500.root", my_variables, False)
+quit()
+
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"

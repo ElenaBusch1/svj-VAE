@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "cms_mTplot"
+tag = "cms_plusMET"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def my_metric(s,b):
@@ -271,14 +271,12 @@ def get_nTracks(x):
     n_tracks.append(len(tracks))
   return n_tracks
  
-def plot_nTracks(bkg, sig, extra_tag=""):
+def plot_nTracks(bkg, extra_tag=""):
   bkg_tracks = get_nTracks(bkg)
-  sig_tracks = get_nTracks(sig)
   #bins=np.histogram(np.hstack((bkg_tracks,sig_tracks)),bins=60)[1]
-  bins = np.arange(0,100,2)
-  plt.hist(bkg_tracks,alpha=0.5, label="bkg", bins=bins, density=False)
-  plt.hist(sig_tracks,alpha=0.5, label="sig", bins=bins, density=False)
-  plt.title("nTracks (after pT>10)")
+  bins = np.arange(0,20,1)
+  plt.hist(bkg_tracks,alpha=0.5, label="sig", histtype='step', bins=bins, density=False)
+  plt.title("nTracks "+extra_tag)
   plt.legend()
   plt.savefig(plot_dir+'nTracks_'+extra_tag+tag+'.png')
   plt.clf()

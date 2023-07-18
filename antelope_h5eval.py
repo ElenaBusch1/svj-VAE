@@ -82,7 +82,7 @@ def cms_mT_plots():
   with h5py.File("../v8.1/v8p1_CMSskim1_515518.hdf5","r") as f:
     sig4_data = f.get('data')[:]
   
-  selection0 = (bkg_data["rT"] > 0.25) & (bkg_data["dphi_min"] < 0.8) & (bkg_data["deltaY_12"] < 1.5)
+  selection0 = (bkg_data["rT"] > 0.25) & (bkg_data["dphi_min"] < 0.8) & (bkg_data["deltaY_12"] < 1.5) 
   selection1 = (sig1_data["rT"] > 0.25) & (sig1_data["dphi_min"] < 0.8) & (sig1_data["deltaY_12"] < 1.5)
   selection2 = (sig2_data["rT"] > 0.25) & (sig2_data["dphi_min"] < 0.8) & (sig2_data["deltaY_12"] < 1.5)
   selection3 = (sig3_data["rT"] > 0.25) & (sig3_data["dphi_min"] < 0.8) & (sig3_data["deltaY_12"] < 1.5)
@@ -209,7 +209,7 @@ def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, cms=Fa
   
   ## CMS selections
   if cms:
-    selection0 = (bkg_data["rT"] > 0.25) & (bkg_data["dphi_min"] < 0.8) & (bkg_data["deltaY_12"] < 1.5)
+    selection0 = (bkg_data["rT"] > 0.25) & (bkg_data["dphi_min"] < 0.8) & (bkg_data["deltaY_12"] < 1.5) & (bkg_data["met_met"] > 200)
     bkg_mT = bkg_data["mT_jj"][selection0]
     bkg_weight = bkg_data["weight"][selection0]
     bkg_weight = bkg_scale*bkg_weight
@@ -234,7 +234,7 @@ def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, cms=Fa
 
       ## CMS selections
       if cms:
-        selection1 = (sig1_data["rT"] > 0.25) & (sig1_data["dphi_min"] < 0.8) & (sig1_data["deltaY_12"] < 1.5)
+        selection1 = (sig1_data["rT"] > 0.25) & (sig1_data["dphi_min"] < 0.8) & (sig1_data["deltaY_12"] < 1.5) & (sig1_data["met_met"] > 200)
         sig1_mT = sig1_data["mT_jj"][selection1]
         sig1_weight = sig1_data["weight"][selection1]
 
@@ -305,9 +305,9 @@ def compare_s_sqrt_b():
 def main():
   #mT_shape_compare()
   #grid_scan("METPresel")
-  #compare_s_sqrt_b()
+  compare_s_sqrt_b()
   #grid_s_sqrt_b(0.99)
-  cms_mT_plots()
+  #cms_mT_plots()
   #score_cut_mT_plot()
 
 if __name__ == '__main__':
