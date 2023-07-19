@@ -20,7 +20,7 @@ class Param:
       pfn_model='PFN', ae_model='PFN', bkg_events=500000, sig_events=500000, 
       num_elements=100, element_size=7, encoding_dim=32, latent_dim=4, phi_dim=64, nepochs=100, n_neuron=75, learning_rate=0.001,
       nlayer_phi=3, nlayer_F=3,
-      max_track=15, 
+      max_track=80, 
       batchsize_pfn=512,
 #      batchsize_pfn=500,
       batchsize_ae=32, # batchsize_pfn=500 -> 512 or any power of 2
@@ -302,6 +302,7 @@ sig_events=502000 # change after no pt requirement
 bkg_events=502000
 #sig_events=500
 #bkg_events=500
+#max_track=15 #160
 max_track=80 #160
 #max_track=15 #160
 """
@@ -321,7 +322,7 @@ for seed in seeds:
 """
 for nlayer in [3]:
   param1=Param(  bkg_events=bkg_events, sig_events=sig_events, nlayer_phi=nlayer, nlayer_F=nlayer)
-#  stdoutOrigin=param1.open_print()
+  stdoutOrigin=param1.open_print()
   all_dir, auc,bkg_events_num,sig_events_num=param1.train()
   setattr(param1, 'auc',auc )
   setattr(param1, 'sig_events_num',sig_events_num )

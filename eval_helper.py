@@ -13,7 +13,7 @@ from termcolor import cprint
 import json
 import h5py 
 #def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_file,bkg_file="user.ebusch.QCDskim.mc20e.root",extraVars=[], plot_dir=''):
-def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,seed,max_track, plot_dir,extraVars=[], bool_weight=True, bool_pt=True, h5_dir=''):
+def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,seed,max_track, plot_dir,extraVars=[], bool_weight=True, bool_pt=False, h5_dir=''):
     
     getExtraVars = len(extraVars) > 0
     h5path=f'{h5_dir}/{input_file}_s={seed}_ne={nevents}_mt={max_track}.hdf5'
@@ -30,7 +30,7 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
           data_ls[i] = f["default"][str_ls[i]][()]
           
       bkg, vars_bkg, bkg_sel, jet_bkg, bkg_in0, bkg_in1=[*data_ls]
-      print('file already exists')
+      print(f'file already exists:{h5path}')
     else:
 
       cprint(f'reading {input_file}','red')
@@ -415,21 +415,25 @@ def applyScoreCut(loss,test_array,cut_val):
     return test_array[loss>cut_val] 
 
 def do_roc(bkg_loss, sig_loss, tag_file, tag_title, make_transformed_plot=False, plot_dir=''):
+   
     truth_labels, eval_vals = transform_loss(bkg_loss, sig_loss, make_plot=make_transformed_plot, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir) 
     fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
     auc = roc_auc_score(truth_labels, eval_vals)
     print("AUC - "+tag_file+": ", auc)
-    make_roc(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
-    make_sic(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
-    return auc
+    #make_roc(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
+    #make_sic(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
 
+    sic_vals = make_sic(fpr,tpr,auc,bkg=bkg_loss,tag_file=tag_file, tag_title=tag_title,plot_dir=plot_dir)
+    sic_vals['auc'] = auc
+    cprint(f'{sic_vals}', 'magenta')
+#    return auc
+    return sic_vals
 def do_grid_plots(sic_vals, title, plot_dir=''):
     with open("dsids_grid_locations.json", "r") as f:
       dsid_coords = json.load(f)
     dsids = list(sic_vals.keys())
-    print(f'{dsids=}')
+
     vals = list(sic_vals[dsids[0]].keys())
-    print(f'{sic_vals=}')
     for val in vals:
         values = np.zeros([4,10])
         for dsid in dsids:

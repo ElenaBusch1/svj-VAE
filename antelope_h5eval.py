@@ -160,11 +160,13 @@ def score_cut_mT_plot():
     plot_ratio(d,w,labels, var, logy=True) 
 
 
-def grid_scan(title):
+def grid_scan(title, dir_all):
   #with h5py.File("../v8.1/v8p1_PFNv1_QCDskim.hdf5","r") as f:
   #  bkg_data = f.get('data')[:]
-  dir_all='/nevis/katya01/data/users/kpark/svj-vae/results/07_12_23_08_47/' # change
-  h5dir=dir_all+'h5dir/'
+#  dir_all='/nevis/katya01/data/users/kpark/svj-vae/results/07_12_23_08_47/' # change
+  h5dir=dir_all+'applydir/'
+  plot_dir=h5dir+'/plots/'
+  if not os.path.exists(plot_dir):os.mkdir(plot_dir)
   bkgpath=h5dir+"v8p1_QCDskim.hdf5"
   with h5py.File(bkgpath,"r") as f:
     bkg_data1 = f.get('data')[:]
@@ -186,8 +188,8 @@ def grid_scan(title):
   dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
     sigpath=h5dir+"v8p1_"+str(dsid)+".hdf5"
-    print()
     try:
+     
       with h5py.File(sigpath,"r") as f:
       #with h5py.File("../v8.1/v8p1_PFNv3_"+str(dsid)+".hdf5","r") as f:
         sig1_data = f.get('data')[:]
@@ -195,21 +197,25 @@ def grid_scan(title):
       bkg_idx = get_weighted_elements_h5(bkg_weights,len(sig1_loss))
       #bkg1_loss = bkg_loss[:len(sig1_loss)]
       bkg1_loss = bkg_loss[bkg_idx]
+      print('grid_scan loo')
       #plot_single_variable([bkg1_loss,sig1_loss],[np.ones(len(bkg1_loss)),np.ones(len(sig1_loss))],["bkg","sig"], "score"+str(dsid), logy=True) 
-      sic_vals = do_roc(bkg1_loss, sig1_loss, str(dsid), False)
+      sic_vals = do_roc(bkg1_loss, sig1_loss, tag_file=str(dsid), tag_title=str(dsid), make_transformed_plot=False,plot_dir=plot_dir )
       sic_values[dsid] = sic_vals
     except Exception as e:
-      print(e)
+      cprint(e,'red')
     #sig1_cut = sig1_loss[sig1_loss>bkg20]
     #cut = len(sig1_cut)/total
     #print(dsid, f'{cut:.0%}') 
   
   print("bkg events: ", len(bkg_loss))
-  cprint(f'{sic_values=}', 'green') 
-  do_grid_plots(sic_values, title)
+  do_grid_plots(sic_values, title,plot_dir=plot_dir)
 
-def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, cms=False):
-  with h5py.File("../v8.1/"+bkg_file,"r") as f:
+def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, dir_all,cms=False): #dir_all # bkg_scale = 5
+  h5dir=dir_all+'applydir/'
+  plot_dir=h5dir+'/plots/'
+  if not os.path.exists(plot_dir):os.mkdir(plot_dir)
+  bkgpath=h5dir+"v8p1_QCDskim.hdf5"
+  with h5py.File(bkgpath,"r") as f:
     bkg_data = f.get('data')[:]
   
   ## CMS selections
@@ -229,12 +235,14 @@ def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, cms=Fa
   y0_total = np.sum(bkg_weight)
   sb_values = {}
   
-  with open("dsid_masses.json", "r") as f:
+  with open("/nevis/katya01/data/users/ebusch/SVJ/autoencoder/svj-vae/dsid_masses.json", "r") as f:
     dsid_mass = json.load(f)
   dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
+    sigpath=h5dir+"v8p1_"+str(dsid)+".hdf5"
     try:
-      with h5py.File("../v8.1/"+sig_file_prefix+str(dsid)+".hdf5","r") as f:
+     
+      with h5py.File(sigpath,"r") as f:
         sig1_data = f.get('data')[:]
 
       ## CMS selections
@@ -273,10 +281,10 @@ def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, cms=Fa
         sb_values[dsid] = {"sensitivity_Inclusive": my_metric(y_total,y0_total), "sensitivity_mT": 0}
 
     except Exception as e:
-      print(e)
+      cprint(e, 'red')
       sb_values[dsid] = {"sensitivity_Inclusive": 0, "sensitivity_mT": 0}
 
-  do_grid_plots(sb_values,title)
+  do_grid_plots(sb_values, title+f'_score_cut={score_cut}',plot_dir=plot_dir)
   return sb_values
 
 def compare_s_sqrt_b():

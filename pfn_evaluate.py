@@ -27,9 +27,9 @@ def extract_tag(filename):
     tag=''+filename[3]
   else: tag=''+filename[2]
   return tag
-
+#h5_dir, max_track
 # ---------- Load graph model ----------
-def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, h5dir,h5path, bool_pt):
+def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, applydir,h5path, bool_pt, max_track, h5_dir):
   cprint(f'{extraVars=}', 'red')
   graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
   graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
@@ -58,15 +58,15 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, h5dir
  
   seed=0
   
-  plot_dir=h5dir+'/plots_dsid/'
+  plot_dir=applydir+'/plots_dsid/'
   if not os.path.exists(plot_dir):
       
     os.mkdir(plot_dir)
 
   cprint(f'{extraVars=}', 'magenta')
-  bkg2, mT_bkg, bkg_sel, jet_bkg = getTwoJetSystem(nevents=bkg_events,input_file=bkg_file,
+  bkg2, mT_bkg, bkg_sel, jet_bkg, _, _ = getTwoJetSystem(nevents=bkg_events,input_file=bkg_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
-      bool_weight=bool_weight,  extraVars=extraVars, plot_dir=plot_dir,seed=seed, bool_pt=bool_pt)
+      bool_weight=bool_weight,  extraVars=extraVars, plot_dir=plot_dir,seed=seed,max_track=max_track, bool_pt=bool_pt, h5_dir=h5_dir)
 
 
   scaler = load(arch_dir+pfn_model+'_scaler.bin')
@@ -97,15 +97,11 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, h5dir
   ds_dt = np.dtype({'names':newVars,'formats':[(float)]*len(newVars)})
   rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
 
-  with h5py.File(h5path,"w") as h5f:
-    dset = h5f.create_dataset("data",data=rec_bkg)
+  with h5py.File(h5path,"w") as f:
+    dset = f.create_dataset("data",data=rec_bkg)
+
 
   """
-  with h5py.File(h5path,"r") as f:
-   #with h5py.File("../v8.1/v8p1_PFNv2_"+str(dsid)+".hdf5","r") as f:
-    sigv1_data = f.get('data')[:]
-  sigv1_loss = sigv1_data["score"]
-  print(sigv1_loss)
   """
 
   return rec_bkg
@@ -118,8 +114,9 @@ title='July12'
 myVars= ["mT_jj", "weight"]# if this is empty
 pfn_model = 'PFN'
 ## Load testing data
-sig_events = 10000000000
-bkg_events = 10000000000
+sig_events = 100000000
+#bkg_events =10
+bkg_events = 100000000
 bool_weight=True
 if bool_weight:weight_tag='ws'
 else:weight_tag='nws'
@@ -127,12 +124,15 @@ else:weight_tag='nws'
 #bool_rewrite=False
 bool_rewrite=True
 
-bool_pt=True
+bool_pt=False
+#max_track=15# CHECK THIS
+max_track=80# CHECK THIS
+h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/jul18/'
 
-dir_all='/nevis/katya01/data/users/kpark/svj-vae/results/07_12_23_08_47/' # change
-h5dir=dir_all+'h5dir/'
-if not os.path.exists(h5dir):
-  os.mkdir(h5dir)
+dir_all='/nevis/katya01/data/users/kpark/svj-vae/results/paramscan/07_18_23_10_54/' # change
+applydir=dir_all+'applydir/'
+if not os.path.exists(applydir):
+  os.mkdir(applydir)
 arch_dir=dir_all+'architectures_saved/'
 dsids=list(range(515487,515527))
 corrupt_files=[515508, 515511,515493]
@@ -142,23 +142,33 @@ for dsid in dsids:
   file_ls.append("skim3.user.ebusch."+str(dsid)+".root")
 
 filetag_ls=[extract_tag(filename=fl) for fl in file_ls]
-
+"""
 for fl in file_ls:
   dsid=fl.split('.')[-2]
   print('*'*30)
   print(fl) 
-  h5path=h5dir+'/'+"v8p1_"+str(dsid)+".hdf5" 
+  h5path=applydir+'/'+"v8p1_"+str(dsid)+".hdf5" 
   cprint(f'{dsid=}, {h5path=}', 'green')
  # my_variables= ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
   tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
   cprint(fl,'blue')
    
-  cprint(f'{dsid=},', 'green')
-  rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,h5dir=h5dir, h5path=h5path, bool_pt=bool_pt)
-#for background 
+  if  os.path.exists(h5path): # and (dsid !=515429):
+    with h5py.File(h5path,"r") as f:
+      dset = f.get('data')[:]
+  else:    rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir)
+
 bkg_file="skim3.user.ebusch.QCDskim.root"
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
-   
-rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=bkg_file.split('.')[-2],h5dir=h5dir, h5path=h5path, bool_pt=bool_pt)
+dsid=bkg_file.split('.')[-2]
+h5path=applydir+'/'+"v8p1_"+str(dsid)+".hdf5"
+cprint(h5path, 'magenta')
+if  os.path.exists(h5path):
+  with h5py.File(h5path,"r") as f:
+    dset = f.get('data')[:]
+
+else: rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir)
 #"""
-grid_scan(title)
+title=f'track={max_track}'
+grid_s_sqrt_b(score_cut=0.97, bkg_file='', bkg_scale=5, sig_file_prefix='', title=title, dir_all=dir_all,cms=False)
+#grid_scan(title, dir_all=dir_all)

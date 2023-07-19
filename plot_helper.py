@@ -126,17 +126,29 @@ def make_roc(fpr,tpr,auc, tag_file="", tag_title="", plot_dir=""):
   plt.clf()
   print("Saved ROC curve for ", tag_file)
 
-def make_sic(fpr,tpr,auc,  tag_file="", tag_title="",  plot_dir=""):
+def make_sic(fpr,tpr,auc, bkg, tag_file="", tag_title="",  plot_dir=""):
+  print('make_sic')
   y = tpr[1:]/np.sqrt(fpr[1:])
+  good = (y != np.inf) & (tpr[1:] > 0.08)
+  ymax = max(y[good])
+  ymax_i = np.argmax(y[good])
+  sigEff = tpr[1:][good][ymax_i]
+  qcdEff = fpr[1:][good][ymax_i]
+  score_cut = np.percentile(bkg,100-(qcdEff*100))
+  print("Max improvement: ", ymax)
+  print("Sig eff: ", sigEff)
+  print("Bkg eff: ", qcdEff)
+  print("Score selection: ", score_cut)
   plt.plot(tpr[1:],y,label="AUC = %0.2f" % auc)
   plt.axhline(y=1, color='0.8', linestyle='--')
   plt.xlabel("Signal Efficiency (TPR)")
   plt.ylabel("Signal Sensitivity ($TPR/\sqrt{FPR}$)")
-  plt.title("Significance Improvement Characteristic: " +f' {tag_title}')
+  plt.title("Significance Improvement Characteristic " )
   plt.legend()
-  plt.savefig(plot_dir+'sic_'+tag_file+'.png')
+  #plt.savefig(plot_dir+'sic_'+tag_file+'.png')
   plt.clf()
-  print("Saved SIC for", tag_file)
+  print("Saved SIC ")
+  return {'sicMax':ymax, 'sigEff': sigEff, 'qcdEff': qcdEff, 'score_cut': score_cut}
 
 def make_grid_plot(values,title,method,plot_dir,tag=''):
   #values must be 4 X 10
@@ -205,7 +217,8 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
   plt.yscale('log')
   plt.legend()
   plt.title(f'PFN Score {tag_title}')
-  plt.xlabel('Loss')
+  plt.xlabel('PFN Score')
+  #plt.xlabel('Loss')
   plt.savefig(plot_dir+'score_'+tag_file+'.png')
   plt.clf()
   print("Saved score distribution for", tag_file)
