@@ -17,7 +17,7 @@ phi_dim = 64
 nepochs=50
 batchsize_vae=32
 
-pfn_model = 'PFNv3'
+pfn_model = 'PFNv3Gabe'
 vae_model = 'vANTELOPE'
 arch_dir = "architectures_saved/"
 data_path = "/data/users/ebusch/SVJ/autoencoder/"
@@ -28,8 +28,8 @@ graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
 graph.compile()
 
 ## AE events
-x_events = 200000
-y_events = 20000
+x_events = 50000
+y_events = 5000
 #z_events = 199899
 
 bkg_file = data_path + "v8.1/skim3.user.ebusch.QCDskim.root"
