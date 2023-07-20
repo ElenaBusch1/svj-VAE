@@ -13,14 +13,10 @@ from models_archive import *
 from eval_helper import *
 import h5py
 
-my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
-bkg2,mT_bkg = getTwoJetSystem(-1,"../v8.1/skim3.user.ebusch.515500.root", my_variables, False)
-quit()
-
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-pfn_model = 'PFNv3'
+pfn_model = 'PFNv3p1'
 arch_dir = "architectures_saved/"
 
 ## ---------- Load graph model ----------
@@ -46,7 +42,7 @@ x_events = -1 ## -1 for all events
 my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
 
 ## evaluate bkg
-bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim3.user.ebusch.QCDskim.root", my_variables, False, True)
+bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim3.user.ebusch.QCDskim.root", my_variables, True)
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False) 
 phi_bkg = graph.predict(bkg2)
@@ -59,7 +55,7 @@ save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
 #print(save_bkg)
 ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
 rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
-with h5py.File("v8p1_PFNv3_QCDskim3.hdf5","w") as h5f:
+with h5py.File("v8p1_PFNv3p1_QCDskim3.hdf5","w") as h5f:
   dset = h5f.create_dataset("data",data=rec_bkg)
 print("Saved hdf5 for QCDskim")
 
@@ -69,7 +65,7 @@ dsids = range(515486,515527)
 for dsid in dsids:
   my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
   try:
-    bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim3.user.ebusch."+str(dsid)+".root", my_variables, False, False)
+    bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim3.user.ebusch."+str(dsid)+".root", my_variables, False)
   except:
     continue
   scaler = load(arch_dir+pfn_model+'_scaler.bin')
@@ -89,7 +85,7 @@ for dsid in dsids:
   ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
   rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
   
-  with h5py.File("v8p1_PFNv3_"+str(dsid)+".hdf5","w") as h5f:
+  with h5py.File("v8p1_PFNv3p1_"+str(dsid)+".hdf5","w") as h5f:
     dset = h5f.create_dataset("data",data=rec_bkg)
   print("Saved hdf5 for ", dsid)
 

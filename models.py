@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras
-from keras import backend as K
-from keras.layers import Dense, Dropout, LeakyReLU
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import Dense, Dropout, LeakyReLU
 from sklearn.svm import OneClassSVM
 arch_dir = "architectures_saved/"
 
@@ -139,6 +139,18 @@ class supervisedPFN(keras.Model):
 ## ------------------------------------------------------------------------------------
 ## 		Functions
 ## ------------------------------------------------------------------------------------
+
+## ------------------------------------------------------------------------------------
+class Sampling(keras.layers.Layer):
+    """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
+
+    def call(self, inputs):
+        z_mean, z_log_var = inputs
+        batch = tf.shape(z_mean)[0]
+        dim = tf.shape(z_mean)[1]
+        epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
+        return z_mean + tf.exp(0.5 * z_log_var) * epsilon
+
 
 ## ------------------------------------------------------------------------------------
 def pfn_mask_func(X, mask_val=0):
@@ -317,7 +329,7 @@ def get_vae(input_dim, encoding_dim, latent_dim):
   decoder = get_decoder(input_dim, encoding_dim, latent_dim)
 
   vae = VAE(encoder, decoder)
-  vae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001))
+  vae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.00001))
   return vae
 
 ## ------------------------------------------------------------------------------------

@@ -16,8 +16,8 @@ phi_dim = 64
 nepochs=50
 batchsize_ae=32
 
-pfn_model = 'PFNv1'
-ae_model = 'ANTELOPE'
+pfn_model = 'PFNv3p1'
+ae_model = 'vANTELOPE'
 arch_dir = "architectures_saved/"
 
 ################### Train the AE ###############################
@@ -26,9 +26,12 @@ graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
 graph.compile()
 
 ## AE events
-x_events = 200000
-y_events = 20000
-bkg2, sig2 = getTwoJetSystem(x_events,y_events)
+x_events = 50000
+y_events = 5000
+bkg_file = "../v8.1/skim3.user.ebusch.QCDskim.root"
+sig_file = "../v8.1/skim3.user.ebusch.SIGskim.root"
+bkg2 = getTwoJetSystem(x_events,bkg_file,[],use_weight=True)
+sig2 = getTwoJetSystem(y_events,sig_file,[],use_weight=False)
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
 sig2,_ = apply_StandardScaling(sig2,scaler,False)
@@ -51,7 +54,6 @@ print("Min: ", eval_min)
 print("Max: ", eval_max)
 if (sig_max > eval_max): eval_max = sig_max
 print("Final Max: ", eval_max)
-quit()
 
 phi_evalb = (phi_evalb - eval_min)/(eval_max-eval_min)
 phi_testb = (phi_testb - eval_min)/(eval_max-eval_min)
@@ -65,7 +67,7 @@ plot_phi(phi_evalb,"train","PFN_phi_train_scaled")
 plot_phi(phi_testb,"test","PFN_phi_test_scaled")
 plot_phi(phi_sig,"sig","PFN_phi_sig_scaled")
 
-ae = get_ae(phi_dim,encoding_dim,latent_dim)
+ae = get_vae(phi_dim,encoding_dim,latent_dim)
 
 h2 = ae.fit(phi_evalb, 
     epochs=nepochs,
