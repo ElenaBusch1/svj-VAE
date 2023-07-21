@@ -92,26 +92,30 @@ plot_loss(h2, ae_model, 'loss')
 
 #2. Get loss
 #bkg_loss, sig_loss = get_single_loss(ae, phi_testb, phi_sig)
+"""
 pred_phi_bkg = ae.predict(phi_testb)['reconstruction']
 pred_phi_sig = ae.predict(phi_sig)['reconstruction']
 bkg_loss = keras.losses.mse(phi_testb, pred_phi_bkg)
 sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
+"""
 
-plot_score(bkg_loss, sig_loss, False, True, ae_model)
+bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss, sig_reco_loss = get_multi_loss(ae, phi_testb, phi_sig)
+
+plot_score(bkg_reco_loss, sig_reco_loss, False, True, ae_model)
 
 # # 3. Signal Sensitivity Score
-score = getSignalSensitivityScore(bkg_loss, sig_loss)
+score = getSignalSensitivityScore(bkg_reco_loss, sig_reco_loss)
 print("95 percentile score = ",score)
 # # 4. ROCs/AUCs using sklearn functions imported above  
-do_roc(bkg_loss, sig_loss, ae_model, True)
+do_roc(bkg_reco_loss, sig_reco_loss, ae_model, True)
 
 print("Taking log of score...")
-bkg_loss = np.log(bkg_loss)
-sig_loss = np.log(sig_loss)
-score = getSignalSensitivityScore(bkg_loss, sig_loss)
+bkg_loss = np.log(bkg_reco_loss)
+sig_loss = np.log(sig_reco_loss)
+score = getSignalSensitivityScore(bkg_reco_loss, sig_reco_loss)
 print("95 percentile score = ",score)
 # # 4. ROCs/AUCs using sklearn functions imported above  
-do_roc(bkg_loss, sig_loss, ae_model+'log', True)
+do_roc(bkg_reco_loss, sig_reco_loss, ae_model+'log', True)
 
 
 # ## get predictions on test data
