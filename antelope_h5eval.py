@@ -14,6 +14,9 @@ from eval_helper import *
 import matplotlib.pyplot as plt
 import h5py
 
+def zero_div(n,d):
+  return n/d if d else 0
+
 def my_metric(s,b):
     return np.sqrt(2*((s+b)*np.log(1+s/b)-s))
 
@@ -144,7 +147,7 @@ def score_cut_mT_plot():
   w = [w0,w1,w2,w3,w4]
   
   #for var in variables: #["mT_jj", "deta_12", ""]:
-  for var in ["rT"]:
+  for var in ["jet2_Width"]:
     labels = ["QCD", "2500 GeV,0.2", "2500 GeV,0.8", "4000 GeV,0.2", "4000 GeV,0.8"]
     if (var=="weight" or var=="mcEventWeight"): continue
     bkg = bkg_data[var][bkg_loss>bkg20]
@@ -158,8 +161,8 @@ def score_cut_mT_plot():
     labels[3] += " ({0:.1e}, {1:.1e})".format(len(sig3),np.sum(w3))
     labels[4] += " ({0:.1e}, {1:.1e})".format(len(sig4),np.sum(w4))
     d = [bkg, sig1, sig2, sig3, sig4]
-    plot_single_variable(d,w,labels, var, logy=True) 
-    #plot_ratio(d,w,labels, var, logy=False) 
+    #plot_single_variable(d,w,labels, var, logy=True) 
+    plot_ratio(d,w,labels, var, logy=True,cumsum=True) 
 
 
 def grid_scan(title):
@@ -211,7 +214,8 @@ def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, cms=Fa
 
   ## ML selection
   else:
-    selection1 = (bkg_data["score"] > score_cut) & (bkg_data["deta_12"] < 1.0)
+    selection1 = (bkg_data["score"] > score_cut)# & (bkg_data["jet2_Width"] > 0.07)
+    #if (title == "PFN_Jet2Width"): selection1 = (bkg_data["score"] > score_cut) & (bkg_data["jet2_Width"] > 0.07)
     bkg_mT = bkg_data["mT_jj"][selection1]
     bkg_weight = bkg_data["weight"][selection1]
     bkg_weight = bkg_scale*bkg_weight
@@ -235,14 +239,15 @@ def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, cms=Fa
 
       ## ML selection
       else:
-        selection1 = (sig1_data["score"] > score_cut) & (sig1_data["deta_12"] < 1.0)
+        selection1 = (sig1_data["score"] > score_cut)# & (sig1_data["jet2_Width"] > 0.07)
+        #if (title == "PFN_Jet2Width"): selection1 = (sig1_data["score"] > score_cut) & (sig1_data["jet2_Width"] > 0.07)
         sig1_weight = sig1_data["weight"][selection1]
         sig1_mT = sig1_data["mT_jj"][selection1]
 
       y_total = np.sum(sig1_weight) #inclusive total
 
-      sig1_mass_window = (sig1_mT < 6500) & (sig1_mT > 1500)
-      bkg_mass_window = (bkg_mT < 6500) & (bkg_mT > 1500)
+      sig1_mass_window = (sig1_mT < 6500) & (sig1_mT > 1000)
+      bkg_mass_window = (bkg_mT < 6500) & (bkg_mT > 1000)
       sig1_restricted_mT = sig1_mT[sig1_mass_window]
       bkg_restricted_mT = bkg_mT[bkg_mass_window]
       sig1_restricted_weight = sig1_weight[sig1_mass_window]
@@ -269,9 +274,10 @@ def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, cms=Fa
   do_grid_plots(sb_values,title)
   return sb_values
 
+
 def compare_s_sqrt_b():
   #v2Inclusive = grid_s_sqrt_b(0.92, "v8p1_PFNv3_QCDskim3.hdf5", 5, "v8p1_PFNv3_", "PFN_PreBugFix", False)
-  v3MET = grid_s_sqrt_b(0.985, "v8p1_PFNv3p1_QCDskim3.hdf5", 5, "v8p1_PFNv3p1_", "PFN_PostBugFix", False)
+  v3MET = grid_s_sqrt_b(0.97, "v8p1_PFNv3p1_QCDskim3.hdf5", 5, "v8p1_PFNv3p1_", "PFN_Jet2Width", False)
   cms = grid_s_sqrt_b(0, "v8p1_CMS_QCDskim1.hdf5", 50, "v8p1_CMSskim1_", "CMS", cms=True)
   v2_compare = {}
   v3_compare = {}
@@ -282,28 +288,29 @@ def compare_s_sqrt_b():
     #v2mT = v2Inclusive[dsid]["sensitivity_mT"]
     v3mT = v3MET[dsid]["sensitivity_mT"]
     cmsmT = cms[dsid]["sensitivity_mT"]
-    if (cmsmT != 0):
-      #v2_compare[dsid] = {"sensitivity_Inclusive": v2incl/cmsincl, "sensitivity_mT": v2mT/cmsmT, "mT_over_Incl": v2mT/v2incl}
-      if (v3incl != 0):
-        v3_compare[dsid] = {"sensitivity_Inclusive": v3incl/cmsincl, "sensitivity_mT": v3mT/cmsmT, "mT_over_Incl": v3mT/v3incl}
-      else:
-        v3_compare[dsid] = {"sensitivity_Inclusive": v3incl/cmsincl, "sensitivity_mT": v3mT/cmsmT, "mT_over_Incl": 0}
-    else:
-      #v2_compare[dsid] = {"sensitivity_Inclusive": v2incl/cmsincl, "sensitivity_mT": 0, "mT_over_Incl": v2mT/v2incl}
-      if (v3incl != 0):
-        v3_compare[dsid] = {"sensitivity_Inclusive": v3incl/cmsincl, "sensitivity_mT": 0, "mT_over_Incl": v3mT/v3incl}
-      else:
-        v3_compare[dsid] = {"sensitivity_Inclusive": v3incl/cmsincl, "sensitivity_mT": 0, "mT_over_Incl": 0}
+    v3_compare[dsid] = {"sensitivity_Inclusive": zero_div(v3incl,cmsincl), "sensitivity_mT": zero_div(v3mT,cmsmT), "mT_over_Incl": zero_div(v3mT,v3incl)}
+    #if (cmsmT != 0):
+    #  #v2_compare[dsid] = {"sensitivity_Inclusive": v2incl/cmsincl, "sensitivity_mT": v2mT/cmsmT, "mT_over_Incl": v2mT/v2incl}
+    #  if (v3incl != 0):
+    #    v3_compare[dsid] = {"sensitivity_Inclusive": v3incl/cmsincl, "sensitivity_mT": v3mT/cmsmT, "mT_over_Incl": v3mT/v3incl}
+    #  else:
+    #    v3_compare[dsid] = {"sensitivity_Inclusive": v3incl/cmsincl, "sensitivity_mT": v3mT/cmsmT, "mT_over_Incl": 0}
+    #else:
+    #  #v2_compare[dsid] = {"sensitivity_Inclusive": v2incl/cmsincl, "sensitivity_mT": 0, "mT_over_Incl": v2mT/v2incl}
+    #  if (v3incl != 0):
+    #    v3_compare[dsid] = {"sensitivity_Inclusive": v3incl/cmsincl, "sensitivity_mT": 0, "mT_over_Incl": v3mT/v3incl}
+    #  else:
+    #    v3_compare[dsid] = {"sensitivity_Inclusive": v3incl/cmsincl, "sensitivity_mT": 0, "mT_over_Incl": 0}
   #do_grid_plots(v2_compare, "v2_compare")  
   do_grid_plots(v3_compare, "v3_compare")  
 
 def main():
   #mT_shape_compare()
   #grid_scan("v3p1_deta")
-  #compare_s_sqrt_b()
+  compare_s_sqrt_b()
   #grid_s_sqrt_b(0.99)
   #cms_mT_plots()
-  score_cut_mT_plot()
+  #score_cut_mT_plot()
 
 if __name__ == '__main__':
   main()
