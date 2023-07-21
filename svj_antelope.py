@@ -99,7 +99,7 @@ vae.get_layer('decoder').save(arch_dir+vae_model+'_decoder_arch')
 # 1. Loss vs. epoch 
 plot_loss(h2, vae_model, 'loss')
 #plot_loss(h2, vae_model, "kl_loss")
-plot_loss(h2, vae_model, "reco_loss")
+#plot_loss(h2, vae_model, "reco_loss")
 
 #2. Get loss
 #bkg_loss, sig_loss = get_single_loss(ae, phi_testb, phi_sig)
@@ -114,14 +114,14 @@ bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss, sig_reco_loss = get
 
 plot_score(bkg_loss, sig_loss, False, False, vae_model)
 #plot_score(bkg_kl_loss, sig_kl_loss, False, False, vae_model+"_KLD")
-plot_score(bkg_reco_loss, sig_reco_loss, False, False, vae_model+"_Reco")
+#plot_score(bkg_reco_loss, sig_reco_loss, False, False, vae_model+"_Reco")
 
 # # 3. Signal Sensitivity Score
 score = getSignalSensitivityScore(bkg_loss, sig_loss)
 print("95 percentile score = ",score)
 # # 4. ROCs/AUCs using sklearn functions imported above  
 do_roc(bkg_loss, sig_loss, vae_model, True)
-do_roc(bkg_reco_loss, sig_reco_loss, vae_model+"_Reco", True)
+#do_roc(bkg_reco_loss, sig_reco_loss, vae_model+"_Reco", True)
 #do_roc(bkg_kl_loss, sig_kl_loss, vae_model+"_KLD", True)
 
 print("Taking log of score...")
