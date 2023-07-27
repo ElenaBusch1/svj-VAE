@@ -23,6 +23,10 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
     data_ls=[bkg,vars_bkg, bkg_sel, jet_bkg, bkg_in0,bkg_in1]
 
 
+    tag0="jet1"
+    tag1="jet2"
+    tag3="jet12"
+    tag2=input_file.split('.')[-2]
 
     if  os.path.exists(h5path):
       with h5py.File(h5path, 'r') as f:
@@ -58,17 +62,13 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
       #bkg_in0, x0, bkg_in1, x1
       #plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
       print('for leading jet') 
-      tag0="jet1"
-      tag1="jet2"
-      tag3="jet12"
-      tag2=input_file.split('.')[-2]
          
       cprint(jet_bkg, 'yellow') 
       cprint(f'{jet_bkg.shape=}', 'yellow') 
       cprint(f'{bkg_in0.shape=}', 'yellow') 
       cprint(f'{bkg_in1.shape=}', 'yellow') 
        
-      """
+#      """
       
       x_0_0, _, bkg_nz0_0,x_pt_0_0 = apply_TrackSelection(bkg_in0, jet_bkg, ntrack=0, bool_pt=bool_pt)
       x_1_0, _, bkg_nz1_0,x_pt_1_0 = apply_TrackSelection(bkg_in1, jet_bkg, ntrack=0, bool_pt=bool_pt)
@@ -82,19 +82,25 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
       x_0_2, _, bkg_nz0_2,x_pt_0_2 = apply_TrackSelection(bkg_in0, jet_bkg, ntrack=2, bool_pt=bool_pt)
       x_1_2, _, bkg_nz1_2,x_pt_1_2  = apply_TrackSelection(bkg_in1, jet_bkg, ntrack=2, bool_pt=bool_pt)
       bkg_nz_2 = bkg_nz0_2 & bkg_nz1_2 
-      """
+#      """
   
       # select events which have both valid leading and subleading jet tracks
       #with pt requirement and track selection
       x_0, _, bkg_nz0,x_pt_0 = apply_TrackSelection(bkg_in0, jet_bkg, bool_pt=bool_pt) #x_0 is leading jet 1 indices applied, x_pt_0 only pt selection applied -> so should use x_pt_0 for the compatibility of dimension with bkg_nz
       x_1, _, bkg_nz1, x_pt_1 = apply_TrackSelection(bkg_in1, jet_bkg, bool_pt=bool_pt)
+      cprint(f'{type(bkg_nz0)}', 'yellow')
+      cprint(f'{type(bkg_nz1)}', 'yellow')
+      
+      cprint(f'{bkg_nz0}', 'yellow')
+      cprint(f'{bkg_nz1}', 'yellow')
       bkg_nz = bkg_nz0 & bkg_nz1
+      cprint(f'{bkg_nz}', 'yellow')
       cprint(f'{x_0.shape=}, {x_1.shape=}, {x_pt_0.shape=}, {x_pt_1.shape=},{bkg_nz.shape=}, {bkg_nz0.shape=}, {bkg_nz1.shape=}')
       bkg_pt0 = x_pt_0[bkg_nz]  # with pt and track requirement
       #bkg_pt0 = bkg_in0[bkg_nz]  # with pt and track requirement
   
      
-      # WHAT ABOUT JETS? PT SELECTION? 
+#      # WHAT ABOUT JETS? PT SELECTION? 
       """
       hist0=[x_pt_0_0, x_pt_0_0[bkg_nz0_0], x_pt_0_0[bkg_nz0_1],x_pt_0_0[bkg_nz0_2], x_pt_0_0[bkg_nz0]] # leading jet ntrack comparison
       hist1=[x_pt_1_0, x_pt_1_0[bkg_nz1_0], x_pt_1_0[bkg_nz1_1],x_pt_1_0[bkg_nz1_2], x_pt_1_0[bkg_nz1]] # leading jet ntrack comparison
@@ -103,7 +109,7 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
       plot_ntrack(hist1,  tag_file=tag1+tag2, tag_title=tag1+tag2, plot_dir=plot_dir)
       plot_ntrack(hist0,  tag_file=tag0+tag2, tag_title=tag0+tag2, plot_dir=plot_dir)
       plot_ntrack(hist2,  tag_file=tag3+tag2, tag_title=tag3+tag2, plot_dir=plot_dir)
-      """
+#      """
   
   
       #bkg_pt1 = bkg_in1[bkg_nz]
@@ -137,7 +143,7 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
 
 
     
-    cprint(f'{bkg=}', 'red')
+#    cprint(f'{bkg=}', 'red')
 
     if getExtraVars: return bkg, vars_bkg, bkg_sel, jet_bkg, bkg_in0, bkg_in1
     #if getExtraVars: return bkg, vars_bkg, bkg_sel, jet_bkg
@@ -420,8 +426,7 @@ def do_roc(bkg_loss, sig_loss, tag_file, tag_title, make_transformed_plot=False,
     fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
     auc = roc_auc_score(truth_labels, eval_vals)
     print("AUC - "+tag_file+": ", auc)
-    #make_roc(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
-    #make_sic(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
+    make_roc(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
 
     sic_vals = make_sic(fpr,tpr,auc,bkg=bkg_loss,tag_file=tag_file, tag_title=tag_title,plot_dir=plot_dir)
     sic_vals['auc'] = auc

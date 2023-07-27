@@ -110,7 +110,6 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-title='July12'
 myVars= ["mT_jj", "weight"]# if this is empty
 pfn_model = 'PFN'
 ## Load testing data
@@ -129,7 +128,8 @@ bool_pt=False
 max_track=80# CHECK THIS
 h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/jul18/'
 
-dir_all='/nevis/katya01/data/users/kpark/svj-vae/results/paramscan/07_18_23_10_54/' # change
+dir_all='/nevis/katya01/data/users/kpark/svj-vae/results/paramscan_new/07_24_23_07_11/' # change
+#dir_all='/nevis/katya01/data/users/kpark/svj-vae/results/major/07_18_23_10_54/' # change
 applydir=dir_all+'applydir/'
 if not os.path.exists(applydir):
   os.mkdir(applydir)
@@ -158,6 +158,7 @@ for fl in file_ls:
       dset = f.get('data')[:]
   else:    rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir)
 
+"""
 bkg_file="skim3.user.ebusch.QCDskim.root"
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 dsid=bkg_file.split('.')[-2]
@@ -168,7 +169,6 @@ if  os.path.exists(h5path):
     dset = f.get('data')[:]
 
 else: rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir)
-#"""
 title=f'track={max_track}'
 grid_s_sqrt_b(score_cut=0.97, bkg_file='', bkg_scale=5, sig_file_prefix='', title=title, dir_all=dir_all,cms=False)
 #grid_scan(title, dir_all=dir_all)

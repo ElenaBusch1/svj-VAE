@@ -6,6 +6,7 @@ from matplotlib import colors
 from root_to_numpy import variable_array
 from math import ceil
 from termcolor import cprint
+from matplotlib.ticker import MultipleLocator
 #tag = "PFN_2jAvg_MM"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 #plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun5_500000_nep100_nl100/'
@@ -14,15 +15,23 @@ from termcolor import cprint
 plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun29/lala/'
 def plot_ntrack(h_ls,  tag_file="", tag_title="", plot_dir="", bin_max=0):
   #label=['no cuts','ntrack >= 3','pt > 10 GeV in leading jet','pt > 10 GeV in subleading jet']
+  print(len(h_ls))
   if len(h_ls)==5:
     label=['no cuts','ntrack >= 0','ntrack >= 1', 'ntrack >= 2', 'ntrack >= 3']
+  elif len(h_ls)==4:
+    label=['sig (before)', 'bkg (before)','sig (after)', 'bkg (after)']
   else:label=['signal', 'QCD']
   bin_max_ls=[]
   count_ls=[]
   nevent_ls=[]
+  n=0
   for i,h in enumerate(h_ls):
   #print(h.history)
     first_var=h[:,:,0]
+    if i!=0 and n!=first_var.shape[1]:
+      cprint('not the same number of max_tracks -> incompatible','red')
+      sys.exit()
+    else: n=first_var.shape[1]
     nevent=first_var.shape[0]
     count=np.count_nonzero(first_var, axis = 1)
    
@@ -31,7 +40,7 @@ def plot_ntrack(h_ls,  tag_file="", tag_title="", plot_dir="", bin_max=0):
     nevent_ls.append(nevent) 
     count_ls.append(count) 
 
-  if bin_max==0:
+  if bin_max==0: # default value is 0
     bin_max=np.max(np.array(bin_max_ls))     # this ensures that we are not cutting out any events 
   
   bins=np.array(range(bin_min-1,bin_max+2))
@@ -39,12 +48,15 @@ def plot_ntrack(h_ls,  tag_file="", tag_title="", plot_dir="", bin_max=0):
   print(f'{bin_max_ls=},{bin_max=}')
 
   for i,h in enumerate(h_ls):
-    plt.hist(count_ls[i], label=f'NE={int(nevent_ls[i])}, {label[i]}',align='right', bins=x_bins,histtype='step',log=True) # use the set bins
+    plt.hist(count_ls[i], label=f'NE={int(nevent_ls[i])}, {label[i]}',align='right', bins=x_bins,histtype='step',log=True, alpha=0.7) # use the set bins
     #plt.hist(count, label=f'NE={int(nevent)}, {label[i]}',align='right', bins=x_bins,histtype='step',log=True) # use the set bins
  
   plt.title(f' Number of tracks ({tag_title})')
   plt.xlabel('ntrack')
   plt.ylabel('count')
+  ax = plt.gca()
+  ax.xaxis.set_major_locator(MultipleLocator(10))  
+  ax.xaxis.set_minor_locator(MultipleLocator(1))  
   plt.legend(loc='upper right')
 #  plt.savefig(plot_dir+loss+'VsEpoch_'+model+'_'+tag+'.png')
   plt.savefig(plot_dir+'/ntrack'+tag_file+'.png')
@@ -145,7 +157,7 @@ def make_sic(fpr,tpr,auc, bkg, tag_file="", tag_title="",  plot_dir=""):
   plt.ylabel("Signal Sensitivity ($TPR/\sqrt{FPR}$)")
   plt.title("Significance Improvement Characteristic " )
   plt.legend()
-  #plt.savefig(plot_dir+'sic_'+tag_file+'.png')
+  plt.savefig(plot_dir+'sic_'+tag_file+'.png')
   plt.clf()
   print("Saved SIC ")
   return {'sicMax':ymax, 'sigEff': sigEff, 'qcdEff': qcdEff, 'score_cut': score_cut}

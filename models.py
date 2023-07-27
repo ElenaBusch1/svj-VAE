@@ -177,7 +177,7 @@ def get_full_PFN(input_dim, phi_dim, n_neuron, learning_rate, nlayer_phi, nlayer
     x = keras.layers.Activation('relu')(x)
     cprint(f"phi{i=}, {dense_dict[i]}, pfn{i+1}, tdist_{i}", 'magenta')
 
-
+  if nlayer_phi==2: i=0 # if nlayer_phi==2, it skipped the loop above
   dense_dict[i+1]=keras.layers.Dense(phi_dim, kernel_initializer=initializer, name="phi") 
   x = keras.layers.TimeDistributed(dense_dict[i+1], name=f"tdist_{i+1}")(x)
   phi_outputs = keras.layers.Activation('relu')(x)
