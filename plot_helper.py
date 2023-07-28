@@ -413,7 +413,6 @@ def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir=
     train = train.reshape(train.shape[0], train.shape[1] * train.shape[2])
   if (len(sig.shape) == 3):
     sig = sig.reshape(sig.shape[0], sig.shape[1] * sig.shape[2])
-  print('after reshaping, train and sig', train.shape, sig.shape)
 #  size=4
   size=7 # length of different variables in variable_array
   for i in range(size): 
@@ -421,7 +420,7 @@ def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir=
     train_v = train[:,i::size].flatten()
     #test_v = test[:,i::size].flatten()
     sig_v = sig[:,i::size].flatten()
-    print(f'{variable_array[i]}, after reshaping and flattening, train and sig', train_v.shape, sig_v.shape)
+#    print(f'{variable_array[i]}, after reshaping and flattening, train and sig', train_v.shape, sig_v.shape)
     bins=np.histogram(np.hstack((train_v,sig_v)),bins=60)[1]
     if(bins[-1] > 3000): bins = np.arange(0,3000,50)
     #plt.subplot(4,1,i+1)

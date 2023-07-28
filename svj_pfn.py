@@ -18,8 +18,11 @@ from sklearn.model_selection import StratifiedKFold
 #plot_dir='/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun29/' 
 # Example usage
 #added
+track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e","jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
+track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e","jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
+jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"] # order is important in apply_JetScalingRotation
 class Param:
-  def __init__(self,  arch_dir="architectures_saved/",print_dir='/',plot_dir='plots/',h5_dir='h5dir/jul18/', 
+  def __init__(self,  arch_dir="architectures_saved/",print_dir='/',plot_dir='plots/',h5_dir='h5dir/jul28/', 
       pfn_model='PFN', ae_model='PFN', bkg_events=500000, sig_events=500000, 
       num_elements=100, element_size=7, encoding_dim=32, phi_dim=64, nepochs=100, n_neuron=75, learning_rate=0.001,
       nlayer_phi=3, nlayer_F=3,
@@ -55,7 +58,7 @@ class Param:
     self.sig_events=sig_events
 
     self.num_elements=num_elements 
-    self.element_size=element_size
+    self.element_size=element_size # this should equal the number of track variables used -> 7 track variables used -> element_size=7
     self.encoding_dim=encoding_dim
     self.phi_dim=phi_dim
     self.nepochs=nepochs
@@ -101,18 +104,18 @@ class Param:
 
     return f'saved info in {self.print_dir}\n {df}'
 
-  def open_print(self):
+  def open_print(self): # redirects the printed statement on the terminal to be saved in a stdout.txt file
     print('printing in\n', self.print_dir)
     stdoutOrigin=sys.stdout
     sys.stdout = open(self.print_dir+f'stdout.txt', 'w')
     return stdoutOrigin
 
-  def close_print(self, stdoutOrigin):
+  def close_print(self, stdoutOrigin): # close the stdout.txt file and the statement printed after this function will be printed on the terminal
     # redirect the print statement
     sys.stdout.close()
     sys.stdout =stdoutOrigin
 
-  def make_html(self, custom_plot_dir='', custom_www_dir='', html_title='/plots'):
+  def make_html(self, custom_plot_dir='', custom_www_dir='', html_title='/plots'): # uses the template.html and makes an html file; if there's an issue -> check href of mystyle.css, nevis_logo.jpg, and image files; '../' might need to be added/removed depending on the relative location of the html file 
     # if using this function: change www_dir to your www_dir
     www_dir='/nevis/kolya/home/kpark/WWW/'+ self.plot_dir.split(self.parent_dir)[-1]+'/'
     print(self.plot_dir.split(self.parent_dir))
@@ -156,62 +159,273 @@ class Param:
   def example_skf(self, a=[]):
     if a==[]:
       a=np.array([[[1,2], [3,4], [5,6]], [[7,8], [9,10], [11,12]],[[13,14], [15,16], [17,18]]]) 
-    b=np.ones(np.shape(a)[0])
+    y=np.ones(np.shape(a)[0])
     nfold=3
     cprint(f'before dividing into {nfold}-fold','yellow') 
     print(f'{a=}, {a.shape=}') 
     skf = StratifiedKFold(n_splits=nfold, shuffle=True, random_state=42)
-    for index, (index_train, index_test) in enumerate(skf.split(a, b)):
+    arr_skf={}
+    for index, (index_train, index_test) in enumerate(skf.split(a, y)):
       cprint(f'{index}th of {nfold}-fold', 'yellow')
       print(f'{a[index_train].shape=}, {a[index_train]=}')
       print(f'{a[index_test].shape=}, {a[index_test]=}')
-    return
+   
+      train=a[index_train]
+      y_train=y[index_train]
+      arr_dict={'index_train': index_train,'index_test': index_test}
+      arr_skf[nfold]=arr_dict
+
+    # check if the index_train of one set and index_test of the other contain the same -> if not apply the model
+    """
+    for nfold in arr_skf:
+      for nfold_other in arr_skf:
+        if not(set(arr_skf[nfold]['index_train'])&set(arr_skf[nfold_other]['index_test']) ):
+          # no common element
+          print(f'{nfold},{nfold_other}')
+    """
+     
+    return 
+
+  def kfold(self, arr,bool_sig, dsid):
+    arr_dict=[]
+    if bool_sig:
+      y=np.ones(np.shape(arr)[0])
+    else: y=np.zeros(np.shape(arr)[0])
+    skf = StratifiedKFold(n_splits=self.nfolds, shuffle=True, random_state=42)
+   
+    arr_skf={} 
+    for nfold, (index_train, index_test) in enumerate(skf.split(arr, y)):
+      path=f'{self.all_dir}/{nfold}/'
+      arch_dir=path+self.arch_dir.split('/')[-2]+'/'
+      plot_dir=path+self.plot_dir.split('/')[-2]+'/'
+      idx_dir=path+'/idx/'
+      dir_ls=[arch_dir,  plot_dir, idx_dir] # don't include print_dir here
+      if not os.path.exists(path):
+        os.mkdir(path)
+        for d in dir_ls:
+          if not os.path.exists(d):
+            os.mkdir(d)
+            print(f'made a directory: {path}')
+  
+      print(arr[index_train].shape)
+      print(arr[index_test].shape)
+      
+    # save idx hdf5 here with a name idx_{nfold}.hdf5
+      str_ls=['index_train', 'index_test','arch_dir', 'plot_dir']
+      data_ls=[index_train, index_test, arch_dir, plot_dir]
+      idx_file=idx_dir+f'idx_{dsid}_{nfold}.hdf5'
+      with h5py.File(idx_file,"w") as f:
+        dset = f.create_group('default')
+        for i in range(len(str_ls)):
+          data= dset.create_dataset(str_ls[i],data=data_ls[i])
+
+      train=arr[index_train] 
+      test=arr[index_test] 
+      y_train=y[index_train] 
+      y_test=y[index_test] 
+      arr_dict={'train': train,'test':test, 'y_train': y_train, 'y_test': y_test, 'arch_dir': arch_dir, 'plot_dir': plot_dir, 'idx_dir': idx_dir}
+      arr_skf[nfold]=arr_dict 
  
-  def prepare(self, dsid=0):
-       
+    return arr_skf
+
+  def find_idx(self,arr,bool_sig,dsid, all_dir,mT=np.array([]), extraVars=np.array([])): # similar to kfold, but instead of writing to a hdf5, this will find indices from the written hdf5
+    arr_dict=[]
+    if bool_sig:
+      y=np.ones(np.shape(arr)[0])
+    else: y=np.zeros(np.shape(arr)[0])
+    arr_skf={}
+    str_ls=['index_train', 'index_test','arch_dir', 'plot_dir']
+    data_ls={}
+    for nfold in range(self.nfolds):
+      path=f'{all_dir}/{nfold}/'
+      idx_dir=path+'/idx/'
+      idx_file=idx_dir+f'idx_{dsid}_{nfold}.hdf5'
+      if os.path.exists(path):
+        with h5py.File(idx_file, 'r') as f:
+          for i in range(len(str_ls)):
+            data_ls[str_ls[i]] = f["default"][str_ls[i]][()]
+        print(dsid)#IndexError: index 48780 is out of bounds for axis 0 with size 48780 
+        print(data_ls)
+        index_train=data_ls['index_train']
+        index_test=data_ls['index_test']
+        plot_dir=data_ls['plot_dir']
+        arch_dir=data_ls['arch_dir']
+        print(arr.shape, len(index_train))
+        train=arr[index_train]
+        test=arr[index_test]
+        y_train=y[index_train]
+        y_test=y[index_test]
+        mT_train=mT[index_train] 
+        mT_test=mT[index_test] 
+ 
+        #arr_dict={'train': train,'test':test, 'y_train': y_train, 'y_test': y_test, 'arch_dir': arch_dir, 'plot_dir': plot_dir, 'idx_dir': idx_dir}
+        arr_dict={'train': train,'test':test, 'y_train': y_train, 'y_test': y_test,'mT_train': mT_train, 'mT_test': mT_test, 'extraVars': extraVars,'arch_dir': arch_dir, 'plot_dir': plot_dir, 'idx_dir': idx_dir}
+        arr_skf[nfold]=arr_dict 
+
+    return arr_skf
+
+  def prepare(self,extraVars=["mT_jj", "weight"]):
     all_start = time.time()
-    track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e","jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
-    track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e","jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
-    jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"] # order is important in apply_JetScalingRotation
-    #jet_array = ["jet1_eta", "jet2_eta", "jet1_phi", "jet2_phi"] # order is important in apply_JetScalingRotation
+    setattr(self, 'all_start',all_start)
 
    ## Load leading two jets
     # Plot inputs before the jet rotation
-#    bkg, sig, mT_bkg, mT_sig = getTwoJetSystem(self.x_events,self.y_events,tag_file=self.tag+"_NSNR", tag_title=self.weight_tag+"_NSNR", bool_weight=self.bool_weight, sig_file=self.sig_file,bkg_file=self.bkg_file, extraVars=self.extraVars, plot_dir=self.plot_dir)
 
     bool_weight_sig=False # important that this is False for sig 
-
     start = time.time()
 
-    sig, mT_sig, sig_sel, jet_sig, sig_in0, sig_in1 = getTwoJetSystem(nevents=self.sig_events,input_file=self.sig_file,
-      track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
-      bool_weight=bool_weight_sig,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed,max_track=self.max_track, bool_pt=self.bool_pt,h5_dir=self.h5_dir)
+    # this creates a hdf5 file of all the information (output of getTwoJetSystem function) titled {input_file}_s={seed}_ne={nevents}_mt={max_track}.hdf5'
+    dsids=list(range(515487,515527))
+    corrupt_files=[515508, 515511,515493]
+    dsids=[x for x in dsids if x not in corrupt_files ]
+    file_ls=[]
+    sig_dict={}
+    for dsid in dsids:
+      file_ls.append("skim3.user.ebusch."+str(dsid)+".root")
+    file_ls=[self.sig_file]
+    for fl in file_ls:
+      dsid=fl.split('.')[-2]
+      sig, mT_sig, sig_sel, jet_sig, sig_in0, sig_in1 = getTwoJetSystem(nevents=self.sig_events,input_file=fl,
+        track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
+        bool_weight=bool_weight_sig,  extraVars=extraVars, plot_dir=self.plot_dir, seed=self.seed,max_track=self.max_track, bool_pt=self.bool_pt,h5_dir=self.h5_dir)
+     # input_file for sig is fl not self.sig_file
+      sig_skf=self.kfold(arr=sig, bool_sig=True,dsid=dsid)
+      for nfold, val in sig_skf.items():
+        if fl ==file_ls[0]:
+          sig_dict[nfold]={}
+          for key in ['y_train', 'y_test','train', 'test']: 
+            sig_dict[nfold][key]=val[key]
+        # for each trial, add the file 
+        else: 
+          for key in ['y_train', 'y_test','train', 'test']: 
+            sig_dict[nfold][key]=np.concatenate((sig_dict[nfold][key],val[key]), axis=0)
+   
+    setattr(self, 'sig_file',file_ls)
     bkg, mT_bkg, bkg_sel, jet_bkg,bkg_in0, bkg_in1 = getTwoJetSystem(nevents=self.bkg_events,input_file=self.bkg_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
-      bool_weight=self.bool_weight,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed, max_track=self.max_track,bool_pt=self.bool_pt,h5_dir=self.h5_dir)
+      bool_weight=self.bool_weight,  extraVars=extraVars, plot_dir=self.plot_dir, seed=self.seed, max_track=self.max_track,bool_pt=self.bool_pt,h5_dir=self.h5_dir)
     
+    bkg_dict=self.kfold(arr=bkg, bool_sig=False,dsid=self.bkg_file.split('.')[-2]) # important that bool_sig=False for bkg
+
     end = time.time()
     print("Elapsed (with getTwoJetSystem) = %s  seconds" % (end - start))
     # FIX THESE
+    for nfold in sig_dict:
+      cprint(f"for {nfold}th, {sig_dict[nfold]['test'].shape=},{bkg_dict[nfold]['test'].shape=}",'yellow')
     plot_ntrack([ np.concatenate((sig_in0, sig_in1),axis=1), np.concatenate((bkg_in0,bkg_in1), axis=1),sig, bkg],  tag_file='_jet12', tag_title=' leading & subleading jet', plot_dir=self.plot_dir, bin_max=self.max_track*2)
     plot_ntrack([ sig_in0,  bkg_in0, sig[:,:80,:], bkg[:,:80,:]],  tag_file='_jet1', tag_title='leading jet', plot_dir=self.plot_dir, bin_max=self.max_track)
-    plot_ntrack([ sig_in1,  bkg_in1, sig[:,80:,:], bkg[:,80:,:]],  tag_file='_jet2', tag_title='subleading jet', plot_dir=self.plot_dir, bin_max=self.max_track) # 80 not 81
 
-    """
-    plot_ntrack([sig_in0, bkg_in0],  tag_file='_jet1', tag_title=' leading jet', plot_dir=self.plot_dir, bin_max=self.max_track)
-    plot_ntrack([sig_in1, bkg_in1],  tag_file='_jet2', tag_title=' subleading jet', plot_dir=self.plot_dir, bin_max=self.max_track)
-    plot_ntrack([sig_in0, bkg_in0],  tag_file='_jet1_exp', tag_title=' leading jet', plot_dir=self.plot_dir)
-    plot_ntrack([sig_in1, bkg_in1],  tag_file='_jet2_exp', tag_title=' subleading jet', plot_dir=self.plot_dir)
-    sys.exit()
-    """
-    return sig, bkg,all_start
-    
-  def train(self, sig,bkg, all_start,dsid=0):
-    y_sig=np.ones(np.shape(sig)[0])
-    y_bkg=np.zeros(np.shape(bkg)[0])
-    skf = StratifiedKFold(n_splits=self.nfolds, shuffle=True, random_state=42)
 
-    ls_dict={}
+    self.train(sig_dict=sig_dict, bkg_dict=bkg_dict)
+
+    return sig, bkg
+ 
+  def do_apply(self, extraVars=["mT_jj", "weight"]):
+    all_start = time.time()
+    setattr(self, 'all_start',all_start)
+
+   ## Load leading two jets
+    # Plot inputs before the jet rotation
+
+    bool_weight_sig=False # important that this is False for sig 
+    start = time.time()
+
+    # this creates a hdf5 file of all the information (output of getTwoJetSystem function) titled {input_file}_s={seed}_ne={nevents}_mt={max_track}.hdf5'
+    dsids=list(range(515487,515527))
+    corrupt_files=[515508, 515511,515493]
+    dsids=[x for x in dsids if x not in corrupt_files ]
+    file_ls=[]
+    for dsid in dsids:
+      file_ls.append("skim3.user.ebusch."+str(dsid)+".root")
+    file_ls.append("skim3.user.ebusch.QCDskim.root")
+    file_ls=[self.sig_file]
+    for fl in file_ls:
+      cprint(f'{fl}', 'red')
+      sig_dict={}
+      dsid=fl.split('.')[-2]
+      # use extraVars instead of self.extraVars 
+      sig, mT_sig, sig_sel, jet_sig, sig_in0, sig_in1 = getTwoJetSystem(nevents=self.sig_events,input_file=fl,
+        track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
+        bool_weight=bool_weight_sig,  extraVars=extraVars, plot_dir=self.plot_dir, seed=self.seed,max_track=self.max_track, bool_pt=self.bool_pt,h5_dir=self.h5_dir)
+     # input_file for sig is fl not self.sig_file
+      print('e', extraVars)
+      cprint(f'{mT_sig}', 'red')
+      all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/test/07_28_23_14_24/'
+      #all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/test/07_28_23_13_39/'
+      #all_dir=self.all_dir
+      sig_skf=self.find_idx(arr=sig, bool_sig=True,dsid=dsid,  mT=mT_sig, extraVars=extraVars,all_dir=all_dir)
+      print(sig_skf)
+      for nfold, val in sig_skf.items():
+        test_loss, mT, newVars,h5path=self.apply(val, dsid)
+        cprint(f'{nfold}among {self.nfolds}, {len(test_loss)=}', 'yellow')
+        if nfold == 0 or nfold==str(0): 
+          sig_dict['test_loss']=test_loss
+          sig_dict['mT']=mT
+        # for each trial, add the file 
+        else: 
+          sig_dict['test_loss']=np.concatenate((sig_dict['test_loss'], test_loss), axis=0)
+          sig_dict['mT']=np.concatenate((sig_dict['mT'], mT), axis=0)
+
+      cprint(f'all {self.nfolds}folds, {len(sig_dict["test_loss"])=}', 'yellow')
+      self.save(sig_dict['test_loss'], sig_dict['mT'], newVars, h5path)               
+      
+    print(test_loss, mT, newVars)
+
+    end = time.time()
+    print("Elapsed (with getTwoJetSystem and do_apply) = %s  seconds" % (end - start))
+    # FIX THESE
+
+    #self.train(sig_dict=sig_dict, bkg_dict=bkg_dict)
+
+    return 
+   
+  def apply(self, arr_dict, dsid):
+
+    arch_dir=arr_dict['arch_dir']
+    mT=arr_dict['mT_test']
+    extraVars=arr_dict['extraVars']
+    applydir=self.all_dir+f'/applydir/'
+    if not(os.path.exists(applydir)):
+      os.mkdir(applydir)
+    h5path=applydir+"v8p1_"+str(dsid)+".hdf5" 
+    pfn_model = 'PFN'
+    cprint(arch_dir+pfn_model+'_graph_arch','yellow')
+    graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
+    graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
+    graph.compile()
+
+    ## Load classifier model
+    classifier = keras.models.load_model(arch_dir+pfn_model+'_classifier_arch')
+    classifier.load_weights(arch_dir+pfn_model+'_classifier_weights.h5')
+    classifier.compile()
+
+    test2=arr_dict['test']
+    scaler = load(arch_dir+pfn_model+'_scaler.bin')
+    test2,_ = apply_StandardScaling(test2,scaler,False)
+
+    phi_test = graph.predict(test2)
+
+    # each event has a pfn score 
+    pred_phi_test = classifier.predict(phi_test)
+    test_loss = pred_phi_test[:,1]
+    newVars=['score']
+    newVars+=extraVars
+    cprint(f'{test_loss}, {test_loss.shape}', 'green')
+    cprint(f'{test_loss[:,None]}, {test_loss[:,None].shape}', 'green')
+    return test_loss, mT, newVars,h5path
+
+  def save(self, test_loss, mT, newVars, h5path):
+
+    #  newVars=extraVars.insert(0,"score")
+    save_test = np.concatenate((test_loss[:,None], mT),axis=1)
+    ds_dt = np.dtype({'names':newVars,'formats':[(float)]*len(newVars)})
+    rec_bkg = np.rec.array(save_test, dtype=ds_dt)
+
+    with h5py.File(h5path,"w") as f:
+      dset = f.create_dataset("data",data=rec_bkg)
+    print('saved ', h5path)
+ 
+  def train(self, sig_dict,bkg_dict):
     auc_dict={}
     sicMax_dict={}
     sigEff_dict={}
@@ -219,36 +433,20 @@ class Param:
     score_cut_dict={}
     sig_events_num_dict={}
     bkg_events_num_dict={}
-    for i, (index_train, index_test) in enumerate(skf.split(sig, y_sig)):
-      ls_dict[str(i)]={}
-      cprint(i, 'yellow')
-      print(sig[index_train].shape)
-      print(sig[index_test].shape)
-      ls_dict[str(i)]['index_train_sig']=index_train
-      ls_dict[str(i)]['index_test_sig']=index_test
-      
-    for i, (index_train, index_test) in enumerate(skf.split(bkg, y_bkg)):
-      cprint(i, 'yellow')
-      print(bkg[index_train].shape)
-      print(bkg[index_test].shape)
-      ls_dict[str(i)]['index_train_bkg']=index_train
-      ls_dict[str(i)]['index_test_bkg']=index_test
-#skf for kfold
-    for key,value in ls_dict.items():
-      nfold=key
-      bkg_test= bkg[value['index_test_bkg']]
-      sig_test= sig[value['index_test_sig']]
-      bkg_train= bkg[value['index_train_bkg']]
-      sig_train= sig[value['index_train_sig']]
-      y_sig_train=y_sig[value['index_train_sig']]
-      y_bkg_train=y_bkg[value['index_train_bkg']]
-      y_sig_test=y_sig[value['index_test_sig']]
-      y_bkg_test=y_bkg[value['index_test_bkg']]
+     
 
-      x_train=np.concatenate((sig_train, bkg_train), axis=0)
-      x_test=np.concatenate((sig_test, bkg_test), axis=0)
-      y_train=tf.keras.utils.to_categorical(np.concatenate((y_sig_train, y_bkg_train), axis=0), num_classes=2)
-      y_test=tf.keras.utils.to_categorical(np.concatenate((y_sig_test, y_bkg_test), axis=0), num_classes=2)
+#skf for kfold
+    for nfold,value in bkg_dict.items():
+      setattr(self, 'arch_dir',bkg_dict[nfold]['arch_dir'])
+      setattr(self, 'plot_dir',bkg_dict[nfold]['plot_dir'])
+      cprint(nfold, 'yellow')
+#      cprint(f"{sig_dict[nfold]['train']},{bkg_dict[nfold]['train']}", 'yellow') 
+#      cprint(f"{sig_dict[nfold]['y_train']},{bkg_dict[nfold]['y_train']}", 'yellow')
+#      sys.exit() 
+      x_train=np.concatenate((sig_dict[nfold]['train'], bkg_dict[nfold]['train']), axis=0)
+      x_test=np.concatenate((sig_dict[nfold]['test'], bkg_dict[nfold]['test']), axis=0)
+      y_train=tf.keras.utils.to_categorical(np.concatenate((sig_dict[nfold]['y_train'],bkg_dict[nfold]['y_train']), axis=0), num_classes=2)
+      y_test=tf.keras.utils.to_categorical(np.concatenate((sig_dict[nfold]['y_test'],bkg_dict[nfold]['y_test']), axis=0), num_classes=2)
       """
       # check if categorizing is correct: we would expect all the signals to have look like [[1,0], [1,0]...]] and bkg to look like [[0,1], [0,1],...]]
       check_y_sig=tf.keras.utils.to_categorical(y_sig_train, num_classes=2)
@@ -257,25 +455,12 @@ class Param:
       cprint(f'{check_y_bkg.shape}, {check_y_bkg}', 'red')
       """
  
-      bkg_skf=np.concatenate((bkg_test, bkg_train), axis=0)
-      sig_skf=np.concatenate((sig_test, sig_train), axis=0)
+      bkg_skf=np.concatenate((bkg_dict[nfold]['train'], bkg_dict[nfold]['test']), axis=0)
+      sig_skf=np.concatenate((sig_dict[nfold]['train'], sig_dict[nfold]['test']), axis=0)
 
-      bkg_events_num=bkg.shape[0]
-      sig_events_num=sig.shape[0]
+      bkg_events_num=bkg_skf.shape[0]
+      sig_events_num=sig_skf.shape[0]
 
-      path=f'{self.all_dir}/{nfold}/'
-      arch_dir=path+self.arch_dir.split('/')[-2]+'/'
-      plot_dir=path+self.plot_dir.split('/')[-2]+'/'
-      dir_ls=[arch_dir,  plot_dir] # don't include print_dir here
-      if not os.path.exists(path):
-        os.mkdir(path)
-        for d in dir_ls:
-          if not os.path.exists(d):
-            os.mkdir(d)
-            print(f'made a directory: {path}')
-  
-      setattr(self, 'arch_dir',arch_dir)
-      setattr(self, 'plot_dir',plot_dir)
       #plot_vectors(bkg_sel,sig_sel,tag_file=self.tag+"_NSNR", tag_title=self.weight_tag+"_NSNR", plot_dir=self.plot_dir) # wrong but keep for reference
       
       plot_vectors(bkg_skf,sig_skf,tag_file=self.tag+f"_NSNR_{nfold}", tag_title=self.weight_tag+f"_NSNR ({nfold}th)", plot_dir=self.plot_dir)
@@ -348,22 +533,26 @@ class Param:
       bkg_score = preds[:,1][y_test[:,1] == 0]
       sig_score = preds[:,1][y_test[:,1] == 1]
       plot_score(bkg_score, sig_score, False, False,tag_file=self.tag, tag_title=self.tag,  plot_dir=self.plot_dir)
+      # choose the smaller of the two : size of signal and background for calculating the auc score
       n_test = min(len(sig_score),len(bkg_score))
       bkg_score = bkg_score[:n_test]
       sig_score = sig_score[:n_test]
       sicMax, sigEff, qcdEff, score_cut, auc=do_roc(bkg_score, sig_score, tag_file=self.tag, tag_title=self.tag +f' ({nfold}th)', make_transformed_plot=False,  plot_dir=self.plot_dir).values()
 
-      auc_dict[str(nfold)]=auc
-      sicMax_dict[str(nfold)]=sicMax
-      sigEff_dict[str(nfold)]=sigEff
-      qcdEff_dict[str(nfold)]=qcdEff
-      score_cut_dict[str(nfold)]=score_cut
-      sig_events_num_dict[str(nfold)]=sig_events_num
-      bkg_events_num_dict[str(nfold)]=bkg_events_num
+      auc_dict[nfold]=auc
+      sicMax_dict[nfold]=sicMax
+      sigEff_dict[nfold]=sigEff
+      qcdEff_dict[nfold]=qcdEff
+      score_cut_dict[nfold]=score_cut
+      sig_events_num_dict[nfold]=sig_events_num
+      bkg_events_num_dict[nfold]=bkg_events_num
       self.make_html()
 
       #write hdft of the indices
+      # apply the model 
+      # average the auc
 
+    
     setattr(self, 'auc',auc_dict )
     setattr(self, 'sicMax',sicMax_dict )
     setattr(self, 'sigEff',sigEff_dict )
@@ -373,16 +562,16 @@ class Param:
     setattr(self, 'bkg_events_num',bkg_events_num_dict )
   
     all_end = time.time()
-    print("Elapsed (in total) = %s seconds" % (all_end - all_start))
+    print("Elapsed (in total) = %s seconds" % (all_end - self.all_start))
     print(self.all_dir)
     return self.all_dir
 
 
-
 """
+Below are functions to do variance test
 """
 import json
-def read_info(filedir):
+def read_info(filedir): # read information from an info.csv file and return a pandas dataframe 
   df=pd.DataFrame()
   onlydirs = [f for f in os.listdir(filedir) if os.path.isdir(os.path.join(filedir, f))] # all the directories in the parent directory
   for subdir in onlydirs:
@@ -398,7 +587,7 @@ def read_info(filedir):
   return df # {directory#1: df in the csv , ... directory#n: df in the corresponding csv}
 
 
-def plot_info(df, param, plot_dir):
+def plot_info(df, param, plot_dir): # plot a variance of a variable e.g. auc score in a histogram
   df=df[param] # find one hyperparameter that's different
 
   if param =='auc':
@@ -422,21 +611,33 @@ def plot_info(df, param, plot_dir):
   plt.clf()     
 
 """
-#make variance scan plot
+execute below to make variance scan plot
+"""
+"""
 dir_read='/nevis/katya01/data/users/kpark/svj-vae/results/stats'
 df_info=read_info(dir_read)
 plot_info(df_info, param='auc', plot_dir=dir_read)
 sys.exit()
 
-seeds=np.arange(0,100, dtype=int)
-#seed=seeds[0]
-sig_events=1151555
-bkg_events=3234186
 """
+#seeds=np.arange(0,100, dtype=int)
+#seed=seeds[0]
+
+"""
+Here are some parameters to change to make PFN models
+
+"""
+
+#sig_events=1151555
+#bkg_events=3234186
 #sig_events=502000 # change after no pt requirement
 #bkg_events=502000
-sig_events=5000
-bkg_events=5000
+#sig_events=5000
+#sig_events=50000
+sig_events=100000000
+bkg_events=100000000
+#bkg_events=50000
+#bkg_events=1151000
 #max_track=80 #160
 max_track=15 #160
 """
@@ -467,10 +668,11 @@ for max_t in [60, 100]:
   
 for n_neuron in [40, 150]:
 #for n_neuron in [75,40, 150]:
-  param1=Param( bkg_events=bkg_events, sig_events=sig_events, n_neuron=n_neuron)
+  param1=Param( bkg_events=bkg_events, sig_events=sig_events, n_neuron=n_neuron, nfolds=3)
 #  stdoutOrigin=param1.open_print()
-  sig,bkg,all_start=param1.prepare()
-  all_dir=param1.train(sig=sig, bkg=bkg, all_start=all_start)
+#  param1.example_skf()
+  param1.prepare()
+  param1.do_apply()
 #  print(param1.close_print(stdoutOrigin)) 
   print(param1.save_info()) 
   sys.exit()

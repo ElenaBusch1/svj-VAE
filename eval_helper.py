@@ -61,12 +61,6 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
   
       #bkg_in0, x0, bkg_in1, x1
       #plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
-      print('for leading jet') 
-         
-      cprint(jet_bkg, 'yellow') 
-      cprint(f'{jet_bkg.shape=}', 'yellow') 
-      cprint(f'{bkg_in0.shape=}', 'yellow') 
-      cprint(f'{bkg_in1.shape=}', 'yellow') 
        
 #      """
       
@@ -186,8 +180,10 @@ def apply_TrackSelection(x_raw, jets, bool_pt=True, bool_track=True, pt=10, ntra
     
     
     x_pt=x.copy() # KEEP THIS -> IMPT
+    """
     print("important that the order of variables is such that pt is the first for this pt selection to work")
     print("Input track shape: ", x.shape)
+    """
     # require at least 3 tracks
     x_test=x.copy()
     if bool_track:
