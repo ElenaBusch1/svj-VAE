@@ -115,13 +115,13 @@ class Param:
     sys.stdout.close()
     sys.stdout =stdoutOrigin
 
-  def make_html(self, custom_plot_dir='', custom_www_dir='', html_title='/plots'): # uses the template.html and makes an html file; if there's an issue -> check href of mystyle.css, nevis_logo.jpg, and image files; '../' might need to be added/removed depending on the relative location of the html file 
+  def make_html(self, nfold,plot_dir='', www_dir='', html_title='/plots'): # uses the template.html and makes an html file; if there's an issue -> check href of mystyle.css, nevis_logo.jpg, and image files; '../' might need to be added/removed depending on the relative location of the html file 
     # if using this function: change www_dir to your www_dir
     www_dir='/nevis/kolya/home/kpark/WWW/'+ self.plot_dir.split(self.parent_dir)[-1]+'/'
-    print(self.plot_dir.split(self.parent_dir))
+    print(self.plot_dir.split(self.parent_dir), nfold)
     html_file= www_dir + f'{html_title}.html'
     # copy the directory containing plots -> only copies if the ww_dir doesn't already exists
-    shutil.copytree(custom_plot_dir, www_dir)
+    shutil.copytree(plot_dir, www_dir)
  
     # copy the template to the www dir
     temp_path='/nevis/kolya/home/kpark/WWW/template.html'    
@@ -190,14 +190,16 @@ class Param:
     if len(extraVars)==0:
       str_ls=['index_train', 'index_test','arch_dir', 'plot_dir', 'train', 'test', 'y_train', 'y_test', 'idx_dir']
     else: 
-      str_ls=['index_train', 'index_test','arch_dir', 'plot_dir', 'train', 'test', 'y_train', 'y_test', 'idx_dir','mT_test','mT_train']
+      newVars=[f'{x}_train' for x in extraVars]
+      newVars+=[f'{x}_test' for x in extraVars]
+      str_ls=['index_train', 'index_test','arch_dir', 'plot_dir', 'train', 'test', 'y_train', 'y_test', 'idx_dir',*newVars]
     arr_dict={}
     arr_skf={} 
     for nfold in range(self.nfolds):
       idxpath=f'{self.h5_dir}idx/'
       idx_dir=idxpath+f'{nfold}/'
       idx_file=idx_dir+f'idx_{dsid}_{nfold}.hdf5'
-      
+      # EVEN IF there is a file existing, it might not already have the extraVars info available, if so manually make a new idx_file containing all extraVars info  
       if os.path.exists(idx_file):
         with h5py.File(idx_file, 'r') as f:
           for i in range(len(str_ls)):
@@ -210,7 +212,8 @@ class Param:
         break
 
     if not(bool_rewrite):
-      'successfully read from idx files that have skf infos e.g. test, train,...'
+      if 'extraVars' in arr_skf.keys():      print(arr_skf['extraVars'])
+      print('successfully read from idx files that have skf infos e.g. test, train,...')
       return arr_skf
 
     arr_skf={} # refresh b/c have to rewrite as not all files are existent
@@ -226,7 +229,7 @@ class Param:
       idx_file=idx_dir+f'idx_{dsid}_{nfold}.hdf5'
       arch_dir=path+self.arch_dir.split('/')[-2]+'/'
       plot_dir=path+self.plot_dir.split('/')[-2]+'/'
-      dir_ls =[all_dir, arch_dir, plot_dir, idxpath,idx_dir]  
+      dir_ls =[all_dir, arch_dir, plot_dir, idxpath,idx_dir] 
       if not os.path.exists(path):
         os.mkdir(path)
         for d in dir_ls:
@@ -237,19 +240,22 @@ class Param:
       test=arr[index_test] 
       y_train=y[index_train] 
       y_test=y[index_test]
-      data_ls=[index_train, index_test, arch_dir, plot_dir, train, test, y_train, y_test, idx_dir] 
       if len(extraVars)!=0:
         mT_train=mT[index_train] 
         mT_test=mT[index_test]
-        data_ls=[index_train, index_test, arch_dir, plot_dir, train, test, y_train, y_test, idx_dir, mT_test, mT_train] 
- 
+        data_ls=[index_train, index_test, arch_dir, plot_dir, train, test, y_train, y_test, idx_dir]
+        print(mT_test.shape) 
     # save idx hdf5 here with a name idx_{nfold}.hdf5
       idx_file=idx_dir+f'idx_{dsid}_{nfold}.hdf5'
       with h5py.File(idx_file,"w") as f:
         dset = f.create_group('default')
-        for i in range(len(str_ls)):
+        for i in range(len(data_ls)):  # not str_ls which also contains 'extraVars'
           dset.create_dataset(str_ls[i],data=data_ls[i])
+        for i in range(len(extraVars)):
+          dset.create_dataset(f'{extraVars[i]}_train',data=mT_train[:,i])
+          dset.create_dataset(f'{extraVars[i]}_test',data=mT_test[:,i])
           #data= dset.create_dataset(str_ls[i],data=data_ls[i])
+      
       if len(extraVars)==0:
         arr_dict={'train': train,'test':test, 'y_train': y_train, 'y_test': y_test, 'arch_dir': arch_dir, 'plot_dir': plot_dir, 'idx_dir': idx_dir}
       else:
@@ -274,9 +280,11 @@ class Param:
     sig_dict={}
     for dsid in dsids:
       file_ls.append("skim3.user.ebusch."+str(dsid)+".root")
+    
     file_ls=[self.sig_file]
     for fl in file_ls:
       dsid=fl.split('.')[-2]
+
       sig, mT_sig, sig_sel, jet_sig, sig_in0, sig_in1 = getTwoJetSystem(nevents=self.sig_events,input_file=fl,
         track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
         bool_weight=bool_weight_sig,  extraVars=extraVars, plot_dir=self.plot_dir, seed=self.seed,max_track=self.max_track, bool_pt=self.bool_pt,h5_dir=self.h5_dir, bool_select_all=self.bool_select_all)
@@ -324,8 +332,8 @@ class Param:
     file_ls=[]
     for dsid in dsids:
       file_ls.append("skim3.user.ebusch."+str(dsid)+".root")
+    file_ls=["skim3.user.ebusch.SIGskim.root"]
     file_ls.append("skim3.user.ebusch.QCDskim.root")
-    file_ls=[self.sig_file]
     for fl in file_ls:
       cprint(f'{fl}', 'red')
       sig_dict={}
@@ -339,23 +347,24 @@ class Param:
       cprint(f'{mT_sig}', 'red')
 #      all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/test/07_28_23_14_24/'
       #all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/test/07_28_23_13_39/'
-      sig_skf=self.find_idx(arr=sig, bool_sig=True,dsid=dsid,  mT=mT_sig, extraVars=extraVars,all_dir=all_dir)
+      if ('QCD' in fl) or ('Znunu' in fl):
+        sig_skf=self.kfold(arr=bkg, bool_sig=False,dsid=dsid, all_dir=self.all_dir,mT=mT_bkg, extraVars=extraVars) # important that bool_sig=False for bkg
+      else:sig_skf=self.kfold(arr=sig, bool_sig=True,dsid=dsid, all_dir=self.all_dir,mT=mT_sig, extraVars=extraVars)
       print(sig_skf)
       for nfold, val in sig_skf.items():
-        test_loss, mT, newVars,h5path=self.apply(val, dsid)
+        arr_dict, newVars,h5path=self.apply(val, dsid, extraVars)
         cprint(f'{nfold}among {self.nfolds}, {len(test_loss)=}', 'yellow')
-        if nfold == 0 or nfold==str(0): 
-          sig_dict['test_loss']=test_loss
-          sig_dict['mT']=mT
+        if nfold == 0 or nfold==str(0):
+          for var in newVars: # not extraVars
+            sig_dict[var]=arr_dict[var]
         # for each trial, add the file 
         else: 
-          sig_dict['test_loss']=np.concatenate((sig_dict['test_loss'], test_loss), axis=0)
-          sig_dict['mT']=np.concatenate((sig_dict['mT'], mT), axis=0)
+          for var in newVars:
+            sig_dict[var]=np.concatenate((sig_dict[var], arr_dict[var]), axis=0)
 
       cprint(f'all {self.nfolds}folds, {len(sig_dict["test_loss"])=}', 'yellow')
-      self.save(sig_dict['test_loss'], sig_dict['mT'], newVars, h5path)               
+      self.save(sig_dict, newVars, h5path)               
       
-    print(test_loss, mT, newVars)
 
     end = time.time()
     print("Elapsed (with getTwoJetSystem and do_apply) = %s  seconds" % (end - start))
@@ -365,11 +374,10 @@ class Param:
 
     return all_dir
    
-  def apply(self, arr_dict, dsid):
+  def apply(self, arr_dict, dsid, extraVars):
 
     arch_dir=arr_dict['arch_dir']
-    mT=arr_dict['mT_test']
-    extraVars=arr_dict['extraVars']
+    #  mT=arr_dict['mT_test']
     applydir=self.all_dir+f'/applydir/'
     if not(os.path.exists(applydir)):
       os.mkdir(applydir)
@@ -393,17 +401,16 @@ class Param:
 
     # each event has a pfn score 
     pred_phi_test = classifier.predict(phi_test)
-    test_loss = pred_phi_test[:,1]
+    arr_dict['score'] = pred_phi_test[:,1]
     newVars=['score']
     newVars+=extraVars
-    cprint(f'{test_loss}, {test_loss.shape}', 'green')
-    cprint(f'{test_loss[:,None]}, {test_loss[:,None].shape}', 'green')
-    return test_loss, mT, newVars,h5path
+    return arr_dict, newVars,h5path
 
-  def save(self, test_loss, mT, newVars, h5path):
+  def save(self, arr_dict, newVars, h5path):
 
     #  newVars=extraVars.insert(0,"score")
-    save_test = np.concatenate((test_loss[:,None], mT),axis=1)
+    save_test = np.concatenate((arr_dict['score'][:,None], mT),axis=1)
+    #save_test = np.concatenate((test_loss[:,None], mT),axis=1)
     ds_dt = np.dtype({'names':newVars,'formats':[(float)]*len(newVars)})
     rec_bkg = np.rec.array(save_test, dtype=ds_dt)
 
@@ -536,7 +543,7 @@ class Param:
       plot_dir=self.plot_dir
       plot_dir=plot_dir.replace('//','/')
       print(plot_dir)
-      self.make_html(plot_dir)
+      self.make_html(plot_dir=plot_dir,nfold=nfold)
 
       #write hdft of the indices
       # apply the model 
@@ -672,9 +679,10 @@ for n_neuron in [75,40, 150]:
 #  stdoutOrigin=param1.open_print()
 #  param1.example_skf()
   param1.prepare()
-  all_dir=param1.all_dir
+#  all_dir=param1.all_dir
   
-  all_dir=param1.do_apply(all_dir=all_dir)
+  all_dir=param1.do_apply(all_dir="/nevis/katya01/data/users/kpark/svj-vae/results/test/07_29_23_11_42")
+  #all_dir=param1.do_apply(all_dir=all_dir)
   title=f'track={param1.max_track}'
   grid_scan(title, dir_all=dir_all)
 #  print(param1.close_print(stdoutOrigin)) 
