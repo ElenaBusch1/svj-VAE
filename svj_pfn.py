@@ -15,6 +15,7 @@ import pandas as pd
 import shutil
 import bs4
 from sklearn.model_selection import StratifiedKFold
+from antelope_h5eval import *
 #plot_dir='/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun29/' 
 # Example usage
 #added
@@ -48,7 +49,7 @@ class Param:
     for d in dir_ls:
       if not os.path.exists(d):
         os.mkdir(d)
-        print(f'made a directory: {self.all_dir}')
+        print(f'made a directory: {d}')
  
     
     self.nfolds=nfolds
@@ -200,6 +201,17 @@ class Param:
       idx_dir=idxpath+f'{nfold}/'
       idx_file=idx_dir+f'idx_{dsid}_{nfold}.hdf5'
       # EVEN IF there is a file existing, it might not already have the extraVars info available, if so manually make a new idx_file containing all extraVars info  
+      path=f'{all_dir}{nfold}/'
+      arch_dir=path+self.arch_dir.split('/')[-2]+'/'
+      plot_dir=path+self.plot_dir.split('/')[-2]+'/'
+      dir_ls =[all_dir, arch_dir, plot_dir, idxpath,idx_dir] 
+      if not os.path.exists(path):
+        os.mkdir(path)
+        print(f'made a directory: {path}')
+        for d in dir_ls:
+          if not os.path.exists(d):
+            os.mkdir(d)
+            print(f'made a directory: {d}')
       if os.path.exists(idx_file):
         with h5py.File(idx_file, 'r') as f:
           for i in range(len(str_ls)):
@@ -223,19 +235,20 @@ class Param:
     else: y=np.zeros(np.shape(arr)[0])
     skf = StratifiedKFold(n_splits=self.nfolds, shuffle=True, random_state=42)
     for nfold, (index_train, index_test) in enumerate(skf.split(arr, y)):
-      path=f'{all_dir}{nfold}/'
       idxpath=f'{self.h5_dir}idx/'
       idx_dir=idxpath+f'{nfold}/'
       idx_file=idx_dir+f'idx_{dsid}_{nfold}.hdf5'
+      path=f'{all_dir}{nfold}/'
       arch_dir=path+self.arch_dir.split('/')[-2]+'/'
       plot_dir=path+self.plot_dir.split('/')[-2]+'/'
       dir_ls =[all_dir, arch_dir, plot_dir, idxpath,idx_dir] 
       if not os.path.exists(path):
         os.mkdir(path)
+        print(f'made a directory: {path}')
         for d in dir_ls:
           if not os.path.exists(d):
             os.mkdir(d)
-            print(f'made a directory: {path}')
+            print(f'made a directory: {d}')
       train=arr[index_train] 
       test=arr[index_test] 
       y_train=y[index_train] 
@@ -246,7 +259,6 @@ class Param:
         data_ls=[index_train, index_test, arch_dir, plot_dir, train, test, y_train, y_test, idx_dir]
         print(mT_test.shape) 
     # save idx hdf5 here with a name idx_{nfold}.hdf5
-      idx_file=idx_dir+f'idx_{dsid}_{nfold}.hdf5'
       with h5py.File(idx_file,"w") as f:
         dset = f.create_group('default')
         for i in range(len(data_ls)):  # not str_ls which also contains 'extraVars'
@@ -281,7 +293,7 @@ class Param:
     for dsid in dsids:
       file_ls.append("skim3.user.ebusch."+str(dsid)+".root")
     
-    file_ls=[self.sig_file]
+#    file_ls=[self.sig_file]
     for fl in file_ls:
       dsid=fl.split('.')[-2]
 
@@ -332,7 +344,7 @@ class Param:
     file_ls=[]
     for dsid in dsids:
       file_ls.append("skim3.user.ebusch."+str(dsid)+".root")
-    file_ls=["skim3.user.ebusch.SIGskim.root"]
+    #file_ls=["skim3.user.ebusch.SIGskim.root"]
     file_ls.append("skim3.user.ebusch.QCDskim.root")
     for fl in file_ls:
       cprint(f'{fl}', 'red')
@@ -348,21 +360,20 @@ class Param:
 #      all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/test/07_28_23_14_24/'
       #all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/test/07_28_23_13_39/'
       if ('QCD' in fl) or ('Znunu' in fl):
-        sig_skf=self.kfold(arr=bkg, bool_sig=False,dsid=dsid, all_dir=self.all_dir,mT=mT_bkg, extraVars=extraVars) # important that bool_sig=False for bkg
+        sig_skf=self.kfold(arr=sig, bool_sig=False,dsid=dsid, all_dir=self.all_dir,mT=mT_sig, extraVars=extraVars) # important that bool_sig=False for bkg
       else:sig_skf=self.kfold(arr=sig, bool_sig=True,dsid=dsid, all_dir=self.all_dir,mT=mT_sig, extraVars=extraVars)
-      print(sig_skf)
       for nfold, val in sig_skf.items():
-        arr_dict, newVars,h5path=self.apply(val, dsid, extraVars)
-        cprint(f'{nfold}among {self.nfolds}, {len(test_loss)=}', 'yellow')
+        arr_dict, newVars,h5path=self.apply(val, dsid, extraVars, all_dir)
+        cprint(f'{nfold}among {self.nfolds}, {newVars}', 'yellow')
         if nfold == 0 or nfold==str(0):
           for var in newVars: # not extraVars
-            sig_dict[var]=arr_dict[var]
+            sig_dict[var]=arr_dict[f'{var}_test']
         # for each trial, add the file 
         else: 
           for var in newVars:
-            sig_dict[var]=np.concatenate((sig_dict[var], arr_dict[var]), axis=0)
+            sig_dict[var]=np.concatenate((sig_dict[var], arr_dict[f'{var}_test']), axis=0)
 
-      cprint(f'all {self.nfolds}folds, {len(sig_dict["test_loss"])=}', 'yellow')
+      
       self.save(sig_dict, newVars, h5path)               
       
 
@@ -374,11 +385,11 @@ class Param:
 
     return all_dir
    
-  def apply(self, arr_dict, dsid, extraVars):
+  def apply(self, arr_dict, dsid, extraVars, all_dir):
 
     arch_dir=arr_dict['arch_dir']
     #  mT=arr_dict['mT_test']
-    applydir=self.all_dir+f'/applydir/'
+    applydir=all_dir+f'/applydir/'
     if not(os.path.exists(applydir)):
       os.mkdir(applydir)
     h5path=applydir+"v8p1_"+str(dsid)+".hdf5" 
@@ -401,15 +412,18 @@ class Param:
 
     # each event has a pfn score 
     pred_phi_test = classifier.predict(phi_test)
-    arr_dict['score'] = pred_phi_test[:,1]
-    newVars=['score']
+    arr_dict['score_test'] = pred_phi_test[:,1]
+    newVars=['score'] # not score_test
     newVars+=extraVars
     return arr_dict, newVars,h5path
 
   def save(self, arr_dict, newVars, h5path):
-
-    #  newVars=extraVars.insert(0,"score")
-    save_test = np.concatenate((arr_dict['score'][:,None], mT),axis=1)
+    save_test=arr_dict['score'][:,None]
+    for var in [x for x in newVars if x!='score']: 
+      cprint(save_test.shape,'green')
+      print(np.array([arr_dict[var]]).T)
+      
+      save_test = np.concatenate((save_test, np.array([arr_dict[var]]).T),axis=1)
     #save_test = np.concatenate((test_loss[:,None], mT),axis=1)
     ds_dt = np.dtype({'names':newVars,'formats':[(float)]*len(newVars)})
     rec_bkg = np.rec.array(save_test, dtype=ds_dt)
@@ -630,11 +644,12 @@ Here are some parameters to change to make PFN models
 #sig_events=502000 # change after no pt requirement
 #bkg_events=502000
 #sig_events=2000
-sig_events=50000
+sig_events=500
+#sig_events=50000
 #sig_events=100000000
 #sig_events=1000000
 #bkg_events=1151555
-bkg_events=50000
+bkg_events=5000
 #bkg_events=1151000
 #max_track=80 #160
 max_track=15 #160
@@ -671,7 +686,9 @@ for max_t in [60, 100]:
 * made in kfold in svj_pfn.py
 * helpful b/c it saves numerous infos from kfold e.g. arrays in [events, track, var] form of train set, train indices, direcotories
  
-*  
+* Troubleshooting: FileNotFoundError: [Errno 2] No such file or directory: '/nevis/katya01/data/users/kpark/svj-vae/results/test/07_30_23_08_14/2/plots/inputs_PFN_2jAvg_MM_ws_NSNR_01.png'
+-> This is because the original directory has been removed and the hdf5 has an plot_dir location saved of that directoy so it can't do anything about it 
+-> sol: delete the content in idx directory and rerun the code  
 """
 #for n_neuron in [40, 150]:
 for n_neuron in [75,40, 150]:
@@ -679,12 +696,12 @@ for n_neuron in [75,40, 150]:
 #  stdoutOrigin=param1.open_print()
 #  param1.example_skf()
   param1.prepare()
-#  all_dir=param1.all_dir
+  all_dir=param1.all_dir
   
-  all_dir=param1.do_apply(all_dir="/nevis/katya01/data/users/kpark/svj-vae/results/test/07_29_23_11_42")
-  #all_dir=param1.do_apply(all_dir=all_dir)
+#  all_dir=param1.do_apply(all_dir="/nevis/katya01/data/users/kpark/svj-vae/results/test/07_30_23_09_19/")
+  all_dir=param1.do_apply(all_dir=all_dir)
   title=f'track={param1.max_track}'
-  grid_scan(title, dir_all=dir_all)
+  grid_scan(title,all_dir=all_dir)
 #  print(param1.close_print(stdoutOrigin)) 
   print(param1.save_info()) 
   sys.exit()

@@ -160,11 +160,11 @@ def score_cut_mT_plot():
     plot_ratio(d,w,labels, var, logy=True) 
 
 
-def grid_scan(title, dir_all):
+def grid_scan(title, all_dir):
   #with h5py.File("../v8.1/v8p1_PFNv1_QCDskim.hdf5","r") as f:
   #  bkg_data = f.get('data')[:]
-#  dir_all='/nevis/katya01/data/users/kpark/svj-vae/results/07_12_23_08_47/' # change
-  h5dir=dir_all+'applydir/'
+#  all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/07_12_23_08_47/' # change
+  h5dir=all_dir+'applydir/'
   plot_dir=h5dir+'/plots/'
   if not os.path.exists(plot_dir):os.mkdir(plot_dir)
   bkgpath=h5dir+"v8p1_QCDskim.hdf5"
@@ -182,7 +182,8 @@ def grid_scan(title, dir_all):
   bkg_loss = bkg_data["score"]
   bkg_weights = np.reshape(bkg_data["weight"],len(bkg_data["weight"]))
   print("bkg events", len(bkg_loss))
-  
+  print(bkg_data1['mT_jj'],bkg_data1['weight']) 
+  print(bkg_data1['mT_jj'].shape,bkg_data1['weight'].shape) 
   sic_values = {}
   
   dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
@@ -210,8 +211,8 @@ def grid_scan(title, dir_all):
   print("bkg events: ", len(bkg_loss))
   do_grid_plots(sic_values, title,plot_dir=plot_dir)
 
-def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, dir_all,cms=False): #dir_all # bkg_scale = 5
-  h5dir=dir_all+'applydir/'
+def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, all_dir,cms=False): #all_dir # bkg_scale = 5
+  h5dir=all_dir+'applydir/'
   plot_dir=h5dir+'/plots/'
   if not os.path.exists(plot_dir):os.mkdir(plot_dir)
   bkgpath=h5dir+"v8p1_QCDskim.hdf5"

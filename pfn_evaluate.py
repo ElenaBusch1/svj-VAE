@@ -128,12 +128,12 @@ bool_pt=False
 max_track=80# CHECK THIS
 h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/jul18/'
 
-dir_all='/nevis/katya01/data/users/kpark/svj-vae/results/paramscan_new/07_24_23_07_11/' # change
-#dir_all='/nevis/katya01/data/users/kpark/svj-vae/results/major/07_18_23_10_54/' # change
-applydir=dir_all+'applydir/'
+all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/paramscan_new/07_24_23_07_11/' # change
+#all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/major/07_18_23_10_54/' # change
+applydir=all_dir+'applydir/'
 if not os.path.exists(applydir):
   os.mkdir(applydir)
-arch_dir=dir_all+'architectures_saved/'
+arch_dir=all_dir+'architectures_saved/'
 dsids=list(range(515487,515527))
 corrupt_files=[515508, 515511,515493]
 dsids=[x for x in dsids if x not in corrupt_files ]
@@ -170,5 +170,5 @@ if  os.path.exists(h5path):
 
 else: rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir)
 title=f'track={max_track}'
-grid_s_sqrt_b(score_cut=0.97, bkg_file='', bkg_scale=5, sig_file_prefix='', title=title, dir_all=dir_all,cms=False)
-#grid_scan(title, dir_all=dir_all)
+grid_s_sqrt_b(score_cut=0.97, bkg_file='', bkg_scale=5, sig_file_prefix='', title=title, all_dir=all_dir,cms=False)
+#grid_scan(title, all_dir=all_dir)
