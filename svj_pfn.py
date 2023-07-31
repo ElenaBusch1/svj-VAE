@@ -40,6 +40,7 @@ class Param:
     self.parent_dir='/nevis/katya01/data/users/kpark/svj-vae/'
     self.all_dir=self.parent_dir+'results/test/'+self.time+'/' # for statistics
 
+
     self.arch_dir=self.all_dir+arch_dir
     self.print_dir=self.all_dir+print_dir
     self.plot_dir=self.all_dir+plot_dir
@@ -194,9 +195,9 @@ class Param:
       newVars=[f'{x}_train' for x in extraVars]
       newVars+=[f'{x}_test' for x in extraVars]
       str_ls=['index_train', 'index_test','arch_dir', 'plot_dir', 'train', 'test', 'y_train', 'y_test', 'idx_dir',*newVars]
-    arr_dict={}
     arr_skf={} 
     for nfold in range(self.nfolds):
+      arr_dict={}
       idxpath=f'{self.h5_dir}idx/'
       idx_dir=idxpath+f'{nfold}/'
       idx_file=idx_dir+f'idx_{dsid}_{nfold}.hdf5'
@@ -204,6 +205,7 @@ class Param:
       path=f'{all_dir}{nfold}/'
       arch_dir=path+self.arch_dir.split('/')[-2]+'/'
       plot_dir=path+self.plot_dir.split('/')[-2]+'/'
+      #print_dir=path+self.print_dir.split('/')[-2]+'/'
       dir_ls =[all_dir, arch_dir, plot_dir, idxpath,idx_dir] 
       if not os.path.exists(path):
         os.mkdir(path)
@@ -216,32 +218,41 @@ class Param:
         with h5py.File(idx_file, 'r') as f:
           for i in range(len(str_ls)):
             arr_dict[str_ls[i]] = f["default"][str_ls[i]][()]
+          for i, var in zip(['arch_dir', 'plot_dir'],  [arch_dir, plot_dir]): # reset it 
+            arr_dict[i] = var
 
-        arr_skf[nfold]=arr_dict 
+#          cprint(f"{arr_dict['arch_dir']}, {nfold}", 'magenta')
+        arr_skf[str(nfold)]=arr_dict 
+#        cprint(f"{arr_skf[str(nfold)]['arch_dir']}, {str(nfold)}", 'green')
       else: 
         bool_rewrite=True
         print('the file does not exist so will write to', idx_file) 
         break
-
     if not(bool_rewrite):
-      if 'extraVars' in arr_skf.keys():      print(arr_skf['extraVars'])
       print('successfully read from idx files that have skf infos e.g. test, train,...')
+ #     for nfold in range(self.nfolds):
+  #      cprint(f"{arr_skf[str(nfold)]['arch_dir']}, {str(nfold)}", 'green')
+#      for d,ls in zip([ 'plot_dir', 'arch_dir'],[plot_dir,arch_dir]):
+#        setattr(self, d, ls)
+
       return arr_skf
 
     arr_skf={} # refresh b/c have to rewrite as not all files are existent
-    arr_dict={}
     if bool_sig:
       y=np.ones(np.shape(arr)[0])
     else: y=np.zeros(np.shape(arr)[0])
     skf = StratifiedKFold(n_splits=self.nfolds, shuffle=True, random_state=42)
     for nfold, (index_train, index_test) in enumerate(skf.split(arr, y)):
+      arr_dict={}
       idxpath=f'{self.h5_dir}idx/'
       idx_dir=idxpath+f'{nfold}/'
       idx_file=idx_dir+f'idx_{dsid}_{nfold}.hdf5'
       path=f'{all_dir}{nfold}/'
       arch_dir=path+self.arch_dir.split('/')[-2]+'/'
       plot_dir=path+self.plot_dir.split('/')[-2]+'/'
+      #print_dir=path+self.print_dir.split('/')[-2]+'/'
       dir_ls =[all_dir, arch_dir, plot_dir, idxpath,idx_dir] 
+      cprint(arch_dir, 'green')
       if not os.path.exists(path):
         os.mkdir(path)
         print(f'made a directory: {path}')
@@ -274,6 +285,11 @@ class Param:
         arr_dict={'train': train,'test':test, 'y_train': y_train, 'y_test': y_test,'mT_train': mT_train, 'mT_test': mT_test, 'extraVars': extraVars,'arch_dir': arch_dir, 'plot_dir': plot_dir, 'idx_dir': idx_dir}
       arr_skf[nfold]=arr_dict
      
+      cprint(f"{nfold},{arr_skf[nfold]['arch_dir']}", 'green')
+      print('*'*30)
+   # for nfold in range(self.nfolds):
+    #  cprint(f"{arr_skf[str(nfold)]['arch_dir']}, {str(nfold)}", 'green')
+  
     return arr_skf
 
   def prepare(self,extraVars=["mT_jj", "weight"]):
@@ -316,15 +332,25 @@ class Param:
     bkg, mT_bkg, bkg_sel, jet_bkg,bkg_in0, bkg_in1 = getTwoJetSystem(nevents=self.bkg_events,input_file=self.bkg_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
       bool_weight=self.bool_weight,  extraVars=extraVars, plot_dir=self.plot_dir, seed=self.seed, max_track=self.max_track,bool_pt=self.bool_pt,h5_dir=self.h5_dir, bool_select_all=False)
-    
+#    bkg_dict={} 
     bkg_dict=self.kfold(arr=bkg, bool_sig=False,dsid=self.bkg_file.split('.')[-2], all_dir=self.all_dir,mT=mT_bkg, extraVars=extraVars) # important that bool_sig=False for bkg
+    #bkg_skf=self.kfold(arr=bkg, bool_sig=False,dsid=self.bkg_file.split('.')[-2], all_dir=self.all_dir,mT=mT_bkg, extraVars=extraVars) # important that bool_sig=False for bkg
+#    print(bkg_skf)
+    """
+    for nfold, val in bkg_skf.items():
+      bkg_dict[nfold]={}
+      for key in ['y_train', 'y_test','train', 'test', 'arch_dir', 'plot_dir']:
+        bkg_dict[nfold][key]=val[key]
+    """
 
+    print('*'*50)
+#    print(sig_dict[0]['arch_dir'], sig_dict[1]['arch_dir'])
     end = time.time()
     print("Elapsed (with getTwoJetSystem) = %s  seconds" % (end - start))
     # FIX THESE
     for nfold in sig_dict:
-      cprint(f"for {nfold}th, {sig_dict[nfold]['test'].shape=},{bkg_dict[nfold]['test'].shape=}",'yellow')
-    plot_ntrack([ np.concatenate((sig_in0, sig_in1),axis=1), np.concatenate((bkg_in0,bkg_in1), axis=1),sig, bkg],  tag_file='_jet12', tag_title=' leading & subleading jet', plot_dir=self.plot_dir, bin_max=self.max_track*2)
+      cprint(f"for {nfold}th, {sig_dict[nfold]['test'].shape=},{bkg_dict[nfold]['test'].shape=}",'green')
+#    plot_ntrack([ np.concatenate((sig_in0, sig_in1),axis=1), np.concatenate((bkg_in0,bkg_in1), axis=1),sig, bkg],  tag_file='_jet12', tag_title=' leading & subleading jet', plot_dir=self.plot_dir, bin_max=self.max_track*2)
 #    plot_ntrack([ sig_in0,  bkg_in0, sig[:,:80,:], bkg[:,:80,:]],  tag_file='_jet1', tag_title='leading jet', plot_dir=self.plot_dir, bin_max=self.max_track)
 
     self.train(sig_dict=sig_dict, bkg_dict=bkg_dict)
@@ -344,7 +370,7 @@ class Param:
     file_ls=[]
     for dsid in dsids:
       file_ls.append("skim3.user.ebusch."+str(dsid)+".root")
-    #file_ls=["skim3.user.ebusch.SIGskim.root"]
+    file_ls=["skim3.user.ebusch.SIGskim.root"]
     file_ls.append("skim3.user.ebusch.QCDskim.root")
     for fl in file_ls:
       cprint(f'{fl}', 'red')
@@ -444,12 +470,10 @@ class Param:
 
 #skf for kfold
     for nfold,value in bkg_dict.items():
+      cprint(f'train:{nfold=}{self.arch_dir},{self.plot_dir}', 'yellow')
       setattr(self, 'arch_dir',bkg_dict[nfold]['arch_dir'])
       setattr(self, 'plot_dir',bkg_dict[nfold]['plot_dir'])
-      cprint(f'{nfold}{self.arch_dir},{self.plot_dir}', 'yellow')
-#      cprint(f"{sig_dict[nfold]['train']},{bkg_dict[nfold]['train']}", 'yellow') 
-#      cprint(f"{sig_dict[nfold]['y_train']},{bkg_dict[nfold]['y_train']}", 'yellow')
-#      sys.exit() 
+      cprint(f'after changing the arch_dir and plot_dir: train:{nfold=}{self.arch_dir},{self.plot_dir}', 'yellow')
       x_train=np.concatenate((sig_dict[nfold]['train'], bkg_dict[nfold]['train']), axis=0)
       x_test=np.concatenate((sig_dict[nfold]['test'], bkg_dict[nfold]['test']), axis=0)
       y_train=tf.keras.utils.to_categorical(np.concatenate((sig_dict[nfold]['y_train'],bkg_dict[nfold]['y_train']), axis=0), num_classes=2)
@@ -467,7 +491,7 @@ class Param:
 
       bkg_events_num=bkg_skf.shape[0]
       sig_events_num=sig_skf.shape[0]
-
+      cprint(f'{bkg_events_num}, {sig_events_num}', 'green')
       #plot_vectors(bkg_sel,sig_sel,tag_file=self.tag+"_NSNR", tag_title=self.weight_tag+"_NSNR", plot_dir=self.plot_dir) # wrong but keep for reference
       
       plot_vectors(bkg_skf,sig_skf,tag_file=self.tag+f"_NSNR_{nfold}", tag_title=self.weight_tag+f"_NSNR ({nfold}th)", plot_dir=self.plot_dir)
@@ -557,7 +581,7 @@ class Param:
       plot_dir=self.plot_dir
       plot_dir=plot_dir.replace('//','/')
       print(plot_dir)
-      self.make_html(plot_dir=plot_dir,nfold=nfold)
+#      self.make_html(plot_dir=plot_dir,nfold=nfold)
 
       #write hdft of the indices
       # apply the model 
@@ -644,12 +668,12 @@ Here are some parameters to change to make PFN models
 #sig_events=502000 # change after no pt requirement
 #bkg_events=502000
 #sig_events=2000
-sig_events=500
-#sig_events=50000
+#sig_events=500
+sig_events=100000
 #sig_events=100000000
 #sig_events=1000000
-#bkg_events=1151555
-bkg_events=5000
+bkg_events=1151555
+#bkg_events=5000
 #bkg_events=1151000
 #max_track=80 #160
 max_track=15 #160
@@ -689,6 +713,9 @@ for max_t in [60, 100]:
 * Troubleshooting: FileNotFoundError: [Errno 2] No such file or directory: '/nevis/katya01/data/users/kpark/svj-vae/results/test/07_30_23_08_14/2/plots/inputs_PFN_2jAvg_MM_ws_NSNR_01.png'
 -> This is because the original directory has been removed and the hdf5 has an plot_dir location saved of that directoy so it can't do anything about it 
 -> sol: delete the content in idx directory and rerun the code  
+* Troubleshooting: raise IOError("SavedModel file does not exist at: %s/{%s|%s}" %
+OSError: SavedModel file does not exist at: /nevis/katya01/data/users/kpark/svj-vae/results/test/07_30_23_10_14/0/architectures_saved/PFN_graph_arch/{saved_model.pbtxt|saved_model.pb}
+-> This happens when the architecture was not saved and instead only the idx files were saved. Try running the 
 """
 #for n_neuron in [40, 150]:
 for n_neuron in [75,40, 150]:
