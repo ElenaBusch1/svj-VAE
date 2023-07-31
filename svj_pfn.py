@@ -370,26 +370,29 @@ class Param:
     file_ls=[]
     for dsid in dsids:
       file_ls.append("skim3.user.ebusch."+str(dsid)+".root")
-    file_ls=["skim3.user.ebusch.SIGskim.root"]
+#    file_ls=["skim3.user.ebusch.SIGskim.root"]
     file_ls.append("skim3.user.ebusch.QCDskim.root")
     for fl in file_ls:
       cprint(f'{fl}', 'red')
       sig_dict={}
       dsid=fl.split('.')[-2]
       # use extraVars instead of self.extraVars 
+      """
       sig, mT_sig, sig_sel, jet_sig, sig_in0, sig_in1 = getTwoJetSystem(nevents=self.sig_events,input_file=fl,
         track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
         bool_weight=bool_weight_sig,  extraVars=extraVars, plot_dir=self.plot_dir, seed=self.seed,max_track=self.max_track, bool_pt=self.bool_pt,h5_dir=self.h5_dir, bool_select_all=bool_select_all)
+      """
      # input_file for sig is fl not self.sig_file
       print('e', extraVars)
-      cprint(f'{mT_sig}', 'red')
 #      all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/test/07_28_23_14_24/'
       #all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/test/07_28_23_13_39/'
       if ('QCD' in fl) or ('Znunu' in fl):
-        sig_skf=self.kfold(arr=sig, bool_sig=False,dsid=dsid, all_dir=self.all_dir,mT=mT_sig, extraVars=extraVars) # important that bool_sig=False for bkg
-      else:sig_skf=self.kfold(arr=sig, bool_sig=True,dsid=dsid, all_dir=self.all_dir,mT=mT_sig, extraVars=extraVars)
+        sig_skf=self.kfold(arr=np.array([]), bool_sig=False,dsid=dsid, all_dir=self.all_dir,mT=np.array([]), extraVars=extraVars) # important that bool_sig=False for bkg
+        #sig_skf=self.kfold(arr=sig, bool_sig=False,dsid=dsid, all_dir=self.all_dir,mT=mT_sig, extraVars=extraVars) # important that bool_sig=False for bkg
+      else:sig_skf=self.kfold(arr=np.array([]), bool_sig=True,dsid=dsid, all_dir=self.all_dir,mT=([]), extraVars=extraVars)
+      #else:sig_skf=self.kfold(arr=sig, bool_sig=True,dsid=dsid, all_dir=self.all_dir,mT=mT_sig, extraVars=extraVars)
       for nfold, val in sig_skf.items():
-        arr_dict, newVars,h5path=self.apply(val, dsid, extraVars, all_dir)
+        arr_dict, newVars,h5path=self.apply(val, dsid, extraVars, all_dir,nfold)
         cprint(f'{nfold}among {self.nfolds}, {newVars}', 'yellow')
         if nfold == 0 or nfold==str(0):
           for var in newVars: # not extraVars
@@ -399,6 +402,7 @@ class Param:
           for var in newVars:
             sig_dict[var]=np.concatenate((sig_dict[var], arr_dict[f'{var}_test']), axis=0)
 
+        cprint(f'{sig_dict[var].shape}', 'red')
       
       self.save(sig_dict, newVars, h5path)               
       
@@ -411,9 +415,12 @@ class Param:
 
     return all_dir
    
-  def apply(self, arr_dict, dsid, extraVars, all_dir):
+  def apply(self, arr_dict, dsid, extraVars, all_dir,nfold):
 
-    arch_dir=arr_dict['arch_dir']
+    arch_dir=all_dir+f'{nfold}/'+self.arch_dir.split('/')[-2]+'/'
+    #arch_dir=arr_dict['arch_dir']
+    print(arch_dir)
+    print(self.arch_dir)
     #  mT=arr_dict['mT_test']
     applydir=all_dir+f'/applydir/'
     if not(os.path.exists(applydir)):
@@ -701,15 +708,25 @@ for max_t in [60, 100]:
 """
 # there are multiple hdf5files
 """
-1)
+1) hdf5
 * /nevis/katya01/data/users/kpark/svj-vae/h5dir/jul28/twojet
 * made in getTwoJetSystem in eval_helper.py
 * helpful as jet rotation and scaling takes a long time
-2) 
+2) hdf5
 * /nevis/katya01/data/users/kpark/svj-vae/h5dir/jul28/idx
 * made in kfold in svj_pfn.py
 * helpful b/c it saves numerous infos from kfold e.g. arrays in [events, track, var] form of train set, train indices, direcotories
- 
+
+3) PFN models
+* /nevis/katya01/data/users/kpark/svj-vae/results/test/07_30_23_19_31
+* made in prepare in svj_pfn.py
+* once these are made from prepare -> when applying just run the do_apply with the all_dir as the model used (the path above) as an input
+
+4) hdf5
+* /nevis/katya01/data/users/kpark/svj-vae/results/test/07_30_23_19_31//applydir
+* made in do_apply in svj_pfn.py
+* saved infos such as mT, weight, score to be used in grid_scan function
+
 * Troubleshooting: FileNotFoundError: [Errno 2] No such file or directory: '/nevis/katya01/data/users/kpark/svj-vae/results/test/07_30_23_08_14/2/plots/inputs_PFN_2jAvg_MM_ws_NSNR_01.png'
 -> This is because the original directory has been removed and the hdf5 has an plot_dir location saved of that directoy so it can't do anything about it 
 -> sol: delete the content in idx directory and rerun the code  
@@ -721,14 +738,15 @@ OSError: SavedModel file does not exist at: /nevis/katya01/data/users/kpark/svj-
 for n_neuron in [75,40, 150]:
   param1=Param( bkg_events=bkg_events, sig_events=sig_events, n_neuron=n_neuron)
 #  stdoutOrigin=param1.open_print()
-#  param1.example_skf()
-  param1.prepare()
+#  param1.prepare() # run this to train 
   all_dir=param1.all_dir
   
-#  all_dir=param1.do_apply(all_dir="/nevis/katya01/data/users/kpark/svj-vae/results/test/07_30_23_09_19/")
-  all_dir=param1.do_apply(all_dir=all_dir)
+  all_dir="/nevis/katya01/data/users/kpark/svj-vae/results/test/07_30_23_19_31/"
+  #all_dir=param1.do_apply(all_dir="/nevis/katya01/data/users/kpark/svj-vae/results/test/07_30_23_19_31/")
+#  all_dir=param1.do_apply(all_dir=all_dir)
   title=f'track={param1.max_track}'
   grid_scan(title,all_dir=all_dir)
+  grid_s_sqrt_b(score_cut=0.97, bkg_file='', bkg_scale=5, sig_file_prefix='', title=title, all_dir=all_dir,cms=False)
 #  print(param1.close_print(stdoutOrigin)) 
   print(param1.save_info()) 
   sys.exit()
