@@ -20,15 +20,18 @@ nepochs= 100
 batchsize_pfn=500
 batchsize_ae=32
 
-pfn_model = 'PFNv6'
+pfn_model = 'PFNv7'
 arch_dir = "architectures_saved/"
 
 ## Load leading two jets
-bkg_file = "../v9.1/skim0.user.ebusch.QCDskim.root"
+bkg_file = "../v9.1/skim0.user.ebusch.totalBkgALL.root"
 #bkg2_file = "../v9.1/skim0.user.ebusch.Znunu.root"
 #bkg3_file = "../v9.1/skim0.user.ebusch.WJets.root"
 sig_file = "../v8.1/skim3.user.ebusch.SIGskim.root"
-bkg = getTwoJetSystem(508540,bkg_file,[],use_weight=True)
+#bkgpt = read_flat_vars(bkg_file,nevents, ["met_met"], True)
+#plot_single_variable([bkgpt], [np.ones(len(bkgpt))], ["totalBKG"],"met_met",True)
+
+bkg = getTwoJetSystem(529610,bkg_file,[],use_weight=True)
 #bkg2 = getTwoJetSystem(234853,bkg2_file,[],use_weight=False)
 #bkg3 = getTwoJetSystem(219828,bkg3_file,[],use_weight=False)
 sig = getTwoJetSystem(512500,sig_file,[],use_weight=False)
