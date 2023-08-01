@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "vae3"
+tag = "bkg_study"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def my_metric(s,b):
@@ -209,32 +209,64 @@ def plot_inputs(bkg, sig, variable_array):
       plt.clf()
 
 def plot_single_variable(hists, weights, h_names, title, logy=False):
-  nbins=50
+  nbins=100
   hists_flat=np.concatenate(hists)
   bin_min=np.min(hists_flat)
   bin_max=np.max(hists_flat)
   bins=np.linspace(bin_min,bin_max,nbins)
-  if(title=="mT_jj"): bins=np.linspace(500,6500, 80)
+  if(title=="mT_jj"): bins=np.linspace(1000,6000,100)
   if(title=="rT"): bins=np.linspace(0,1.0, nbins)
   for data,weight,name in zip(hists,weights,h_names):
     plt.hist(data, bins=bins, histtype='step', label=name, density=True, weights=weight)
   plt.legend(loc='lower center', fontsize='x-small')
   if (logy): plt.yscale("log")
   plt.title(title)
-  plt.savefig(plot_dir+'histlin_'+title.replace(" ","")+'_'+tag+'.png')
+  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'_'+tag+'.png')
   plt.clf()
   print("Saved plot",title)
 
+def plot_simple_ratio(hists, weights, h_names, title, logy=False):
+  colors = ['black', 'darkblue', 'deepskyblue', 'firebrick', 'darkgreen','limegreen' ]
+  #colors = ['firebrick', 'darkgreen','limegreen' ]
+  nbins=50
+  f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
+  hists_flat=np.concatenate(hists)
+  bin_min=np.min(hists_flat)
+  bin_max=np.max(hists_flat)
+  bins=np.linspace(bin_min,bin_max,nbins)
+  x_bins = bins[1:]
+  for data,weight,name,i in zip(hists,weights,h_names, range(len(hists))):
+    y,_, _=axs[0].hist(data, bins=bins, label=f'{name} ({np.sum(weight):0.2e})', density=True, histtype='step', weights=weight, color=colors[i])
+    if i ==0:
+      y0=y # make sure the first of hists list has the most number of events
+      continue
+    else:
+      axs[1].scatter(x_bins,y/y0, marker="+", color=colors[i])
+  axs[1].set_ylim(0.5,3.0)  
+  axs[1].set_ylabel('Ratio')
+  plt.tick_params(axis='y', which='minor') 
+  plt.grid()
+ 
+  axs[0].set_ylabel('Event Number')
+  if (logy): axs[0].set_yscale("log")
+  axs[0].legend(loc='upper center', fontsize='x-small')
+  axs[0].set_title(title)
+  plt.savefig(plot_dir+'ratioSimple_'+title.replace(" ","")+'_'+tag+'.png')
+  plt.clf()
+  print("Saved simple rato plot",title)
+   
 def plot_ratio(hists, weights, h_names, title, logy=False, cumsum=False):
   colors = ['black', 'darkblue', 'deepskyblue', 'firebrick', 'orange']
 
   f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
-  #hists_flat=np.concatenate(hists)
-  #bin_min=np.min(hists_flat)
-  #bin_max=np.max(hists_flat)
+  hists_flat=np.concatenate(hists)
+  nbins=50
+  bin_min=np.min(hists_flat)
+  bin_max=np.max(hists_flat)
+  #bins=np.linspace(bin_min,bin_max,nbins)
   #gap=(bin_max-bin_min)*0.05
-  bins=np.linspace(0.0,0.25,26)
-  #bins=np.linspace(1500,6500,50)
+  #bins=np.linspace(0.0,0.25,26)
+  bins=np.linspace(1000,6500,50)
   #x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
   x_bins = bins[1:]
   hists=list(hists)

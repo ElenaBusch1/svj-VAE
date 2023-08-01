@@ -31,10 +31,6 @@ def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True):
     
     bkg_nz = bkg_nz0 & bkg_nz1
 
-    print("bkg_nz0: ", bkg_nz0.shape)
-    print("bkg_nz1: ", bkg_nz1.shape)
-    print("total selection shape: ", bkg_nz.shape)
-
     # select events which have both valid leading and subleading jet tracks
     bkg_pt0 = x0[bkg_nz]
     bkg_pt1 = x1[bkg_nz]
@@ -124,7 +120,6 @@ def apply_TrackSelection(x_raw, jets):
     x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 3 for jet in x])
     #x = x[x_nz]
     #jets = jets[x_nz]
-    print("selection shape: ", x_nz.shape)
     #print()
     return x, jets, x_nz
 

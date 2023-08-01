@@ -20,20 +20,28 @@ nepochs= 100
 batchsize_pfn=500
 batchsize_ae=32
 
-pfn_model = 'PFNv3p1'
+pfn_model = 'PFNv6'
 arch_dir = "architectures_saved/"
 
 ## Load leading two jets
-bkg_file = "../v8.1/skim3.user.ebusch.QCDskim.root"
+bkg_file = "../v9.1/skim0.user.ebusch.QCDskim.root"
+#bkg2_file = "../v9.1/skim0.user.ebusch.Znunu.root"
+#bkg3_file = "../v9.1/skim0.user.ebusch.WJets.root"
 sig_file = "../v8.1/skim3.user.ebusch.SIGskim.root"
-bkg = getTwoJetSystem(nevents,bkg_file,[],use_weight=True)
-sig = getTwoJetSystem(nevents,sig_file,[],use_weight=False)
+bkg = getTwoJetSystem(508540,bkg_file,[],use_weight=True)
+#bkg2 = getTwoJetSystem(234853,bkg2_file,[],use_weight=False)
+#bkg3 = getTwoJetSystem(219828,bkg3_file,[],use_weight=False)
+sig = getTwoJetSystem(512500,sig_file,[],use_weight=False)
+
+#bkg = np.concatenate((bkg1,bkg2,bkg3))
+print("Total bkg shape:", bkg.shape)
+print("Sig shape:", sig.shape)
 
 # Plot inputs
 plot_vectors(bkg,sig,"PFNrotated")
 #check_weights(nevents)
-plot_nTracks(bkg, "bkg")
-plot_nTracks(sig, "sig")
+#plot_nTracks(bkg, "bkg")
+#plot_nTracks(sig, "sig")
 
 # Create truth target
 input_data = np.concatenate((bkg,sig),axis=0)
