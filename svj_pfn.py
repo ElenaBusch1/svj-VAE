@@ -20,23 +20,22 @@ nepochs= 100
 batchsize_pfn=500
 batchsize_ae=32
 
-pfn_model = 'PFNv7'
+pfn_model = 'PFNv8'
 arch_dir = "architectures_saved/"
 
 ## Load leading two jets
-bkg_file = "../v9.1/skim0.user.ebusch.totalBkgALL.root"
-#bkg2_file = "../v9.1/skim0.user.ebusch.Znunu.root"
-#bkg3_file = "../v9.1/skim0.user.ebusch.WJets.root"
+bkg_file = "../v9.1/skim0.user.ebusch.QCDskim.root"
+bkg2_file = "../v9.1/skim0.user.ebusch.METbkg.root"
+bkg3_file = "../v9.1/skim0.user.ebusch.topPhys.root"
 sig_file = "../v8.1/skim3.user.ebusch.SIGskim.root"
 #bkgpt = read_flat_vars(bkg_file,nevents, ["met_met"], True)
 #plot_single_variable([bkgpt], [np.ones(len(bkgpt))], ["totalBKG"],"met_met",True)
 
-bkg = getTwoJetSystem(529610,bkg_file,[],use_weight=True)
-#bkg2 = getTwoJetSystem(234853,bkg2_file,[],use_weight=False)
-#bkg3 = getTwoJetSystem(219828,bkg3_file,[],use_weight=False)
+bkg1 = getTwoJetSystem(254700,bkg_file,[],use_weight=True)
+bkg2 = getTwoJetSystem(193900,bkg2_file,[],use_weight=False)
+bkg3 = getTwoJetSystem(80000,bkg3_file,[],use_weight=False)
 sig = getTwoJetSystem(512500,sig_file,[],use_weight=False)
-
-#bkg = np.concatenate((bkg1,bkg2,bkg3))
+bkg = np.concatenate((bkg1,bkg2,bkg3))
 print("Total bkg shape:", bkg.shape)
 print("Sig shape:", sig.shape)
 
