@@ -11,18 +11,18 @@ from plot_helper import *
 from models import *
 import json
 
-def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True):
+def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True, idx_range=[]):
     getExtraVars = len(extraVars) > 0
     
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e", "jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
     track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e", "jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
     jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"]
     print("Reading in data...")
-    bkg_in0 = read_vectors(input_file, x_events, track_array0, use_weight=use_weight)
-    bkg_in1 = read_vectors(input_file, x_events, track_array1, use_weight=use_weight)
-    jet_bkg = read_flat_vars(input_file, x_events, jet_array, use_weight=use_weight)
+    bkg_in0 = read_vectors(input_file, x_events, track_array0, use_weight=use_weight, idx_range=idx_range)
+    bkg_in1 = read_vectors(input_file, x_events, track_array1, use_weight=use_weight, idx_range=idx_range)
+    jet_bkg = read_flat_vars(input_file, x_events, jet_array, use_weight=use_weight, idx_range=idx_range)
     if getExtraVars: 
-        vars_bkg = read_flat_vars(input_file, x_events, extraVars, use_weight=use_weight)
+        vars_bkg = read_flat_vars(input_file, x_events, extraVars, use_weight=use_weight, idx_range=idx_range)
 
     print("Selecting tracks & rotating...")
     plot_nTracks(bkg_in1, "j2_presel")

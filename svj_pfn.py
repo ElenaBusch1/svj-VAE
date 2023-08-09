@@ -24,26 +24,27 @@ pfn_model = 'PFNv8'
 arch_dir = "architectures_saved/"
 
 ## Load leading two jets
-bkg_file = "../v9.1/skim0.user.ebusch.QCDskim.root"
-bkg2_file = "../v9.1/skim0.user.ebusch.METbkg.root"
-bkg3_file = "../v9.1/skim0.user.ebusch.topPhys.root"
-sig_file = "../v8.1/skim3.user.ebusch.SIGskim.root"
+bkg_file = "../v9.1/skim0.user.ebusch.totalBkgALL.root"
+#bkg2_file = "../v9.1/skim0.user.ebusch.METbkg.root"
+#bkg3_file = "../v9.1/skim0.user.ebusch.topPhys.root"
+sig_file = "../v9.1/user.ebusch.data16.root"
 #bkgpt = read_flat_vars(bkg_file,nevents, ["met_met"], True)
 #plot_single_variable([bkgpt], [np.ones(len(bkgpt))], ["totalBKG"],"met_met",True)
 
-bkg1 = getTwoJetSystem(254700,bkg_file,[],use_weight=True)
-bkg2 = getTwoJetSystem(193900,bkg2_file,[],use_weight=False)
-bkg3 = getTwoJetSystem(80000,bkg3_file,[],use_weight=False)
-sig = getTwoJetSystem(512500,sig_file,[],use_weight=False)
-bkg = np.concatenate((bkg1,bkg2,bkg3))
+bkg = getTwoJetSystem(50000,bkg_file,[],use_weight=True)
+#bkg2 = getTwoJetSystem(193900,bkg2_file,[],use_weight=False)
+#bkg3 = getTwoJetSystem(80000,bkg3_file,[],use_weight=False)
+sig = getTwoJetSystem(50000,sig_file,[],use_weight=False)
+#bkg = np.concatenate((bkg1,bkg2,bkg3))
 print("Total bkg shape:", bkg.shape)
 print("Sig shape:", sig.shape)
 
 # Plot inputs
-plot_vectors(bkg,sig,"PFNrotated")
+plot_vectors(bkg,sig,"PFNinput")
 #check_weights(nevents)
 #plot_nTracks(bkg, "bkg")
 #plot_nTracks(sig, "sig")
+quit()
 
 # Create truth target
 input_data = np.concatenate((bkg,sig),axis=0)

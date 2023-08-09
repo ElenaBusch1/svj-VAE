@@ -4,8 +4,9 @@ from scipy import stats
 import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
+from scipy.stats import pearsonr
 
-tag = "bkg_study"
+tag = "PFNv8"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def my_metric(s,b):
@@ -105,14 +106,14 @@ def make_grid_plot(values,title,method):
   #values must be 4 X 10
 
   fig,ax = plt.subplots(1,1)
-  if (method.find("compare") != -1): img = ax.imshow(values, cmap='PiYG',vmin=0.8, vmax=1.2)#norm=colors.LogNorm(vmin=0.1,vmax=10))
+  if (method.find("compare") != -1): img = ax.imshow(values, cmap='PiYG', vmin=-1, vmax=3)#norm=colors.LogNorm(vmin=0.1,vmax=10))
   else:
     if (title == "qcdEff"): img = ax.imshow(values,norm=colors.LogNorm(vmin=1e-7,vmax=1e-1))
     elif (title == "sigEff"): img = ax.imshow(values,vmin=-0.1,vmax=0.7)
     elif (title == "sensitivity_Inclusive" or title == "sensitivity_mT"): img = ax.imshow(values, norm=colors.LogNorm(vmin=1e-5,vmax=1.5))
-    elif (title == "auc"): img = ax.imshow(values, vmin=0.7, vmax=1)
+    elif (title == "auc"): img = ax.imshow(values, vmin=0.8, vmax=0.9)
     elif (title == "sicMax"): img = ax.imshow(values, vmin=-2, vmax=20)
-    else: img = ax.imshow(values)
+    else: img = ax.imshow(values, cmap='Wistia')
 
   # add text to table
   for (j,i),label in np.ndenumerate(values):
@@ -171,6 +172,22 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, extra_tag=
   plt.clf()
   print("Saved score distribution for", extra_tag)
 
+def correlation_plot(data1, data2, data1_name, data2_name, bin_dict, title):
+  corr, _ = pearsonr(data1, data2)
+  print("Pearson correlation coeff: ", corr)
+
+  fig, ax = plt.subplots()
+  binsx = bin_dict[data1_name]
+  binsy = bin_dict[data2_name]
+  h = ax.hist2d(data1,data2,bins=[binsx,binsy],norm=colors.LogNorm())
+  fig.colorbar(h[3], ax=ax)
+  ax.set_xlabel(data1_name)
+  ax.set_ylabel(data2_name)
+  ax.set_title(f'{title}: Corr = {corr:.2f}')
+  plt.savefig(plot_dir+'corr_'+data1_name+'_'+data2_name+'_'+title+'_'+tag+'.png')
+  plt.clf()
+  print("Saved 2D plot of", data1_name, data2_name)
+
 def plot_phi(phis,name,extra_tag):
   nphis = phis.shape[1]
   nevents = phis.shape[0]
@@ -226,7 +243,7 @@ def plot_single_variable(hists, weights, h_names, title, logy=False):
   print("Saved plot",title)
 
 def plot_simple_ratio(hists, weights, h_names, title, logy=False):
-  colors = ['black', 'darkblue', 'deepskyblue', 'firebrick', 'darkgreen','limegreen' ]
+  colors = ['black', 'firebrick', 'darkgreen','limegreen','darkblue', 'deepskyblue' ]
   #colors = ['firebrick', 'darkgreen','limegreen' ]
   nbins=50
   f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
@@ -234,15 +251,18 @@ def plot_simple_ratio(hists, weights, h_names, title, logy=False):
   bin_min=np.min(hists_flat)
   bin_max=np.max(hists_flat)
   bins=np.linspace(bin_min,bin_max,nbins)
+  if (title == 'mT_jj'): bins=np.linspace(1500,5000,nbins)
   x_bins = bins[1:]
   for data,weight,name,i in zip(hists,weights,h_names, range(len(hists))):
     y,_, _=axs[0].hist(data, bins=bins, label=f'{name} ({np.sum(weight):0.2e})', density=True, histtype='step', weights=weight, color=colors[i])
+    mid = 0.5*(bins[1:] + bins[:-1])
+    axs[0].errorbar(mid, y, yerr=np.sqrt(y)/np.sum(weight), fmt='none')
     if i ==0:
       y0=y # make sure the first of hists list has the most number of events
       continue
     else:
       axs[1].scatter(x_bins,y/y0, marker="+", color=colors[i])
-  axs[1].set_ylim(0.5,3.0)  
+  axs[1].set_ylim(0.5,1.5)  
   axs[1].set_ylabel('Ratio')
   plt.tick_params(axis='y', which='minor') 
   plt.grid()
@@ -265,8 +285,8 @@ def plot_ratio(hists, weights, h_names, title, logy=False, cumsum=False):
   bin_max=np.max(hists_flat)
   #bins=np.linspace(bin_min,bin_max,nbins)
   #gap=(bin_max-bin_min)*0.05
-  #bins=np.linspace(0.0,0.25,26)
-  bins=np.linspace(1000,6500,50)
+  bins=np.linspace(0.0,0.25,26)
+  #bins=np.linspace(1000,6500,50)
   #x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
   x_bins = bins[1:]
   hists=list(hists)
@@ -339,9 +359,9 @@ def plot_vectors(train,sig,extra_tag):
     if(bins[-1] > 3000): bins = np.arange(0,3000,50)
     plt.subplot(4,2,i+1)
     plt.tight_layout(h_pad=1, w_pad=1)
-    plt.hist(train_v, alpha=0.5, label="v8", bins=bins, density=False)
+    plt.hist(train_v, alpha=0.5, label="MC", bins=bins, density=False, histtype='step')
     #plt.hist(test_v, alpha=0.5, label="test", bins=bins, density=True, color='lightskyblue')
-    plt.hist(sig_v, alpha=0.5, label="v8.1", bins=bins, density=False)
+    plt.hist(sig_v, alpha=0.5, label="data", bins=bins, density=False, histtype='step')
     plt.yscale('log')
     plt.title(variable_array[i])
     if i == 1: plt.legend()

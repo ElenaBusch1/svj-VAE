@@ -13,7 +13,7 @@ def get_weighted_elements(tree, nEvents):
     idx = np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
     return idx
 
-def read_flat_vars(infile, nEvents, variable_array, use_weight=True):
+def read_flat_vars(infile, nEvents, variable_array, use_weight=True, idx_range=[]):
     file = uproot.open(infile)
     
     tree = file["PostSel"]
@@ -24,14 +24,14 @@ def read_flat_vars(infile, nEvents, variable_array, use_weight=True):
     if (use_weight):
         idx = get_weighted_elements(tree, nEvents)
     else:
-        #idx = range(1000000,1300000)
-        idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
+        if idx_range == []: idx = get_spaced_elements(len(my_array[variable_array[0]]),nEvents)
+        else: idx = idx_range
     #print('Flat variable index:', idx.shape, idx)
     selected_array = np.array([val[idx] for _,val in my_array.items()]).T
 
     return selected_array
 
-def read_vectors(infile, nEvents, jet_array, use_weight=True):
+def read_vectors(infile, nEvents, jet_array, use_weight=True, idx_range=[]):
     file = uproot.open(infile)
     
     max_jets = 80
@@ -46,8 +46,8 @@ def read_vectors(infile, nEvents, jet_array, use_weight=True):
     if (use_weight):
         idx = get_weighted_elements(tree, nEvents)
     else:
-        #idx = range(1000000,1300000)
-        idx = get_spaced_elements(len(my_jet_array[jet_array[0]]),nEvents)
+        if idx_range == []: idx = get_spaced_elements(len(my_jet_array[jet_array[0]]),nEvents)
+        else: idx = idx_range
 
     #print('Vector variable index:', idx.shape, idx)
     selected_jet_array = np.array([val[idx] for _,val in my_jet_array.items()]).T
