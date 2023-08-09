@@ -198,10 +198,10 @@ def grid_scan(title, all_dir):
       bkg_idx = get_weighted_elements_h5(bkg_weights,len(sig1_loss))
       #bkg1_loss = bkg_loss[:len(sig1_loss)]
       bkg1_loss = bkg_loss[bkg_idx]
-      print('grid_scan loo')
       #plot_single_variable([bkg1_loss,sig1_loss],[np.ones(len(bkg1_loss)),np.ones(len(sig1_loss))],["bkg","sig"], "score"+str(dsid), logy=True) 
       sic_vals = do_roc(bkg1_loss, sig1_loss, tag_file=str(dsid), tag_title=str(dsid), make_transformed_plot=False,plot_dir=plot_dir )
       sic_values[dsid] = sic_vals
+      cprint(f"{dsid}, sig events, {len(sig1_loss)}", )
     except Exception as e:
       cprint(e,'red')
     #sig1_cut = sig1_loss[sig1_loss>bkg20]
