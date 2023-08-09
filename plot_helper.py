@@ -8,7 +8,7 @@ from math import ceil
 #tag = "PFN_2jAvg_MM"
 #tag = "pfnEvalTest"
 #tag = "BKGONLY_PFNv3"
-tag = "vANTELOPE_PFNv3"
+tag = "batch1_vANTELOPE_PFNv3"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 plot_dir = "/nevis/milne/files/gpm2117/WWW/SVJ/autoencoder/"
 

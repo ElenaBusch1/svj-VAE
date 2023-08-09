@@ -17,7 +17,7 @@ phi_dim = 64
 nepochs=50
 batchsize_vae=32
 
-pfn_model = 'PFNv3'
+pfn_model = 'PFNv3p1'
 vae_model = 'vANTELOPE'
 arch_dir = "architectures_saved/"
 data_path = "/data/users/ebusch/SVJ/autoencoder/"
@@ -29,6 +29,8 @@ graph.compile()
 
 ## AE events
 x_events = 200000
+#x_events = 20000
+#y_events = 2000
 y_events = 20000
 #z_events = 199899
 

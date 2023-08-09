@@ -163,14 +163,16 @@ def score_cut_mT_plot():
 def grid_scan(title):
   #with h5py.File("../v8.1/v8p1_PFNv1_QCDskim.hdf5","r") as f:
   #  bkg_data = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv3_QCDskim3_1.hdf5","r") as f:
-    bkg_data1 = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv3_QCDskim3_2.hdf5","r") as f:
-    bkg_data2 = f.get('data')[:]
+  #with h5py.File("../v8.1/v8p1_PFNv3_QCDskim3_1.hdf5","r") as f:
+  #  bkg_data1 = f.get('data')[:]
+  #with h5py.File("../v8.1/v8p1_PFNv3_QCDskim3_2.hdf5","r") as f:
+  #  bkg_data2 = f.get('data')[:]
   #with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_3.hdf5","r") as f:
   #  bkg_data3 = f.get('data')[:]
+  with h5py.File("v8p1_PFNv3_QCDskim3.hdf5","r") as f:
+    bkg_data = f.get('data')[:]
 
-  bkg_data = np.concatenate((bkg_data1,bkg_data2))
+  #bkg_data = np.concatenate((bkg_data1,bkg_data2))
   #bkg_data = np.concatenate((bkg_data1,bkg_data2, bkg_data3))
 
   variables = [f_name for (f_name,f_type) in bkg_data.dtype.descr]
@@ -182,9 +184,10 @@ def grid_scan(title):
   
   dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
-    print()
+    print(dsid)
     try:
-      with h5py.File("../v8.1/v8p1_PFNv3_"+str(dsid)+".hdf5","r") as f:
+      #with h5py.File("../v8.1/v8p1_PFNv3_"+str(dsid)+".hdf5","r") as f:
+      with h5py.File("v8p1_PFNv3_"+str(dsid)+".hdf5","r") as f:
         sig1_data = f.get('data')[:]
       sig1_loss = sig1_data["score"]
       bkg_idx = get_weighted_elements_h5(bkg_weights,len(sig1_loss))
@@ -200,6 +203,8 @@ def grid_scan(title):
     #print(dsid, f'{cut:.0%}') 
   
   print("bkg events: ", len(bkg_loss))
+
+  print(sic_values)
   
   do_grid_plots(sic_values, title)
 
@@ -304,10 +309,10 @@ def compare_s_sqrt_b():
 
 def main():
   #mT_shape_compare()
-  #grid_scan("METPresel")
+  grid_scan("METPresel_PFNv3")
   #compare_s_sqrt_b()
   #grid_s_sqrt_b(0.99)
-  cms_mT_plots()
+  #cms_mT_plots()
   #score_cut_mT_plot()
 
 if __name__ == '__main__':
