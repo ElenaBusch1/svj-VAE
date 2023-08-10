@@ -20,7 +20,7 @@ nepochs= 100
 batchsize_pfn=500
 batchsize_ae=32
 
-pfn_model = 'PFNv3'
+pfn_model = 'PFNv3p1'
 arch_dir = "architectures_saved/"
 data_path = "/data/users/ebusch/SVJ/autoencoder/"
 

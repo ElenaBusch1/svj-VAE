@@ -17,7 +17,7 @@ phi_dim = 64
 nepochs=50
 batchsize_vae=32
 
-pfn_model = 'PFNv3Gabe'
+pfn_model = 'PFNv3p1'
 vae_model = 'vANTELOPE'
 arch_dir = "architectures_saved/"
 data_path = "/data/users/ebusch/SVJ/autoencoder/"

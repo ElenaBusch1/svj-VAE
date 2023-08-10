@@ -28,14 +28,18 @@ def getTwoJetSystem(x_events, input_file, extraVars=[], use_weight=True):
         vars_bkg = read_flat_vars(input_file, x_events, extraVars, use_weight=use_weight)
 
     print("Selecting tracks & rotating...")
-    _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
-    _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
+    x0, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
+    x1, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
     
     bkg_nz = bkg_nz0 & bkg_nz1
 
+    print("bkg_nz0: ", bkg_nz0.shape)
+    print("bkg_nz1: ", bkg_nz1.shape)
+    print("total selection shape: ", bkg_nz.shape)
+
     # select events which have both valid leading and subleading jet tracks
-    bkg_pt0 = bkg_in0[bkg_nz]
-    bkg_pt1 = bkg_in1[bkg_nz]
+    bkg_pt0 = x0[bkg_nz]
+    bkg_pt1 = x1[bkg_nz]
     bjet_sel = jet_bkg[bkg_nz]
     if getExtraVars:
         vars_bkg = vars_bkg[bkg_nz]    
@@ -152,14 +156,13 @@ def pt_sort(x):
 
 def apply_TrackSelection(x_raw, jets):
     x = np.copy(x_raw)
-    x[x[:,:,0] < 10] = 0 # apply pT requirement
-    #print("Input track shape: ", x.shape)
+    #x[x[:,:,0] < 10] = 0 # apply pT requirement
+    print("Input track shape: ", x.shape)
     # require at least 3 tracks
     x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 3 for jet in x])
-    x = x[x_nz]
-    jets = jets[x_nz]
-    #print("Selected track shape: ", x.shape)
-    #print("Selected jet shape: ", jets.shape)
+    #x = x[x_nz]
+    #jets = jets[x_nz]
+    print("selection shape: ", x_nz.shape)
     #print()
     return x, jets, x_nz
 
@@ -227,7 +230,7 @@ def get_multi_loss(model_svj, x_test, y_test):
     bkg_reco_loss = []
     sig_reco_loss = []
     nevents = min(len(y_test),len(x_test))
-    step_size = 4
+    step_size = 1
     for i in range(0,nevents, step_size):
         xt = x_test[i:i+step_size]
         yt = y_test[i:i+step_size]
