@@ -16,7 +16,7 @@ import pandas as pd
 # Example usage
 #added
 class Param:
-  def __init__(self,  arch_dir="architectures_saved/",print_dir='',plot_dir='plots/',h5_dir='h5dir/jul18/', 
+  def __init__(self,  arch_dir="architectures_saved/",print_dir='',plot_dir='plots/',h5_dir='h5dir/jul28/', 
       pfn_model='PFN', ae_model='PFN', bkg_events=500000, sig_events=500000, 
       num_elements=100, element_size=7, encoding_dim=32, latent_dim=4, phi_dim=64, nepochs=100, n_neuron=75, learning_rate=0.001,
       nlayer_phi=3, nlayer_F=3,
@@ -32,7 +32,7 @@ class Param:
     self.time_dir=time.strftime("%m_%d/", time.localtime())
 #    self.all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/stats/'+self.time+'/' # for statistics
     self.parent_dir='/nevis/katya01/data/users/kpark/svj-vae/'
-    self.all_dir=self.parent_dir+'results/paramscan/'+self.time+'/' # for statistics
+    self.all_dir=self.parent_dir+'results/test/'+self.time+'/' # for statistics
 #    self.all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/'+self.time+'/'
 
     self.arch_dir=self.all_dir+arch_dir
@@ -44,7 +44,7 @@ class Param:
     for d in dir_ls:
       if not os.path.exists(d):
         os.mkdir(d)
-        print(f'made a directory: {self.all_dir}')
+        print(f'made a directory: {d}')
 
     self.pfn_model=pfn_model
     self.ae_model=ae_model
@@ -300,8 +300,8 @@ bkg_events=3234186
 """
 sig_events=502000 # change after no pt requirement
 bkg_events=502000
-#sig_events=500
-#bkg_events=500
+#sig_events=5000
+#bkg_events=5000
 #max_track=15 #160
 max_track=80 #160
 #max_track=15 #160
@@ -342,16 +342,6 @@ for max_t in [max_track]:
   print(param1.close_print(stdoutOrigin)) 
   print(param1.save_info())
   sys.exit()
-for latent_dim in [4,2,8]:
-#for latent_dim in [2,8,4]:
-  param1=Param( bkg_events=bkg_events, sig_events=sig_events, latent_dim=latent_dim)
-  stdoutOrigin=param1.open_print()
-  all_dir, auc,bkg_events_num,sig_events_num=param1.train()
-  setattr(param1, 'auc',auc )
-  setattr(param1, 'sig_events_num',sig_events_num )
-  setattr(param1, 'bkg_events_num',bkg_events_num )
-  print(param1.close_print(stdoutOrigin)) 
-  print(param1.save_info()) 
   
 for n_neuron in [75,40, 150]:
   param1=Param( bkg_events=bkg_events, sig_events=sig_events, n_neuron=n_neuron)

@@ -13,7 +13,7 @@ from termcolor import cprint
 import json
 import h5py 
 #def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_file,bkg_file="user.ebusch.QCDskim.mc20e.root",extraVars=[], plot_dir=''):
-def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,seed,max_track, plot_dir,extraVars=[], bool_weight=True, bool_pt=False, h5_dir='', bool_select_all=False):
+def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,seed,max_track, plot_dir,extraVars=[], bool_weight=True, bool_pt=False, h5_dir='', bool_select_all=False, read_dir=''):
     
     getExtraVars = len(extraVars) > 0
     h5path=f'{h5_dir}/twojet/{input_file}_s={seed}_ne={nevents}_mt={max_track}.hdf5'
@@ -36,8 +36,7 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
       bkg, vars_bkg, bkg_sel, jet_bkg, bkg_in0, bkg_in1=[*data_ls]
       print(f'file already exists:{h5path}')
     else:
-
-      read_dir='/nevis/katya01/data/users/ebusch/SVJ/autoencoder/v8.1/'
+      if read_dir=='': read_dir='/nevis/katya01/data/users/ebusch/SVJ/autoencoder/v8.1/'
       input_path=read_dir+input_file
       cprint(f'reading {input_path}','red')
       bkg_in0 = read_vectors(input_path, nevents, track_array0,seed=seed, max_track=max_track,bool_weight=bool_weight, bool_select_all=bool_select_all)
@@ -243,7 +242,7 @@ def get_multi_loss(model_svj, x_test, y_test):
     bkg_reco_loss = []
     sig_reco_loss = []
     nevents = min(len(y_test),len(x_test))
-    step_size = 4
+    step_size = 1
     for i in range(0,nevents, step_size):
         xt = x_test[i:i+step_size]
         yt = y_test[i:i+step_size]
@@ -292,7 +291,7 @@ def equal_length(bkg_loss, sig_loss):
   return bkg_loss,sig_loss
 
 
-def transform_loss(bkg_loss, sig_loss, make_plot=False, tag_file="", tag_title="", plot_dir=''):
+def transform_loss(bkg_loss, sig_loss, make_plot=False, tag_file="", tag_title="", plot_dir='', bool_PFN=True):
     bkg_loss,sig_loss=equal_length(bkg_loss,sig_loss)
     nevents = len(sig_loss) 
     
@@ -306,7 +305,7 @@ def transform_loss(bkg_loss, sig_loss, make_plot=False, tag_file="", tag_title="
     bkg_transformed = [(x - eval_min)/eval_max for x in bkg_loss]
     sig_transformed = [(x - eval_min)/eval_max for x in sig_loss]
     if make_plot:
-        plot_score(bkg_transformed, sig_transformed, False, False, tag_file=tag_file+'_Transformed', tag_title=tag_title+'_Transformed', plot_dir=plot_dir)
+        plot_score(bkg_transformed, sig_transformed, False, False, tag_file=tag_file+'_Transformed', tag_title=tag_title+'_Transformed', plot_dir=plot_dir, bool_PFN=True)
     return truth_labels, eval_vals 
 
 def transform_loss_ex(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
@@ -335,9 +334,9 @@ def getSignalSensitivityScore(bkg_loss, sig_loss, percentile=95):
 def applyScoreCut(loss,test_array,cut_val):
     return test_array[loss>cut_val] 
 
-def do_roc(bkg_loss, sig_loss, tag_file, tag_title, make_transformed_plot=False, plot_dir=''):
+def do_roc(bkg_loss, sig_loss, tag_file, tag_title, make_transformed_plot=False, plot_dir='', bool_PFN=True):
    
-    truth_labels, eval_vals = transform_loss(bkg_loss, sig_loss, make_plot=make_transformed_plot, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir) 
+    truth_labels, eval_vals = transform_loss(bkg_loss, sig_loss, make_plot=make_transformed_plot, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir, bool_PFN=True) 
     fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
     auc = roc_auc_score(truth_labels, eval_vals)
     print("AUC - "+tag_file+": ", auc)

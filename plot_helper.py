@@ -209,7 +209,7 @@ def make_single_roc(rocs,aucs,ylabel, tag_file="", tag_title="",  plot_dir=""):
   plt.savefig(saveTag+'_roc_aucs_'+Ylabel.replace("/","")+tag_file+'.pdf')
   plt.clf()
 
-def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="", tag_title="",  plot_dir=""):
+def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="", tag_title="",  plot_dir="", bool_pfn=True):
   if remove_outliers:
     bkg_score,nb = detect_outliers(bkg_score)
     sig_score,ns = detect_outliers(sig_score)
@@ -229,14 +229,19 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
   if xlog: plt.xscale('log')
   plt.yscale('log')
   plt.legend()
-  plt.title(f'PFN Score {tag_title}')
-  plt.xlabel('PFN Score')
+  if bool_pfn:
+    plt.title(f'PFN Score {tag_title}')
+    plt.xlabel('PFN Score')
+  else:
+    plt.title(f'Anomaly Score {tag_title}')
+    plt.xlabel('Anomaly Score')
   #plt.xlabel('Loss')
   plt.savefig(plot_dir+'score_'+tag_file+'.png')
   plt.clf()
   print("Saved score distribution for", tag_file)
 
-def plot_phi(phis,name,extra_tag, tag_file="", tag_title="",  plot_dir=""):
+def plot_phi(phis, tag_file="", tag_title="",  plot_dir=""):
+#def plot_phi(phis,name,extra_tag, tag_file="", tag_title="",  plot_dir=""):
   nphis = phis.shape[1]
   nevents = phis.shape[0]
   idx = [i for i in range(nphis)]*nevents
@@ -253,8 +258,8 @@ def plot_phi(phis,name,extra_tag, tag_file="", tag_title="",  plot_dir=""):
   fig.colorbar(h[3], ax=ax)
   ax.set_xlabel('Value')
   ax.set_ylabel('Index')
-  ax.set_title('PFN Set Representation - '+name +f' {tag_title}')
-  plt.savefig(plot_dir+'phi2D_'+name+'_'+tag_file+'.png')
+  ax.set_title(f'PFN Set Representation - {tag_title}')
+  plt.savefig(plot_dir+f'phi2D_{tag_file}.png')
   plt.clf()
   print("Saved 2D plot of phi-rep for", tag_file)
 
