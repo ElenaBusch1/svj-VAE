@@ -7,4 +7,5 @@ plots/*
 plots_result/*
 h5dir*
 results/*
-
+plots/*
+plots_result/*
