@@ -6,7 +6,7 @@ from matplotlib import colors
 from math import ceil
 from scipy.stats import pearsonr
 
-tag = "PFNv8"
+tag = "PFNv6_1"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def my_metric(s,b):

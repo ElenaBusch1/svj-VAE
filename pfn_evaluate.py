@@ -16,9 +16,9 @@ import h5py
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-pfn_models = ['PFNv7','PFNv8']
+pfn_models = ['PFNv6']
 arch_dir = "architectures_saved/"
-pfn_model = 'PFNv8'
+pfn_model = 'PFNv6'
 x_events = -1
 
 ## ---------- Load graph model ----------

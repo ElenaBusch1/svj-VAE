@@ -269,7 +269,7 @@ def do_roc(bkg_loss, sig_loss, plot_tag, make_transformed_plot=False):
     fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
     auc = roc_auc_score(truth_labels, eval_vals)
     print("AUC - "+plot_tag+": ", auc)
-    #make_roc(fpr,tpr,auc,plot_tag)
+    make_roc(fpr,tpr,auc,plot_tag)
     sic_vals = make_sic(fpr,tpr,auc,bkg_loss,plot_tag)
     sic_vals['auc'] = auc
     return sic_vals
