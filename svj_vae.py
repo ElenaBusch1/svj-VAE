@@ -32,7 +32,7 @@ y_events = 10000
 ## Model architecture
 latent_dim = 12
 encoding_dim = 32
-phi_dim = 64
+phi_dim = 64 #Should we be changing this? Originally 64
 
 # Hyper parameters
 nepochs = 30

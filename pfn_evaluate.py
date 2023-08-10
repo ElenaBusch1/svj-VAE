@@ -16,8 +16,9 @@ import h5py
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-pfn_model = 'PFNv3'
+pfn_model = 'PFNv3p1'
 arch_dir = "architectures_saved/"
+data_path = "/data/users/ebusch/SVJ/autoencoder/"
 
 ## ---------- Load graph model ----------
 graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
@@ -42,7 +43,7 @@ x_events = -1 ## -1 for all events
 my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
 
 ## evaluate bkg
-bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim3.user.ebusch.QCDskim.root", my_variables, False, True)
+bkg2, mT_bkg = getTwoJetSystem(x_events, data_path + "v8.1/skim3.user.ebusch.QCDskim.root", my_variables, True)
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False) 
 phi_bkg = graph.predict(bkg2)
@@ -65,7 +66,7 @@ dsids = range(515486,515527)
 for dsid in dsids:
   my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
   try:
-    bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim3.user.ebusch."+str(dsid)+".root", my_variables, False, False)
+    bkg2, mT_bkg = getTwoJetSystem(x_events, data_path + "v8.1/skim3.user.ebusch."+str(dsid)+".root", my_variables, False)
   except:
     continue
   scaler = load(arch_dir+pfn_model+'_scaler.bin')

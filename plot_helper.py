@@ -5,8 +5,13 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from math import ceil
 
-tag = "cms_mTplot"
-plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
+#tag = "PFN_2jAvg_MM"
+#tag = "pfnEvalTest"
+#tag = "BKGONLY_PFNv3"
+
+tag = "PFNv3GabeV"
+#plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
+plot_dir = "/nevis/milne/files/gpm2117/WWW/SVJ/autoencoder/"
 
 def my_metric(s,b):
     return np.sqrt(2*((s+b)*np.log(1+s/b)-s))
@@ -96,7 +101,7 @@ def make_sic(fpr,tpr,auc,bkg, model=""):
   plt.ylabel("Signal Sensitivity ($TPR/\sqrt{FPR}$)")
   plt.title("Significance Improvement Characteristic: "+model )
   plt.legend()
-  #plt.savefig(plot_dir+'sic_'+model+'_'+tag+'.png')
+  plt.savefig(plot_dir+'sic_'+model+'_'+tag+'.png')
   plt.clf()
   print("Saved SIC for", model)
   return {'sicMax':ymax, 'sigEff': sigEff, 'qcdEff': qcdEff, 'score_cut': score_cut}
@@ -280,9 +285,23 @@ def plot_nTracks(bkg, sig, extra_tag=""):
   plt.hist(sig_tracks,alpha=0.5, label="sig", bins=bins, density=False)
   plt.title("nTracks (after pT>10)")
   plt.legend()
+  plt.tight_layout()
   plt.savefig(plot_dir+'nTracks_'+extra_tag+tag+'.png')
   plt.clf()
   print("Saved plot of nTracks")
+
+def plot_nTracks_2d_hist(leadingJetTracks, subleadingJetTracks):
+  leading_nTracks = get_nTracks(leadingJetTracks)
+  subleading_nTracks = get_nTracks(subleadingJetTracks)
+  bins = np.arange(0, 75, 1)
+  plt.hist2d(leading_nTracks, subleading_nTracks, bins=bins)
+  plt.title("nTracks (after pT > 10)")
+  plt.xlabel("Leading Jet Number of Tracks")
+  plt.ylabel("Subleading Jet Number of Tracks")
+  plt.tight_layout()
+  plt.savefig(plot_dir+'nTracks_2d_'+tag+'.png')
+  plt.clf()
+  print("Saved plot of nTracks 2D")
 
 def plot_vectors(train,sig,extra_tag):
   variable_array = ["pT", "eta", "phi", "E", "z0", "d0", "qOverP"]

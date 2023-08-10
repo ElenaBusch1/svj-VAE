@@ -16,9 +16,11 @@ import h5py
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-pfn_model = 'PFNv1'
-ae_model = 'ANTELOPEv1'
+pfn_model = 'PFNv3p1'
+#ae_model = 'ANTELOPEv1'
+vae_model = "vANTELOPE"
 arch_dir = "architectures_saved/"
+data_path = "/data/users/ebusch/SVJ/autoencoder/"
 
 ## ---------- Load graph model ----------
 graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
@@ -26,29 +28,107 @@ graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
 graph.compile()
 
 ## ---------- Load AE model ----------
-encoder = keras.models.load_model(arch_dir+ae_model+'_encoder_arch')
-decoder = keras.models.load_model(arch_dir+ae_model+'_decoder_arch')
-ae = AE(encoder,decoder)
+encoder = keras.models.load_model(arch_dir+vae_model+'_encoder_arch')
+decoder = keras.models.load_model(arch_dir+vae_model+'_decoder_arch')
+vae = VAE(encoder,decoder)
 
-ae.get_layer('encoder').load_weights(arch_dir+ae_model+'_encoder_weights.h5')
-ae.get_layer('decoder').load_weights(arch_dir+ae_model+'_decoder_weights.h5')
+vae.get_layer('encoder').load_weights(arch_dir+vae_model+'_encoder_weights.h5')
+vae.get_layer('decoder').load_weights(arch_dir+vae_model+'_decoder_weights.h5')
 
-ae.compile(optimizer=keras.optimizers.Adam())
+vae.compile(optimizer=keras.optimizers.Adam())
+print ("Loaded model")
+
+
+x_events = 200000
+y_events = 20000
+bkg_file = data_path + "v8.1/skim3.user.ebusch.QCDskim.root"
+sig_file = data_path + "v8.1/skim3.user.ebusch.SIGskim.root"
+bkg2 = getTwoJetSystem(x_events,bkg_file,[],use_weight=True)
+sig2 = getTwoJetSystem(y_events,sig_file,[],use_weight=False)
+#sig2 = getTwoJetSystem(y_events,bkg_file,[],use_weight=True)
+
+scaler = load(arch_dir+pfn_model+'_scaler.bin')
+bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
+sig2,_ = apply_StandardScaling(sig2,scaler,False)
+
+phi_bkg = graph.predict(bkg2)
+phi_sig = graph.predict(sig2)
 
 ## Load history
 # with open(arch_dir+ae_model+"_history.json", 'r') as f:
 #     h = json.load(f)
 # print(h)
 # print(type(h))
+phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=sig2.shape[0])
+eval_max = np.amax(phi_evalb)
+eval_min = np.amin(phi_evalb)
+sig_max = np.amax(phi_sig)
+print("Min: ", eval_min)
+print("Max: ", eval_max)
+if (sig_max > eval_max): eval_max = sig_max
+print("Final Max: ", eval_max)
+#quit()
 
-print ("Loaded model")
+phi_evalb = (phi_evalb - eval_min)/(eval_max-eval_min)
+phi_testb = (phi_testb - eval_min)/(eval_max-eval_min)
+phi_sig = (phi_sig - eval_min)/(eval_max-eval_min)
 
+bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss, sig_reco_loss = get_multi_loss(vae, phi_testb, phi_sig)
+do_roc(bkg_loss, sig_loss, vae_model, True)
+do_roc(bkg_reco_loss, sig_reco_loss, vae_model+"_Reco", True)
+do_roc(bkg_kl_loss, sig_kl_loss, vae_model+"_KLD", True)
+
+print("Taking log of score...")
+bkg_loss = np.log(bkg_loss)
+sig_loss = np.log(sig_loss)
+#score = getSignalSensitivityScore(bkg_loss, sig_loss)
+#print("95 percentile score = ",score)
+# # 4. ROCs/AUCs using sklearn functions imported above  
+do_roc(bkg_loss, sig_loss, vae_model+'log', True)
+
+quit()
 ## Load testing data
-x_events = -1 ## -1 for all events
-dsids = [515487, 515488, 515489, 515490, 515491, 515492, 515493, 515494, 515504, 515507, 515508, 515509, 515510, 515511, 515514, 515515, 515516, 515518, 515520, 515521, 515522, 515523, 515525, 515526]
-for dsid in dsids:
+#x_events = -1 ## -1 for all events
+x_events = -1
+#dsids = [515487, 515488, 515489, 515490, 515491, 515492, 515493, 515494, 515504, 515507, 515508, 515509, 515510, 515511, 515514, 515515, 515516, 515518, 515520, 515521, 515522, 515523, 515525, 515526]
+
+my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
+
+## evaluate bkg
+bkg2, mT_bkg = getTwoJetSystem(x_events, data_path + "v8.1/skim3.user.ebusch.QCDskim.root", my_variables, True)
+scaler = load(arch_dir+pfn_model+'_scaler.bin')
+bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
+phi_bkg = graph.predict(bkg2)
+
+## Scale phis - values from v1 training
+eval_min = 0.0
+eval_max = 109.87523
+#eval_max = np.amax(phi_bkg)
+#eval_min = np.amin(phi_bkg)
+phi_bkg = (phi_bkg - eval_min)/(eval_max-eval_min)
+
+pred_phi_bkg = vae.predict(phi_bkg)['reconstruction']
+
+# ## AE loss
+bkg_loss = np.array(keras.losses.mse(phi_bkg, pred_phi_bkg))
+
+my_variables.insert(0,"score")
+print(my_variables)
+save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+#print(save_bkg)
+ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
+rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
+
+with h5py.File("v8p1_vANTELOPE_QCDskim3.hdf5","w") as h5f:
+  dset = h5f.create_dataset("data",data=rec_bkg)
+print("Saved hdf5 for QCDskim")
+
+for dsid in range(515486,515527):
   my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
-  bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim.user.ebusch."+str(dsid)+".mc20e.root", my_variables)
+  try:
+    bkg2,mT_bkg = getTwoJetSystem(x_events,data_path + "v8.1/skim3.user.ebusch."+str(dsid)+".root", my_variables)
+  except: continue
+
   scaler = load(arch_dir+pfn_model+'_scaler.bin')
   bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
   
@@ -56,10 +136,12 @@ for dsid in dsids:
   
   ## Scale phis - values from v1 training
   eval_min = 0.0
-  eval_max = 167.20311
+  eval_max = 109.87523
+  #eval_max = np.amax(phi_bkg)
+  #eval_min = np.amin(phi_bkg)
   phi_bkg = (phi_bkg - eval_min)/(eval_max-eval_min)
   
-  pred_phi_bkg = ae.predict(phi_bkg)['reconstruction']
+  pred_phi_bkg = vae.predict(phi_bkg)['reconstruction']
   
   # ## AE loss
   bkg_loss = np.array(keras.losses.mse(phi_bkg, pred_phi_bkg))
@@ -71,7 +153,7 @@ for dsid in dsids:
   ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
   rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
   
-  with h5py.File("v8p1_"+str(dsid)+".hdf5","w") as h5f:
+  with h5py.File("v8p1_vANTELOPE_"+str(dsid)+".hdf5","w") as h5f:
     dset = h5f.create_dataset("data",data=rec_bkg)
   print("Saved hdf5 for ", dsid)
 

@@ -20,12 +20,13 @@ nepochs= 100
 batchsize_pfn=500
 batchsize_ae=32
 
-pfn_model = 'PFNv3'
+pfn_model = 'PFNv3p1'
 arch_dir = "architectures_saved/"
+data_path = "/data/users/ebusch/SVJ/autoencoder/"
 
 ## Load leading two jets
-bkg_file = "../v8.1/skim3.user.ebusch.QCDskim.root"
-sig_file = "../v8.1/skim3.user.ebusch.SIGskim.root"
+bkg_file = data_path + "v8.1/skim3.user.ebusch.QCDskim.root"
+sig_file = data_path + "v8.1/skim3.user.ebusch.SIGskim.root"
 bkg = getTwoJetSystem(nevents,bkg_file,[],use_weight=True)
 sig = getTwoJetSystem(nevents,sig_file,[],use_weight=False)
 

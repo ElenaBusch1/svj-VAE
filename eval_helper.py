@@ -11,12 +11,15 @@ from plot_helper import *
 from models import *
 import json
 
-def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True):
+data_path = "/data/users/ebusch/SVJ/autoencoder/"
+
+def getTwoJetSystem(x_events, input_file, extraVars=[], use_weight=True):
     getExtraVars = len(extraVars) > 0
     
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e", "jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
     track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e", "jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
     jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"]
+
     print("Reading in data...")
     bkg_in0 = read_vectors(input_file, x_events, track_array0, use_weight=use_weight)
     bkg_in1 = read_vectors(input_file, x_events, track_array1, use_weight=use_weight)
@@ -25,20 +28,33 @@ def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True):
         vars_bkg = read_flat_vars(input_file, x_events, extraVars, use_weight=use_weight)
 
     print("Selecting tracks & rotating...")
-    _, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
-    _, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
+    x0, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)
+    x1, _, bkg_nz1 = apply_TrackSelection(bkg_in1, jet_bkg)
     
     bkg_nz = bkg_nz0 & bkg_nz1
 
+    print("bkg_nz0: ", bkg_nz0.shape)
+    print("bkg_nz1: ", bkg_nz1.shape)
+    print("total selection shape: ", bkg_nz.shape)
+
     # select events which have both valid leading and subleading jet tracks
-    bkg_pt0 = bkg_in0[bkg_nz]
-    bkg_pt1 = bkg_in1[bkg_nz]
+    bkg_pt0 = x0[bkg_nz]
+    bkg_pt1 = x1[bkg_nz]
     bjet_sel = jet_bkg[bkg_nz]
     if getExtraVars:
         vars_bkg = vars_bkg[bkg_nz]    
 
     #plot_nTracks(bkg_pt0, sig_pt0, "j1")
     #plot_nTracks(bkg_pt1, sig_pt1, "j2")
+
+    #plot_nTracks_2d_hist(bkg_pt0, bkg_pt1)
+    
+    # NOTE no need to sort for ANTELOPE
+    #bkg_sel0 = pt_sort(bkg_pt0)
+    #bkg_sel1 = pt_sort(bkg_pt1)
+    #sig_sel0 = pt_sort(sig_pt0)
+    #sig_sel1 = pt_sort(sig_pt1)
+    
 
     bkg_sel = np.concatenate((bkg_pt0,bkg_pt1),axis=1)
     #bkg_sel = pt_sort(bkg_sel)
@@ -66,6 +82,7 @@ def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True):
     #sig = sig
 
     print("Total jets:", bkg.shape)
+
     #print(mT_sel.shape)
     #x = x_2D.reshape(bkg.shape[0],x_2D.shape[1]*4)
     #sig = sig_2D.reshape(sig_2D.shape[0],x_2D.shape[1]*4)
@@ -76,11 +93,37 @@ def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True):
 
 def check_weights(x_events):
     #bkg_nw1 = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 10000, ["jet1_pt"], use_weight=False)
-    bkg_nw = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 500000, ["mT_jj"], use_weight=True)
-    bkg_w = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 100000, ["mT_jj"], use_weight=True)
-    sig_nw = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 10000, ["mT_jj"], use_weight=True)
+    bkg_nw = read_flat_vars(data_path + "v8.1/user.ebusch.QCDskim.mc20e.root", 500000, ["mT_jj"], use_weight=True)
+    bkg_w = read_flat_vars(data_path + "v8.1/user.ebusch.QCDskim.mc20e.root", 100000, ["mT_jj"], use_weight=True)
+    sig_nw = read_flat_vars(data_path + "v8.1/user.ebusch.QCDskim.mc20e.root", 10000, ["mT_jj"], use_weight=True)
     #sig_nw2 = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 5000, ["jet1_pt"], use_weight=True)
     plot_single_variable([bkg_nw,bkg_w, sig_nw], ["QCD - 500k", "QCD - 100k", "QCD - 10k"], "mT Stat Check", logy=True) 
+
+def get_multiplicity_signals(bkg):
+    # Sort events by number of tracks
+    nTracks = get_nTracks(bkg)
+    print(bkg)
+    print(nTracks)
+    sorted_indices = np.argsort(nTracks)
+    bkg = bkg[sorted_indices, :, :]
+
+    # Gets top and bottom 10% of jets
+    nEvents = bkg.shape[0]
+    ten_pct = round(0.1*nEvents)
+    high_multiplicity = bkg[-ten_pct:, :, :]
+    low_multiplicity = bkg[:ten_pct, :, :]
+
+    # Sanity checks
+    print("High multiplicity min", get_nTracks(high_multiplicity)[0])
+    print("High multiplicity max", get_nTracks(high_multiplicity)[-1])
+    print("Low multiplicity min", get_nTracks(low_multiplicity)[0])
+    print("Low multiplicity max", get_nTracks(low_multiplicity)[-1])
+
+    # Puts these events in random order (does this matter?)
+    np.random.shuffle(high_multiplicity)
+    np.random.shuffle(low_multiplicity)
+
+    return high_multiplicity, low_multiplicity
 
 def get_dPhi(x1,x2):
     dPhi = x1 - x2
@@ -108,19 +151,18 @@ def pt_sort(x):
     for i in range(x.shape[0]):
         ev = x[i]
         x[i] = ev[ev[:,0].argsort()]
-    #y = x[:,-60:,:]
+    #y = x[:,-80:,:]
     return x
 
 def apply_TrackSelection(x_raw, jets):
     x = np.copy(x_raw)
-    x[x[:,:,0] < 10] = 0 # apply pT requirement
-    #print("Input track shape: ", x.shape)
+    #x[x[:,:,0] < 10] = 0 # apply pT requirement
+    print("Input track shape: ", x.shape)
     # require at least 3 tracks
     x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 3 for jet in x])
-    x = x[x_nz]
-    jets = jets[x_nz]
-    #print("Selected track shape: ", x.shape)
-    #print("Selected jet shape: ", jets.shape)
+    #x = x[x_nz]
+    #jets = jets[x_nz]
+    print("selection shape: ", x_nz.shape)
     #print()
     return x, jets, x_nz
 
@@ -188,7 +230,7 @@ def get_multi_loss(model_svj, x_test, y_test):
     bkg_reco_loss = []
     sig_reco_loss = []
     nevents = min(len(y_test),len(x_test))
-    step_size = 4
+    step_size = 1
     for i in range(0,nevents, step_size):
         xt = x_test[i:i+step_size]
         yt = y_test[i:i+step_size]
@@ -270,7 +312,7 @@ def do_roc(bkg_loss, sig_loss, plot_tag, make_transformed_plot=False):
     fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
     auc = roc_auc_score(truth_labels, eval_vals)
     print("AUC - "+plot_tag+": ", auc)
-    #make_roc(fpr,tpr,auc,plot_tag)
+    make_roc(fpr,tpr,auc,plot_tag)
     sic_vals = make_sic(fpr,tpr,auc,bkg_loss,plot_tag)
     sic_vals['auc'] = auc
     return sic_vals
