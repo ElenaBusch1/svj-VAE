@@ -7,6 +7,7 @@ from root_to_numpy import variable_array
 from math import ceil
 from termcolor import cprint
 from matplotlib.ticker import MultipleLocator
+# tag = "pfnEvalTest"      
 #tag = "PFN_2jAvg_MM"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 #plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun5_500000_nep100_nl100/'
@@ -248,15 +249,16 @@ def plot_phi(phis,name,extra_tag, tag_file="", tag_title="",  plot_dir=""):
   phis[phis==0] = -bin_width 
 
   fig, ax = plt.subplots()
-  h = ax.hist2d(phis,idx,bins=[nbinsx+1,nphis])
+  h = ax.hist2d(phis,idx,bins=[nbinsx+1,nphis],norm=colors.LogNorm())
   fig.colorbar(h[3], ax=ax)
   ax.set_xlabel('Value')
   ax.set_ylabel('Index')
   ax.set_title('PFN Set Representation - '+name +f' {tag_title}')
   plt.savefig(plot_dir+'phi2D_'+name+'_'+tag_file+'.png')
+  plt.clf()
   print("Saved 2D plot of phi-rep for", tag_file)
 
-def plot_inputs(bkg, sig, tag_file="", tag_title="",  plot_dir=""):
+def plot_inputs(bkg, sig, variable_array,tag_file="", tag_title="",  plot_dir=""):
   for i in range(len(variable_array)):
     plt.subplot(2,2,i%4+1)
     plt.tight_layout(h_pad=1, w_pad=1)

@@ -309,6 +309,25 @@ def transform_loss(bkg_loss, sig_loss, make_plot=False, tag_file="", tag_title="
         plot_score(bkg_transformed, sig_transformed, False, False, tag_file=tag_file+'_Transformed', tag_title=tag_title+'_Transformed', plot_dir=plot_dir)
     return truth_labels, eval_vals 
 
+def transform_loss_ex(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
+    nevents = len(sig_loss)
+    eval_vals = np.concatenate((bkg_loss,sig_loss))
+    eval_transformed = [1 - np.exp(-x) for x in eval_vals]
+    bkg_transformed = [1 - np.exp(-x) for x in bkg_loss]
+    sig_transformed = [1 - np.exp(-x) for x in sig_loss]
+    if make_plot:
+        plot_score(bkg_transformed, sig_transformed, False, False, plot_tag+'_TransformedEx')
+    return eval_vals 
+
+def vrnn_transform(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
+    train_mean = np.mean(bkg_loss)
+    bkg_loss_p = [1-x/(2*train_mean) for x in bkg_loss]
+    sig_loss_p = [1-x/(2*train_mean) for x in sig_loss]
+    if make_plot:
+        plot_score(bkg_loss_p, sig_loss_p, False, False, plot_tag+'_MeanShift')
+    return bkg_loss_p, sig_loss_p    
+
+
 def getSignalSensitivityScore(bkg_loss, sig_loss, percentile=95):
     nSigAboveThreshold = np.sum(sig_loss > np.percentile(bkg_loss, percentile))
     return nSigAboveThreshold / len(sig_loss)
