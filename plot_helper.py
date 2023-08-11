@@ -3,7 +3,6 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 from matplotlib import colors
-from root_to_numpy import variable_array
 from math import ceil
 from termcolor import cprint
 from matplotlib.ticker import MultipleLocator
@@ -64,11 +63,15 @@ def plot_ntrack(h_ls,  tag_file="", tag_title="", plot_dir="", bin_max=0):
   #plt.show()
   plt.clf()
   print("Saved ntrack plot for ", tag_file)
-  
+ 
 def plot_hist(dict_ls, var='auc'):
     
   for key in dict_ls:
     dict_ls[key][var]
+
+def my_metric(s,b):
+    return np.sqrt(2*((s+b)*np.log(1+s/b)-s))
+
     
 def detect_outliers(x):
   z = np.abs(stats.zscore(x))
@@ -197,8 +200,6 @@ def make_grid_plot(values,title,method,plot_dir,tag=''):
   plt.savefig(plot_dir+'table_'+method+'_'+title+'_'+tag+'.png')
   print("Saved grid plot for", title)
 
-
-
 def make_single_roc(rocs,aucs,ylabel, tag_file="", tag_title="",  plot_dir=""):
   plt.plot(rocs[0],rocs[1],label=str(np.round(r,4))+", $\sigma$="+str(sigs)+": AUC="+str(np.round(aucs,3)))
   plt.xlabel('fpr')
@@ -221,7 +222,7 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
   if xlog and bmin == 0: bmin = 1e-9
   if xlog: bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
   else: bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
-  #bins = np.linspace(0,5e-3,80)
+  #bins = np.linspace(500,4000,80)
   #plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg (-"+str(nb)+")", density=True)
   #plt.hist(sig_score, bins=bins, alpha=0.5, label="sig(-"+str(ns)+")", density=True)
   plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg", density=True)
@@ -246,11 +247,14 @@ def plot_phi(phis, tag_file="", tag_title="",  plot_dir=""):
   nevents = phis.shape[0]
   idx = [i for i in range(nphis)]*nevents
 
+  print(extra_tag)
   phiT = phis.T
   print("n zeros = ", len(np.where(~phiT.any(axis=1))[0]))
   phis = phis.flatten()
   nbinsx = 10
   bin_width = max(phis)/nbinsx
+  print("max: ", max(phis))
+  print("bin_width", bin_width)
   phis[phis==0] = -bin_width 
 
   fig, ax = plt.subplots()
@@ -345,23 +349,61 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
     axs[1].scatter(x_bins,y/y0)
 #    axs[1].set_ylim([])
     #axs[1].scatter(x_bins,zero_div(y,y0))
-    ratio_all
   axs[1].set_ylim(0,3)  
   axs[1].set_ylabel('Ratio')
   axs[1].legend(loc='upper right')
   plt.tick_params(axis='y', which='minor') 
   plt.grid()
- 
+
   axs[0].set_ylabel('Event Number')
   if (logy): axs[0].set_yscale("log")
   axs[0].legend(loc='upper right')
   axs[1].legend(loc='upper right')
   axs[0].set_title(title)
 
-  plt.savefig(plot_dir+'hist_'+title.replace(" ","").replace('(','')+'_weighted'+'.png')
+  plt.savefig(plot_dir+'histlin_'+title.replace(" ","")+'_'+tag+'.png')
   plt.clf()
   print("Saved plot",title)
 
+def plot_ratio(hists, weights, h_names, title, logy=False):
+  colors = ['black', 'darkblue', 'deepskyblue', 'firebrick', 'orange']
+
+  f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
+  nbins=20
+  hists_flat=np.concatenate(hists)
+  #bin_min=np.min(hists_flat)
+  #bin_max=np.max(hists_flat)
+  #gap=(bin_max-bin_min)*0.05
+  bins=np.linspace(1500,6500,50)
+  x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
+  hists=list(hists)
+  nTot = len(hists[0])
+  for data,weight,name,i in zip(hists,weights,h_names, range(len(hists))):
+    y,_, _=axs[0].hist(data, bins=bins, label=f'{name}', density=False, histtype='step', weights=weight, color=colors[i])
+    #print(i, len(bins), len(y), bins, y) 
+    #if i ==len(hists)-1:
+    if i ==0:
+      y0=y # make sure the first of hists list has the most number of events
+      continue
+    axs[1].scatter(x_bins,my_metric(y,y0), marker="+", color=colors[i], label=f'{max(my_metric(y,y0)):.1E}')
+    #axs[1].scatter(x_bins,zero_div(y,y0))
+
+  #axs[1].set_ylim(0.5,3.0)  
+  axs[1].set_ylabel('Fig of Merit')
+  axs[1].set_yscale('log')
+  #axs[1].legend(loc='upper right', fontsize='x-small')
+  plt.tick_params(axis='y', which='minor') 
+  plt.grid()
+
+  axs[0].set_ylabel('Event Number') 
+  if (logy): axs[0].set_yscale("log")
+  axs[0].legend(loc='upper right', fontsize='x-small')
+  axs[0].set_title(title)
+  axs[1].legend(loc='upper right')
+
+  lt.savefig(plot_dir+'ratio_'+title.replace(" ","").replace('(','')+'_weighted'+'.png')
+  plt.clf()
+  print("Saved plot",title)
 
 def get_nTracks(x):
   n_tracks = []
@@ -371,11 +413,12 @@ def get_nTracks(x):
     n_tracks.append(len(tracks))
   return n_tracks
  
+
 def plot_nTracks(bkg, sig, tag_file="", tag_title="",  plot_dir=""):
   bkg_tracks = get_nTracks(bkg)
   sig_tracks = get_nTracks(sig)
   #bins=np.histogram(np.hstack((bkg_tracks,sig_tracks)),bins=60)[1]
-  bins = np.arange(0,50,1)
+  bins = np.arange(0,100,2)
   plt.hist(bkg_tracks,alpha=0.5, label="bkg", bins=bins, density=False)
   plt.hist(sig_tracks,alpha=0.5, label="sig", bins=bins, density=False)
   plt.title("nTracks (after pT>10) - Tertiary"+f' {tag_title}')
@@ -411,11 +454,25 @@ def plot_vectors_jet(train,sig,jet_array, tag_file="", tag_title="", bool_jet=Fa
     plt.close()
     print("Saved inputs plot (", plot_dir+'inputs_jet_'+tag_file+'.png')
 
+
+def plot_nTracks_2d_hist(leadingJetTracks, subleadingJetTracks):
+  leading_nTracks = get_nTracks(leadingJetTracks)
+  subleading_nTracks = get_nTracks(subleadingJetTracks)
+  bins = np.arange(0, 75, 1)
+  plt.hist2d(leading_nTracks, subleading_nTracks, bins=bins)
+  plt.title("nTracks (after pT > 10)")
+  plt.xlabel("Leading Jet Number of Tracks")
+  plt.ylabel("Subleading Jet Number of Tracks")
+  plt.tight_layout()
+  plt.savefig(plot_dir+'nTracks_2d_'+tag+'.png')
+  plt.clf()
+  print("Saved plot of nTracks 2D")
+
 def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir=""):
   #variable_array = ["pT", "eta", "phi", "E"]
   variable_array = ["pT", "eta", "phi", "E", "z0", "d0", "qOverP"]
   print('before reshaping, train and sig', train.shape, sig.shape)
- 
+
   if (len(train.shape) == 3):
     train = train.reshape(train.shape[0], train.shape[1] * train.shape[2])
   if (len(sig.shape) == 3):
@@ -432,25 +489,12 @@ def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir=
     if(bins[-1] > 3000): bins = np.arange(0,3000,50)
     #plt.subplot(4,1,i+1)
     if bool_one:    plt.subplot(4,2,i+1)
-    #plt.subplot(2,2,(i%4)+1)
-#    fig,ax= plt.subplots(2,2)
-#    plt.subplot(2,2,1)
-#    row, col=((i%4)//2),((i%4)%2)
     plt.hist(train_v, alpha=0.5, label=f"bkg ({len(train_v)})", bins=bins, density=False)
-#    ax[row,col].hist(train_v, alpha=0.5, label=f"bkg ({len(train_v)})", bins=bins, density=False)
-    #plt.hist(test_v, alpha=0.5, label="test", bins=bins, density=True, color='lightskyblue')
-#    ax[row,col].hist(sig_v, alpha=0.5, label=f"sig ({len(sig_v)})", bins=bins, density=False)
     plt.hist(sig_v, alpha=0.5, label=f"sig ({len(sig_v)})", bins=bins, density=False)
-    #ax[row,col].set_title(f'{variable_array[i]} {tag_title}')
     plt.title(f'{variable_array[i]} {tag_title}')
     if i == 0: plt.legend(loc='upper right')
-    #if (i %1)== 1: ax[row,col].legend()
-#    print('all',i, i%4, i//4, row, col) 
-    #print('all',i, i%4, i//4, row, col) 
-#    if (i%4==3):
-#      print('selected',i, i%4, i//4)
     plt.tight_layout(h_pad=1, w_pad=1)
-    plt.yscale('log')
+    plt.yscale('log') 
     if bool_one:
       if i==size-1:
         filepath=plot_dir+'inputs_'+tag_file+str(i//4)+'.png'

@@ -16,7 +16,7 @@ from eval_helper import *
 model = "AE"
 arch_dir = "architectures_saved/"
 
-xevents = 241845
+xevents = 99500
 nevents = 10000
 
 ## ---------- CODE ----------
@@ -30,12 +30,25 @@ else: jets_1D = True
 ## Load testing data
 x_full, sig = getTwoJetSystem(xevents,nevents)
 x_train, x, _, _ = train_test_split(x_full, x_full, test_size=sig.shape[0]) #done randomly
+# NOTE had to reshape
+x_train = x_train.reshape(x_train.shape[0], 400)
+x = x.reshape(x.shape[0], 400)
+#x_test,_ = apply_StandardScaling(x_test_1,scaler,False)
+sig = sig.reshape(sig.shape[0],400)
 #x = x[:sig.shape[0]]
-plot_vectors(x,sig,tag_file="AEtest", tag_title="AEtest")
+
+high_multiplicity, low_multiplicity = get_multiplicity_signals(x_full)
+high_multiplicity = high_multiplicity.reshape(high_multiplicity.shape[0], 400)
+low_multiplicity = low_multiplicity.reshape(low_multiplicity.shape[0], 400)
+
+#plot_vectors(x,sig,"AEtest")
+plot_vectors(x, high_multiplicity, "AEtest_high_multi")
+plot_vectors(x, low_multiplicity, "AEtest_low_multi")
+
 
 ## Load model
-encoder = keras.models.load_model(arch_dir+model+'5_encoder_arch')
-decoder = keras.models.load_model(arch_dir+model+'5_decoder_arch')
+encoder = keras.models.load_model(arch_dir+model+'8_encoder_arch')
+decoder = keras.models.load_model(arch_dir+model+'8_decoder_arch')
 if model.find("PFN") >-1:
     pfn = keras.models.load_model(arch_dir+model+'_pfn_arch')
 
@@ -48,8 +61,8 @@ elif model == "PFN_AE":
 elif model == "PFN_VAE":
     model_svj = PFN_VAE(pfn,encoder,decoder)
 
-model_svj.get_layer('encoder').load_weights(arch_dir+model+'5_encoder_weights.h5')
-model_svj.get_layer('decoder').load_weights(arch_dir+model+'5_decoder_weights.h5')
+model_svj.get_layer('encoder').load_weights(arch_dir+model+'8_encoder_weights.h5')
+model_svj.get_layer('decoder').load_weights(arch_dir+model+'8_decoder_weights.h5')
 if model.find("PFN") >-1:
     model_svj.get_layer('pfn').load_weights(arch_dir+model+'_pfn_weights.h5')
 
@@ -57,7 +70,7 @@ model_svj.compile(optimizer=keras.optimizers.Adam())
 #model_svj.summary()
 
 ## Load history
-with open(arch_dir+model+"_history.json", 'r') as f:
+with open(arch_dir+model+"8_history.json", 'r') as f:
     h = json.load(f)
 print(h)
 print(type(h))
@@ -71,11 +84,17 @@ if (model.find("VAE") > -1):
 ## Evaluate single Loss model
 else:
     pred_bkg = model_svj.predict(x)['reconstruction']
-    pred_sig = model_svj.predict(sig)['reconstruction']
-    plot_vectors(pred_bkg,pred_sig,tag_file="AEpred",tag_title="AEpred")
-    
+    #pred_sig = model_svj.predict(sig)['reconstruction']
+    pred_high = model_svj.predict(high_multiplicity)["reconstruction"]
+    pred_low = model_svj.predict(low_multiplicity)["reconstruction"]
+    plot_vectors(pred_bkg,pred_high,tag_file="AEpred_high_multi", tag_title="AEpred_high_multi")
+    plot_vectors(pred_bkg,pred_low,tag_file="AEpred_low_multi", tag_title="AEpred_low_multi")
+
     bkg_loss = keras.losses.mse(x, pred_bkg)
-    sig_loss = keras.losses.mse(sig, pred_sig)
+    high_loss = keras.losses.mse(high_multiplicity, pred_high)
+    low_loss = keras.losses.mse(low_multiplicity, pred_low)
+
+    #sig_loss = keras.losses.mse(sig, pred_sig)
     #bkg_loss, sig_loss = get_single_loss(model_svj, x, sig)
 
 # --- Eval plots 
@@ -85,8 +104,11 @@ plot_saved_loss(h,  loss="loss", tag_file=model, tag_title=model)
 #    plot_saved_loss(h,  loss="kl_loss", tag_file=model, tag_title=model)
 #    plot_saved_loss(h,  loss="reco_loss", tag_file=model, tag_title=model)
 # 2. Anomaly score
-plot_score(bkg_loss, sig_loss, False, False, tag_file=model, tag_title=model)
 #plot_score(bkg_loss, sig_loss, False, True, tag_file=model+"_xlog", tag_title=model+"_xlog")
+
+plot_score(bkg_loss, high_loss, False, False, tag_file=model+"_high_multi", tag_title=model+"_high_multi")
+plot_score(bkg_loss, low_loss, False, False, tag_filemodel+"_low_multi", tag_title=model+"_low_multi")
+
 if model.find('VAE') > -1:
     plot_score(bkg_kl_loss, sig_kl_loss, remove_outliers=False, xlog=True, tag_file=model+"_KLD", tag_title=model+"_KLD")
     plot_score(bkg_reco_loss, sig_reco_loss, False, False, tag_file=model_name+'_Reco', tag_title=model_name+'_Reco')
@@ -94,7 +116,11 @@ if model.find('VAE') > -1:
 # score = getSignalSensitivityScore(bkg_loss, sig_loss)
 # print("score = ",score)
 # 4. ROCs/AUCs using sklearn functions imported above  
-do_roc(bkg_loss, sig_loss, tag_file=model,tag_title=model,make_transformed_plot= True)
+#do_roc(bkg_loss, sig_loss, model, True)
+do_roc(bkg_loss, high_loss, tag_file=model + "_high_multi",tag_title=model + "_high_multi",make_transformed_plot= True)
+do_roc(bkg_loss, low_loss, tag_file=model + "_low_multi",tag_title=model + "_low_multi",make_transformed_plot= True)
+
+
 # if model.find('VAE') > -1:
 #     do_roc(bkg_reco_loss, sig_reco_loss, tag_file=model+'_Reco',tag_title=model+'_Reco',make_transformed_plot= True)
 #     do_roc(bkg_kl_loss, sig_kl_loss, tag_file=model+'_KLD',tag_title=model+'_KLD',make_transformed_plot= True)

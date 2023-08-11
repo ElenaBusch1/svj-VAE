@@ -394,8 +394,5 @@ for batchsize_pfn in [256, 1024]:
   print(param1.save_info())
 
 
-#original
-#element_size = 4 # change here
-
 sys.exit()
 

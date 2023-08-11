@@ -115,6 +115,39 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
   
     if getExtraVars: return bkg, vars_bkg, bkg_sel, jet_bkg, bkg_in0, bkg_in1
     else: return bkg, np.array([]), bkg_sel, jet_bkg, bkg_in0, bkg_in1
+def check_weights(x_events):
+    #bkg_nw1 = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 10000, ["jet1_pt"], use_weight=False)
+    bkg_nw = read_flat_vars(data_path + "v8.1/user.ebusch.QCDskim.mc20e.root", 500000, ["mT_jj"], use_weight=True)
+    bkg_w = read_flat_vars(data_path + "v8.1/user.ebusch.QCDskim.mc20e.root", 100000, ["mT_jj"], use_weight=True)
+    sig_nw = read_flat_vars(data_path + "v8.1/user.ebusch.QCDskim.mc20e.root", 10000, ["mT_jj"], use_weight=True)
+    #sig_nw2 = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 5000, ["jet1_pt"], use_weight=True)
+    plot_single_variable([bkg_nw,bkg_w, sig_nw], ["QCD - 500k", "QCD - 100k", "QCD - 10k"], "mT Stat Check", logy=True) 
+
+def get_multiplicity_signals(bkg):
+    # Sort events by number of tracks
+    nTracks = get_nTracks(bkg)
+    print(bkg)
+    print(nTracks)
+    sorted_indices = np.argsort(nTracks)
+    bkg = bkg[sorted_indices, :, :]
+
+    # Gets top and bottom 10% of jets
+    nEvents = bkg.shape[0]
+    ten_pct = round(0.1*nEvents)
+    high_multiplicity = bkg[-ten_pct:, :, :]
+    low_multiplicity = bkg[:ten_pct, :, :]
+
+    # Sanity checks
+    print("High multiplicity min", get_nTracks(high_multiplicity)[0])
+    print("High multiplicity max", get_nTracks(high_multiplicity)[-1])
+    print("Low multiplicity min", get_nTracks(low_multiplicity)[0])
+    print("Low multiplicity max", get_nTracks(low_multiplicity)[-1])
+
+    # Puts these events in random order (does this matter?)
+    np.random.shuffle(high_multiplicity)
+    np.random.shuffle(low_multiplicity)
+
+    return high_multiplicity, low_multiplicity
 
 def get_dPhi(x1,x2):
     dPhi = x1 - x2
@@ -326,7 +359,6 @@ def vrnn_transform(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
         plot_score(bkg_loss_p, sig_loss_p, False, False, plot_tag+'_MeanShift')
     return bkg_loss_p, sig_loss_p    
 
-
 def getSignalSensitivityScore(bkg_loss, sig_loss, percentile=95):
     nSigAboveThreshold = np.sum(sig_loss > np.percentile(bkg_loss, percentile))
     return nSigAboveThreshold / len(sig_loss)
@@ -359,4 +391,3 @@ def do_grid_plots(sic_vals, title, plot_dir=''):
             loc = tuple(dsid_coords[str(dsid)])
             values[loc] = sic_vals[dsid][val]
         make_grid_plot(values, val, title, plot_dir)
-

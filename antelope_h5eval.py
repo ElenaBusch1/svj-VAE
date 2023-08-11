@@ -10,6 +10,7 @@ from joblib import dump, load
 from plot_helper import *
 from models import *
 #from models_archive import *
+from models_archive import *
 from eval_helper import *
 import matplotlib.pyplot as plt
 import h5py
@@ -192,7 +193,6 @@ def grid_scan(title, all_dir):
   for dsid in dsids:
     sigpath=h5dir+"v8p1_"+str(dsid)+".hdf5"
     try:
-     
       with h5py.File(sigpath,"r") as f:
       #with h5py.File("../v8.1/v8p1_PFNv3_"+str(dsid)+".hdf5","r") as f:
         sig1_data = f.get('data')[:]
@@ -246,7 +246,6 @@ def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, all_di
     sigpath=h5dir+"v8p1_"+str(dsid)+".hdf5"
     # sigpath="../v8.1/"+sig_file_prefix+str(dsid)+".hdf5"
     try:
-     
       with h5py.File(sigpath,"r") as f:
         sig1_data = f.get('data')[:]
 
@@ -323,7 +322,7 @@ def compare_s_sqrt_b():
 def main():
   #mT_shape_compare()
   #grid_scan("METPresel") -> before  8/10
-  grid_scan("METPresel_PFNv3") -> after 8/10
+  grid_scan("METPresel_PFNv3") #-> after 8/10
   #compare_s_sqrt_b()
   #grid_s_sqrt_b(0.99)
   cms_mT_plots()
@@ -331,5 +330,4 @@ def main():
 
 if __name__ == '__main__':
   main()
-
 

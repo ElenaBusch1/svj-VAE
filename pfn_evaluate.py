@@ -39,7 +39,6 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
   classifier = keras.models.load_model(arch_dir+pfn_model+'_classifier_arch')
   classifier.load_weights(arch_dir+pfn_model+'_classifier_weights.h5')
   classifier.compile()
-
 ## Load history
 # with open(arch_dir+ae_model+"_history.json", 'r') as f:
 #     h = json.load(f)
@@ -48,7 +47,6 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
 
   print ("Loaded model")
   
-
 
 #change here -> file and other changes
 

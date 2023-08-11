@@ -89,6 +89,7 @@ class VAE(keras.Model):
             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
             kl_loss = tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1))
             kl_loss *= 100
+            #kl_loss *= 0
             total_loss = reconstruction_loss + kl_loss
         grads = tape.gradient(total_loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
@@ -109,6 +110,7 @@ class VAE(keras.Model):
         kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
         kl_loss = tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1))
         kl_loss *= 100
+        #kl_loss *= 0
         total_loss = reconstruction_loss + kl_loss
         return {
             "loss": total_loss,
@@ -150,7 +152,6 @@ class Sampling(keras.layers.Layer):
         epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
 
-
 ## ------------------------------------------------------------------------------------
 def pfn_mask_func(X, mask_val=0):
   # map mask_val to zero and return 1 elsewhere
@@ -173,6 +174,7 @@ def get_full_PFN(input_dim, phi_dim, n_neuron, learning_rate, nlayer_phi, nlayer
   masked = keras.layers.Lambda(pfn_mask_func, name="mask")(pfn_inputs) 
 
   # Phi network
+
   dense_dict={}
 #  x=pfn_inputs 
   dense_dict[0]=keras.layers.Dense(n_neuron, kernel_initializer=initializer, name=f'pfn1') # 1st hidden layer: the # of units = n_neuron e.g. 50
