@@ -291,7 +291,7 @@ def equal_length(bkg_loss, sig_loss):
   return bkg_loss,sig_loss
 
 
-def transform_loss(bkg_loss, sig_loss, make_plot=False, tag_file="", tag_title="", plot_dir='', bool_PFN=True):
+def transform_loss(bkg_loss, sig_loss, make_plot=False, tag_file="", tag_title="", plot_dir='', bool_pfn=True):
     bkg_loss,sig_loss=equal_length(bkg_loss,sig_loss)
     nevents = len(sig_loss) 
     
@@ -305,7 +305,7 @@ def transform_loss(bkg_loss, sig_loss, make_plot=False, tag_file="", tag_title="
     bkg_transformed = [(x - eval_min)/eval_max for x in bkg_loss]
     sig_transformed = [(x - eval_min)/eval_max for x in sig_loss]
     if make_plot:
-        plot_score(bkg_transformed, sig_transformed, False, False, tag_file=tag_file+'_Transformed', tag_title=tag_title+'_Transformed', plot_dir=plot_dir, bool_PFN=True)
+        plot_score(bkg_transformed, sig_transformed, False, False, tag_file=tag_file+'_Transformed', tag_title=tag_title+'_Transformed', plot_dir=plot_dir, bool_pfn=True)
     return truth_labels, eval_vals 
 
 def transform_loss_ex(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
@@ -334,9 +334,9 @@ def getSignalSensitivityScore(bkg_loss, sig_loss, percentile=95):
 def applyScoreCut(loss,test_array,cut_val):
     return test_array[loss>cut_val] 
 
-def do_roc(bkg_loss, sig_loss, tag_file, tag_title, make_transformed_plot=False, plot_dir='', bool_PFN=True):
+def do_roc(bkg_loss, sig_loss, tag_file, tag_title, make_transformed_plot=False, plot_dir='', bool_pfn=True):
    
-    truth_labels, eval_vals = transform_loss(bkg_loss, sig_loss, make_plot=make_transformed_plot, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir, bool_PFN=True) 
+    truth_labels, eval_vals = transform_loss(bkg_loss, sig_loss, make_plot=make_transformed_plot, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir, bool_pfn=True) 
     fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
     auc = roc_auc_score(truth_labels, eval_vals)
     print("AUC - "+tag_file+": ", auc)

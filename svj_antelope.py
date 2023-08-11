@@ -108,7 +108,7 @@ h2 = ae.fit(phi_evalb,
 
 # # simple ae
 #ae.save(arch_dir+ae_model)
-print("saved model"+ arch_dir+ae_model)
+#print("saved model"+ arch_dir+ae_model)
 
 #complex ae
 ae.get_layer('encoder').save_weights(arch_dir+ae_model+'_encoder_weights.h5')
@@ -133,14 +133,14 @@ sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
 bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss, sig_reco_loss = get_multi_loss(ae, phi_testb, phi_sig)
 
 
-plot_score(bkg_loss, sig_loss, False, True, tag_file=ae_model, tag_title=ae_model, plot_dir=plot_dir, bool_PFN=False) # anomaly score
+plot_score(bkg_loss, sig_loss, False, True, tag_file=ae_model, tag_title=ae_model, plot_dir=plot_dir, bool_pfn=False) # anomaly score
 #plot_score(bkg_loss, sig_loss, False, True, ae_model)
 
 # # 3. Signal Sensitivity Score
 score = getSignalSensitivityScore(bkg_loss, sig_loss)
 print("95 percentile score = ",score)
 # # 4. ROCs/AUCs using sklearn functions imported above  
-#do_roc(bkg_loss, sig_loss, tag_file=ae_model, tag_title=ae_model,make_transformed_plot= True, plot_dir=plot_dir, bool_PFN=False)
+do_roc(bkg_loss, sig_loss, tag_file=ae_model, tag_title=ae_model,make_transformed_plot= False, plot_dir=plot_dir, bool_pfn=False)
 
 """
 print("Taking log of score...")
@@ -149,7 +149,7 @@ sig_loss = np.log(sig_loss)
 score = getSignalSensitivityScore(bkg_loss, sig_loss)
 print("95 percentile score = ",score)
 # # 4. ROCs/AUCs using sklearn functions imported above  
-do_roc(bkg_loss, sig_loss, tag_file=ae_model+'log', tag_title=ae_model+'log',make_transformed_plot= True, plot_dir=plot_dir,  bool_PFN=False)
+do_roc(bkg_loss, sig_loss, tag_file=ae_model+'log', tag_title=ae_model+'log',make_transformed_plot= True, plot_dir=plot_dir,  bool_pfn=False)
 """
 
 # ## get predictions on test data
