@@ -161,7 +161,7 @@ def score_cut_mT_plot():
     plot_ratio(d,w,labels, var, logy=True) 
 
 
-def grid_scan(title, all_dir):
+def grid_scan(title, all_dir, sig_file_prefix, bkg_file_prefix):
   # if this doesn't work try changing bkgpath
   #with h5py.File("../v8.1/v8p1_PFNv1_QCDskim.hdf5","r") as f:
   #  bkg_data = f.get('data')[:]
@@ -169,7 +169,8 @@ def grid_scan(title, all_dir):
   h5dir=all_dir+'applydir/'
   plot_dir=h5dir+'/plots/'
   if not os.path.exists(plot_dir):os.mkdir(plot_dir)
-  bkgpath=h5dir+"v8p1_QCDskim.hdf5"
+  #bkgpath=h5dir+"v8p1_QCDskim.hdf5"
+  bkgpath=h5dir+f"{bkg_file_prefix}QCDskim.hdf5"
   #bkgpath="v8p1_PFNv3_QCDskim.hdf5"
   with h5py.File(bkgpath,"r") as f:
     bkg_data1 = f.get('data')[:]
@@ -191,7 +192,8 @@ def grid_scan(title, all_dir):
   
   dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
-    sigpath=h5dir+"v8p1_"+str(dsid)+".hdf5"
+    #sigpath=h5dir+"v8p1_"+str(dsid)+".hdf5"
+    sigpath=h5dir+f"{sig_file_prefix}{dsid}"+".hdf5"
     try:
       with h5py.File(sigpath,"r") as f:
       #with h5py.File("../v8.1/v8p1_PFNv3_"+str(dsid)+".hdf5","r") as f:
@@ -213,12 +215,12 @@ def grid_scan(title, all_dir):
   print("bkg events: ", len(bkg_loss))
   do_grid_plots(sic_values, title,plot_dir=plot_dir)
 
-def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, all_dir,cms=False): #all_dir # bkg_scale = 5
+def grid_s_sqrt_b(score_cut, bkg_scale, sig_file_prefix, bkg_file_prefix,title, all_dir,cms=False): #all_dir # bkg_scale = 5
   # if can't read the file try changing sigpath or h5dir
   h5dir=all_dir+'applydir/'
   plot_dir=h5dir+'/plots/'
   if not os.path.exists(plot_dir):os.mkdir(plot_dir)
-  bkgpath=h5dir+"v8p1_QCDskim.hdf5"
+  bkgpath=h5dir+f"{bkg_file_prefix}QCDskim.hdf5"
   with h5py.File(bkgpath,"r") as f:
     bkg_data = f.get('data')[:]
   
@@ -243,7 +245,7 @@ def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, all_di
     dsid_mass = json.load(f)
   dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
-    sigpath=h5dir+"v8p1_"+str(dsid)+".hdf5"
+    sigpath=h5dir+f"{sig_file_prefix}{dsid}"+".hdf5"
     # sigpath="../v8.1/"+sig_file_prefix+str(dsid)+".hdf5"
     try:
       with h5py.File(sigpath,"r") as f:

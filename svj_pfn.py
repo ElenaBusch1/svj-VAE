@@ -17,22 +17,23 @@ import pandas as pd
 #added
 class Param:
   def __init__(self,  arch_dir="architectures_saved/",print_dir='',plot_dir='plots/',h5_dir='h5dir/jul28/', 
-      pfn_model='PFN', ae_model='PFN', bkg_events=500000, sig_events=500000, 
-      num_elements=100, element_size=7, encoding_dim=32, latent_dim=4, phi_dim=64, nepochs=100, n_neuron=75, learning_rate=0.001,
+      pfn_model='PFN', vae_model='vANTELOPE', bkg_events=500000, sig_events=500000, 
+      num_elements=100, element_size=7, encoding_dim=32, latent_dim=12, phi_dim=64, nepochs=100, n_neuron=75, learning_rate=0.001,
       nlayer_phi=3, nlayer_F=3,
       max_track=80, 
       batchsize_pfn=512,
 #      batchsize_pfn=500,
-      batchsize_ae=32, # batchsize_pfn=500 -> 512 or any power of 2
+      batchsize_vae=32, # batchsize_pfn=500 -> 512 or any power of 2
       bool_pt=False,
       sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim3.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=[],seed=0):
       #sig_file="user.ebusch.SIGskim.mc20e.root", bkg_file="user.ebusch.QCDskim.mc20e.root",  bool_weight=True, extraVars=[]):
      
     self.time=time.strftime("%m_%d_%y_%H_%M", time.localtime())
     self.time_dir=time.strftime("%m_%d/", time.localtime())
-#    self.all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/stats/'+self.time+'/' # for statistics
+#    self. all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/stats/'+self.time+'/' # for statistics
     self.parent_dir='/nevis/katya01/data/users/kpark/svj-vae/'
-    self.all_dir=self.parent_dir+'results/test/'+self.time+'/' # for statistics
+    self.all_dir=self.parent_dir+'results/antelope/'+self.time+'/' # for statistics
+    #self.all_dir=self.parent_dir+'results/test/'+self.time+'/' # for statistics
 #    self.all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/'+self.time+'/'
 
     self.arch_dir=self.all_dir+arch_dir
@@ -47,7 +48,7 @@ class Param:
         print(f'made a directory: {d}')
 
     self.pfn_model=pfn_model
-    self.ae_model=ae_model
+    self.vae_model=vae_model
     self.bkg_events=bkg_events
     self.sig_events=sig_events
 
@@ -65,7 +66,7 @@ class Param:
     self.max_track=max_track
 
     self.batchsize_pfn=batchsize_pfn
-    self.batchsize_ae=batchsize_ae
+    self.batchsize_vae=batchsize_vae
     self.bool_pt=bool_pt
 
     self.sig_file=sig_file
@@ -306,20 +307,6 @@ bkg_events=502000
 max_track=80 #160
 #max_track=15 #160
 """
-for seed in seeds:
-  param1=Param(  bkg_events=bkg_events, sig_events=sig_events,seed=seed, max_track=max_track)
-#  sys.exit()
-  stdoutOrigin=param1.open_print()
-  all_dir, auc,bkg_events_num,sig_events_num=param1.train()
-  setattr(param1, 'auc',auc )
-  setattr(param1, 'sig_events_num',sig_events_num )
-  setattr(param1, 'bkg_events_num',bkg_events_num )
-  print(param1.close_print(stdoutOrigin)) 
-  print(param1.save_info())
-
-  sys.exit()
- 
-"""
 for nlayer in [3]:
   param1=Param(  bkg_events=bkg_events, sig_events=sig_events, nlayer_phi=nlayer, nlayer_F=nlayer)
   stdoutOrigin=param1.open_print()
@@ -395,4 +382,5 @@ for batchsize_pfn in [256, 1024]:
 
 
 sys.exit()
+"""
 

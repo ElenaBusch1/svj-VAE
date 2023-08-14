@@ -214,11 +214,14 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
   if remove_outliers:
     bkg_score,nb = detect_outliers(bkg_score)
     sig_score,ns = detect_outliers(sig_score)
+  cprint(f'{bkg_score}, {sig_score}', 'green')
   #bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
   #bkg_score = np.absolute(bkg_score)
   #sig_score = np.absolute(sig_score)
   bmax = max(max(bkg_score),max(sig_score))
   bmin = min(min(bkg_score),min(sig_score))
+  
+  cprint(f'{bmax}, {bmin}', 'magenta')
   if xlog and bmin == 0: bmin = 1e-9
   if xlog: bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
   else: bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
@@ -247,7 +250,6 @@ def plot_phi(phis, tag_file="", tag_title="",  plot_dir=""):
   nevents = phis.shape[0]
   idx = [i for i in range(nphis)]*nevents
 
-  print(extra_tag)
   phiT = phis.T
   print("n zeros = ", len(np.where(~phiT.any(axis=1))[0]))
   phis = phis.flatten()

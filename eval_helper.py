@@ -12,6 +12,7 @@ from models import *
 from termcolor import cprint
 import json
 import h5py 
+from numba import jit
 #def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_file,bkg_file="user.ebusch.QCDskim.mc20e.root",extraVars=[], plot_dir=''):
 def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,seed,max_track, plot_dir,extraVars=[], bool_weight=True, bool_pt=False, h5_dir='', bool_select_all=False, read_dir=''):
     
@@ -266,7 +267,7 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
     #plt.show()
     return x
 
-
+#@jit(nopython=True)
 def get_multi_loss(model_svj, x_test, y_test):
     bkg_total_loss = []
     sig_total_loss = []

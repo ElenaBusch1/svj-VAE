@@ -47,8 +47,8 @@ def read_vectors(infile, nEvents,jet_array,seed,max_track,bool_weight=True,bool_
     """
     if(infile.find("Small") != -1): myTree = "outTree"
     else: myTree = "PostSel"
-    """
     tree = file[myTree]
+    """
     my_jet_array = tree.arrays(jet_array, library = "np")
     if not(bool_select_all):
       if bool_weight:
