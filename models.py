@@ -359,12 +359,13 @@ def get_ae(input_dim, encoding_dim, latent_dim):
   return ae
 
 ## ------------------------------------------------------------------------------------
-def get_vae(input_dim, encoding_dim, latent_dim):
+def get_vae(input_dim, encoding_dim, latent_dim, learning_rate=0.00001):
   encoder = get_variational_encoder(input_dim, encoding_dim, latent_dim)
   decoder = get_decoder(input_dim, encoding_dim, latent_dim)
 
   vae = VAE(encoder, decoder)
-  vae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.00001))
+  vae.compile(optimizer=keras.optimizers.Adam(learning_rate=learning_rate))
+  #vae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.00001))
   return vae
 
 ## ------------------------------------------------------------------------------------

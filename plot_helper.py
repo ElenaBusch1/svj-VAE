@@ -214,10 +214,19 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
   if remove_outliers:
     bkg_score,nb = detect_outliers(bkg_score)
     sig_score,ns = detect_outliers(sig_score)
-  cprint(f'{bkg_score}, {sig_score}', 'green')
+#  cprint(f'{bkg_score}, {sig_score}', 'green')
   #bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
   #bkg_score = np.absolute(bkg_score)
   #sig_score = np.absolute(sig_score)
+  if xlog:
+    try:
+    # if bkg_score is array
+      bkg_score, sig_score=bkg_score[bkg_score>0],sig_score[sig_score>0]
+    except:
+      bkg_score,sig_score=np.array(bkg_score), np.array(sig_score)
+      bkg_score, sig_score=bkg_score[bkg_score>0],sig_score[sig_score>0]
+      bkg_score, sig_score=list(bkg_score), list(sig_score)
+
   bmax = max(max(bkg_score),max(sig_score))
   bmin = min(min(bkg_score),min(sig_score))
   
@@ -228,8 +237,8 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
   #bins = np.linspace(500,4000,80)
   #plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg (-"+str(nb)+")", density=True)
   #plt.hist(sig_score, bins=bins, alpha=0.5, label="sig(-"+str(ns)+")", density=True)
-  plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg", density=True)
-  plt.hist(sig_score, bins=bins, alpha=0.5, label="sig", density=True)
+  plt.hist(bkg_score, bins=bins, alpha=0.5, label=f"bkg ({len(bkg_score)})", density=True)
+  plt.hist(sig_score, bins=bins, alpha=0.5, label=f"sig ({len(sig_score)})", density=True)
   if xlog: plt.xscale('log')
   plt.yscale('log')
   plt.legend()

@@ -96,22 +96,32 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
     eval_max = 109.87523
     #eval_max = np.amax(phi_bkg)
     #eval_min = np.amin(phi_bkg)
+
+
+
     phi_bkg = (phi_bkg - eval_min)/(eval_max-eval_min)
     
     pred_phi_bkg = vae.predict(phi_bkg)['reconstruction']
-    
+    bkg_loss={}
     # ## AE loss
-    bkg_loss = np.array(keras.losses.mse(phi_bkg, pred_phi_bkg))
+    bkg_loss['bkg_loss'] = np.array(keras.losses.mse(phi_bkg, pred_phi_bkg)
+    bkg_loss['bkg_total_loss'], bkg_loss['bkg_kl_loss'],  bkg_loss['bkg_reco_loss']=get_multi_loss_each(vae, phi_bkg)
 
 
-  newVars=['score']
+  newVars=['score', 'score_total', 'score_kl', 'score_reco']
   newVars+=extraVars
-  
+
+    
 #  newVars=extraVars.insert(0,"score")
-  save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+  save_bkg = np.concatenate((bkg_loss['bkg_loss'][:,None], 
+   bkg_loss['bkg_total_loss'][:,None],
+   bkg_loss['bkg_kl_loss'][:,None],
+   bkg_loss['bkg_reco_loss'][:,None],
+    mT_bkg),axis=1)
 
   ds_dt = np.dtype({'names':newVars,'formats':[(float)]*len(newVars)})
   rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
+ 
 
   with h5py.File(h5path,"w") as f:
     dset = f.create_dataset("data",data=rec_bkg)
@@ -126,7 +136,7 @@ myVars= ["mT_jj", "weight"]# if this is empty
 pfn_model = 'PFNv6'
 #vae_model = 'ANTELOPE'
 vae_model = 'vANTELOPE'
-
+#bkg_loss_type='bkg_loss'#'bkg_loss' 'bkg_total_loss', 'bkg_kl_loss', ''bkg_reco_loss', 
 ## Load testing data
 sig_events =100000
 #bkg_events =10
@@ -162,10 +172,11 @@ for fl in file_ls:
   dsid=fl.split('.')[-2]
   print('*'*30)
   print(fl) 
-  if vae_model=='':
+  if vae_model=='': # if evaluating PFN
     sig_file_prefix='v8p1_'
-  else:sig_file_prefix=f'v8p1_{vae_model}_'
-  h5path=applydir+'/'+sig_file_prefix+str(dsid)+".hdf5" 
+  else:sig_file_prefix=f'v8p1_{vae_model}_' # if evaluating ANTELOPE
+  h5path=applydir+'/'+f'{sig_file_prefix}{dsid}'+".hdf5" 
+  #h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_{bkg_loss_type}'+".hdf5" 
   cprint(f'{dsid=}, {h5path=}', 'green')
  # my_variables= ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
   tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
@@ -179,7 +190,8 @@ for fl in file_ls:
 bkg_file="skim3.user.ebusch.QCDskim.root"
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 dsid=bkg_file.split('.')[-2]
-h5path=applydir+'/'+"v8p1_"+str(dsid)+".hdf5"
+h5path=applydir+'/'+f'{sig_file_prefix}{dsid}'+".hdf5" 
+#h5path=applydir+'/'+"v8p1_"+str(dsid)+".hdf5"
 cprint(h5path, 'magenta')
 if  os.path.exists(h5path):
   with h5py.File(h5path,"r") as f:

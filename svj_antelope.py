@@ -16,16 +16,16 @@ class Param_ANTELOPE(Param):
   def __init__(self,  
       arch_dir_pfn,
       arch_dir="architectures_saved/",print_dir='',plot_dir='plots/',h5_dir='h5dir/jul28/',
-      pfn_model='PFN', vae_model='vANTELOPE', bkg_events=500000, sig_events=500000,
-      num_elements=100, element_size=7, encoding_dim=32, latent_dim=12, phi_dim=64, nepochs=100, n_neuron=75, learning_rate=0.001,
+      pfn_model='PFN', vae_model='vANTELOPE', bkg_events=200000, sig_events=20000,
+      num_elements=100, element_size=7, encoding_dim=32, latent_dim=12, phi_dim=64, nepochs=50, n_neuron=75, learning_rate=0.001,
       nlayer_phi=3, nlayer_F=3,
       max_track=80,
       batchsize_pfn=512,
 #      batchsize_pfn=500,
       batchsize_vae=32, # batchsize_pfn=500 -> 512 or any power of 2
       bool_pt=False,
-      sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim3.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=[],seed=0 ):
-
+      sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim0.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=[],seed=0 ):
+      #changeable: encoding_dim,latent_dim, nepochs, learning_rate, bkg_events, sig_events
     """
     arch_dir,print_dir,plot_dir,h5_dir,
       pfn_model, vae_model, bkg_events, sig_events,
@@ -82,7 +82,7 @@ class Param_ANTELOPE(Param):
     bkg, mT_bkg, bkg_sel, jet_bkg,bkg_in0, bkg_in1 = getTwoJetSystem(nevents=self.bkg_events,input_file=self.bkg_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
       bool_weight=self.bool_weight,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed, max_track=self.max_track,bool_pt=self.bool_pt,h5_dir=self.h5_dir,
-      read_dir='/data/users/ebusch/SVJ/autoencoder/v8.1/') 
+      read_dir='/data/users/ebusch/SVJ/autoencoder/v9.1/') 
       #read_dir='/data/users/ebusch/SVJ/autoencoder/v9.1/') 
     
     scaler = load(self.arch_dir_pfn+self.pfn_model+'_scaler.bin')
@@ -92,7 +92,7 @@ class Param_ANTELOPE(Param):
     
     phi_bkg = graph.predict(bkg2)
     phi_sig = graph.predict(sig2)
-    
+ 
     #plot_score(phi_bkg[:,11], phi_sig[:,11], False, False, "phi_11_raw")
     
     #phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=sig2.shape[0], random_state=42) # no info on labels e.g. y_train or y_test
@@ -108,6 +108,7 @@ class Param_ANTELOPE(Param):
     print("Max: ", eval_max)
     if (sig_max > eval_max): eval_max = sig_max
     print("Final Max: ", eval_max)
+
     
     phi_evalb = (phi_evalb - eval_min)/(eval_max-eval_min)
     phi_testb = (phi_testb - eval_min)/(eval_max-eval_min)
@@ -122,7 +123,7 @@ class Param_ANTELOPE(Param):
     plot_phi(phi_sig,tag_file="PFN_phi_sig_scaled", tag_title="Signal Scaled")
     
     
-    vae = get_vae(self.phi_dim,self.encoding_dim,self.latent_dim)
+    vae = get_vae(self.phi_dim,self.encoding_dim,self.latent_dim, self.learning_rate)
     
     h2 = vae.fit(phi_evalb, 
         epochs=self.nepochs,
@@ -153,12 +154,14 @@ class Param_ANTELOPE(Param):
     
     #2. Get loss
     #bkg_loss, sig_loss = get_single_loss(ae, phi_testb, phi_sig)
-    """
+#    """
     pred_phi_bkg = vae.predict(phi_testb)['reconstruction']
     pred_phi_sig = vae.predict(phi_sig)['reconstruction']
     bkg_loss = keras.losses.mse(phi_testb, pred_phi_bkg)
     sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
-    """
+
+    plot_score(bkg_loss, sig_loss, False, True, tag_file=self.vae_model+'_single_loss', tag_title=self.vae_model+'(single loss)', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+#    """
     #start = time.time()
     bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss, sig_reco_loss = get_multi_loss(vae, phi_testb, phi_sig)
     #end = time.time()
@@ -167,11 +170,11 @@ class Param_ANTELOPE(Param):
     except: cprint(f'{np.min(bkg_loss)}, {np.min(sig_loss)},{np.max(bkg_loss)}, {np.max(sig_loss)}', 'blue')
     print('\n')
     plot_score(bkg_loss, sig_loss, False, True, tag_file=self.vae_model, tag_title=self.vae_model, plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-    plot_score(bkg_loss, sig_loss, False, True, tag_file=self.vae_model+"_KLD", tag_title=self.vae_model+"_KLD", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-    plot_score(bkg_loss, sig_loss, False, True, tag_file=self.vae_model+"_Reco", tag_title=self.vae_model+"_Reco", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-    #plot_score(bkg_loss, sig_loss, False, True, self.vae_model)
-    #plot_score(bkg_kl_loss, sig_kl_loss, False, False, self.vae_model+"_KLD")
-    #plot_score(bkg_reco_loss, sig_reco_loss, False, False, self.vae_model+"_Reco")
+    plot_score(bkg_kl_loss, sig_kl_loss, False, True, tag_file=self.vae_model+"_KLD", tag_title=self.vae_model+"_KLD", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_reco_loss, sig_reco_loss, False, True, tag_file=self.vae_model+"_Reco", tag_title=self.vae_model+"_Reco", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_loss, sig_loss, False, False, tag_file=self.vae_model+'_nolog', tag_title=self.vae_model+'_nolog', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_kl_loss, sig_kl_loss, False, False, tag_file=self.vae_model+'_nolog'+"_KLD", tag_title=self.vae_model+'_nolog'+"_KLD", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_reco_loss, sig_reco_loss, False, False, tag_file=self.vae_model+'_nolog'+"_Reco", tag_title=self.vae_model+'_nolog'+"_Reco", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
     
     """
     """
@@ -179,12 +182,16 @@ class Param_ANTELOPE(Param):
     score = getSignalSensitivityScore(bkg_loss, sig_loss)
     print("95 percentile score = ",score)
     # # 4. ROCs/AUCs using sklearn functions imported above  
-    do_roc(bkg_loss, sig_loss, tag_file=self.vae_model, tag_title=self.vae_model,make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
-    
+    sic_vals=do_roc(bkg_loss, sig_loss, tag_file=self.vae_model, tag_title=self.vae_model,make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
+    sic_vals_kl=do_roc(bkg_kl_loss, sig_kl_loss, tag_file=self.vae_model+"_KLD", tag_title=self.vae_model+"_KLD",make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
+    sic_vals_reco=do_roc(bkg_reco_loss, sig_reco_loss, tag_file=self.vae_model+"_Reco", tag_title=self.vae_model+"_Reco",make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
+    auc={sic_vals['auc'], sic_vals_kl['auc'], sic_vals_reco['auc']}
+    bkg_events_num,sig_events_num=len(phi_bkg), len(phi_sig) 
     #do_roc(bkg_reco_loss, sig_reco_loss, vself.vae_model+"_Reco", True)
     #do_roc(bkg_kl_loss, sig_kl_loss, vself.vae_model+"_KLD", True)
     
     print("Taking log of score...")
+    """
     bkg_loss = np.log(bkg_loss)
     sig_loss = np.log(sig_loss)
     score = getSignalSensitivityScore(bkg_loss, sig_loss)
@@ -192,6 +199,7 @@ class Param_ANTELOPE(Param):
     # # 4. ROCs/AUCs using sklearn functions imported above  
     do_roc(bkg_loss, sig_loss, tag_file=self.vae_model+'log', tag_title=self.vae_model+'log',make_transformed_plot= True, plot_dir=self.plot_dir,  bool_pfn=False)
     
+    """
     # ## get predictions on test data
     # preds = pfn.predict(x_test)
     # ## get ROC curve
@@ -210,16 +218,18 @@ class Param_ANTELOPE(Param):
     return self.all_dir, auc, bkg_events_num,sig_events_num
 
 ## AE events
-sig_events = 50000
 #sig_events = 20000
-bkg_events = 100000
 #bkg_events = 200000
 pfn_model='PFNv6'
-ls_sig=[20000, 50000,50000 ]
-ls_bkg=[200000, 200000, 100000]
-
-for sig_events, bkg_events in zip(ls_sig, ls_bkg):
-  param1=Param_ANTELOPE(pfn_model=pfn_model,bkg_events=bkg_events, sig_events=sig_events, h5_dir='h5dir/antelope/aug10/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/')
+"""
+ls_sig=[30000]
+ls_bkg=[90000]
+ls_sig=[20000]
+ls_bkg=[200000]
+"""
+for learning_rate in [0.00001, 0.0001, 0.001]:
+  param1=Param_ANTELOPE(pfn_model=pfn_model,h5_dir='h5dir/antelope/aug10/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
+    learning_rate=learning_rate)
   stdoutOrigin=param1.open_print()
   all_dir, auc,bkg_events_num,sig_events_num=param1.train_vae()
   setattr(param1, 'auc',auc )
@@ -227,7 +237,18 @@ for sig_events, bkg_events in zip(ls_sig, ls_bkg):
   setattr(param1, 'bkg_events_num',bkg_events_num )
   print(param1.close_print(stdoutOrigin))
   print(param1.save_info())
+  sys.exit()
 """
+for sig_events, bkg_events in zip(ls_sig, ls_bkg):
+  param1=Param_ANTELOPE(pfn_model=pfn_model,bkg_events=bkg_events, sig_events=sig_events, h5_dir='h5dir/antelope/aug10/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
+    learning_rate=0.00001)
+  stdoutOrigin=param1.open_print()
+  all_dir, auc,bkg_events_num,sig_events_num=param1.train_vae()
+  setattr(param1, 'auc',auc )
+  setattr(param1, 'sig_events_num',sig_events_num )
+  setattr(param1, 'bkg_events_num',bkg_events_num )
+  print(param1.close_print(stdoutOrigin))
+  print(param1.save_info())
 encoding_dim = 32
 latent_dim = 12
 phi_dim = 64
