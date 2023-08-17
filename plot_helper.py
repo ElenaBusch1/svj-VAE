@@ -210,7 +210,7 @@ def make_single_roc(rocs,aucs,ylabel, tag_file="", tag_title="",  plot_dir=""):
   plt.savefig(saveTag+'_roc_aucs_'+Ylabel.replace("/","")+tag_file+'.pdf')
   plt.clf()
 
-def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="", tag_title="",  plot_dir="", bool_pfn=True):
+def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="", tag_title="",  plot_dir="", bool_pfn=True, bool_neg=False):
   if remove_outliers:
     bkg_score,nb = detect_outliers(bkg_score)
     sig_score,ns = detect_outliers(sig_score)
@@ -219,27 +219,28 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
   #bkg_score = np.absolute(bkg_score)
   #sig_score = np.absolute(sig_score)
   if xlog:
-    try:
-    # if bkg_score is array
-      bkg_score, sig_score=bkg_score[bkg_score>0],sig_score[sig_score>0]
-    except:
-      bkg_score,sig_score=np.array(bkg_score), np.array(sig_score)
-      bkg_score, sig_score=bkg_score[bkg_score>0],sig_score[sig_score>0]
-      bkg_score, sig_score=list(bkg_score), list(sig_score)
+    bkg_score,sig_score=np.array(bkg_score), np.array(sig_score)
+    if bool_neg:
+      bkg_score, sig_score=bkg_score[bkg_score<=0],sig_score[sig_score<=0]
+    else:bkg_score, sig_score=bkg_score[bkg_score>0],sig_score[sig_score>0]
+    bkg_score, sig_score=list(bkg_score), list(sig_score)
+    
 
+    #plt.xlabel('Loss')
+  print("Saved score distribution for", tag_file)
   bmax = max(max(bkg_score),max(sig_score))
   bmin = min(min(bkg_score),min(sig_score))
   
   cprint(f'{bmax}, {bmin}', 'magenta')
-  if xlog and bmin == 0: bmin = 1e-9
-  if xlog: bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
+  if xlog and bmin == 0 and not(bool_neg) : bmin = 1e-9
+  if xlog and not(bool_neg) : bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
   else: bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
   #bins = np.linspace(500,4000,80)
   #plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg (-"+str(nb)+")", density=True)
   #plt.hist(sig_score, bins=bins, alpha=0.5, label="sig(-"+str(ns)+")", density=True)
   plt.hist(bkg_score, bins=bins, alpha=0.5, label=f"bkg ({len(bkg_score)})", density=True)
   plt.hist(sig_score, bins=bins, alpha=0.5, label=f"sig ({len(sig_score)})", density=True)
-  if xlog: plt.xscale('log')
+  if xlog and not(bool_neg): plt.xscale('log')
   plt.yscale('log')
   plt.legend()
   if bool_pfn:
@@ -249,6 +250,7 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
     plt.title(f'Anomaly Score {tag_title}')
     plt.xlabel('Anomaly Score')
   #plt.xlabel('Loss')
+  if bool_neg: tag_file='neg_'+tag_file
   plt.savefig(plot_dir+'score_'+tag_file+'.png')
   plt.clf()
   print("Saved score distribution for", tag_file)
@@ -297,8 +299,9 @@ def zero_div(a,b, bool_print=False): # this avoid zero division error
     #e.g. a= [2 2 4], b= [1 0 3], result [2 0 1.333]
     return np.divide(a, b, out=np.zeros_like(a), where=mask) 
 
-def plot_single_variable(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir=""):
-  nbins=50
+def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, logy=False, len_ls=[],  plot_dir="", tag_file=''):
+  nbins=100
+  #nbins=50
   hists_flat=np.concatenate(hists)
   bin_min=np.min(hists_flat)
   bin_max=np.max(hists_flat)
@@ -310,10 +313,9 @@ def plot_single_variable(hists, h_names, weights_ls,title,density_top=True, logy
   cut0_idx=0
   len0=len(hists[cut0_idx])
  
-  ratio_all=np.array([]) 
   for data,name,weights,i in zip(hists,h_names,weights_ls, range(len(hists))):
-    y,_, _=plt.hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i]*100,1)}% left, cut={name}')
-    #y,_, _=plt[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len0*100,1)}% left, cut={name}')
+    y,_, _=plt.hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {name}')
+    #y,_, _=plt.hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i]*100,1)}% left, cut={name}')
 #    y_unnorm,_, _=plt[0].hist(data, bins=bins, density=False,histtype='step', alpha=0)
 #    print(i, len(bins), len(y), bins, y) 
     #if i ==len(hists)-1:
@@ -321,14 +323,16 @@ def plot_single_variable(hists, h_names, weights_ls,title,density_top=True, logy
   plt.grid()
  
   plt.ylabel('Event Number')
+  plt.xlabel(tag_title)
   if (logy): plt.yscale("log")
   plt.legend(loc='lower right')
   #plt.legend(loc='upper right')
   plt.title(title)
 
-  plt.savefig(plot_dir+'hist_'+title.replace(" ","").replace('(','')+'_weighted_cut'+'.png')
+  plt.savefig(plot_dir+'hist_'+tag_file+'_weighted'+'.png')
+  #plt.savefig(plot_dir+'hist_'+tag_title.replace(" ","").replace('(','')+'_weighted_cut'+'.png')
   plt.clf()
-  print("Saved plot",title)
+  print("Saved plot",tag_title)
 
 
 

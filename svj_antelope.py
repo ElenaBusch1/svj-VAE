@@ -11,6 +11,8 @@ from plot_helper import *
 from eval_helper import *
 import time
 from svj_pfn import Param
+
+import pandas as pd
 # Example usage
 class Param_ANTELOPE(Param):
   def __init__(self,  
@@ -24,7 +26,7 @@ class Param_ANTELOPE(Param):
 #      batchsize_pfn=500,
       batchsize_vae=32, # batchsize_pfn=500 -> 512 or any power of 2
       bool_pt=False,
-      sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim0.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=[],seed=0 ):
+      sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim0.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],seed=0 ):
       #changeable: encoding_dim,latent_dim, nepochs, learning_rate, bkg_events, sig_events
     """
     arch_dir,print_dir,plot_dir,h5_dir,
@@ -63,6 +65,24 @@ class Param_ANTELOPE(Param):
 
     self.arch_dir_pfn=arch_dir_pfn
 
+  def save_info(self, bool_csv=True): # always saves info.txt -> info.csv is optional
+    if bool_csv: # save in csv
+      info_dict=[self.__dict__]
+      print(info_dict) # print all the attributes as a dictionary
+      print('printing in', self.print_dir)
+      df= pd.DataFrame.from_dict(info_dict)
+      df.to_csv(self.print_dir+f'info.csv', index=False) 
+     # save in textfile
+    text=f'{vars(param1)}' # print all attributes of the class as dictionary
+    print(text)
+    print('printing in', self.print_dir)
+    with open(self.print_dir+f'info.txt', 'w') as f: 
+      f.write(text)
+#    return f'saved info in {self.print_dir}\n {text}'
+
+    return f'saved info in {self.print_dir}\n {df}'
+
+
   def train_vae(self):
     cprint(self.arch_dir_pfn+self.pfn_model+'_graph_arch', 'yellow')
     graph = keras.models.load_model(self.arch_dir_pfn+self.pfn_model+'_graph_arch')
@@ -96,7 +116,17 @@ class Param_ANTELOPE(Param):
     #plot_score(phi_bkg[:,11], phi_sig[:,11], False, False, "phi_11_raw")
     
     #phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=sig2.shape[0], random_state=42) # no info on labels e.g. y_train or y_test
-    phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=sig2.shape[0])
+#    phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=sig2.shape[0])
+    print(phi_bkg.shape, mT_bkg.shape)
+    print(len(phi_bkg))
+    phi_evalb_idx, phi_testb_idx, _, _ = train_test_split(np.arange(len(phi_bkg)), phi_bkg, test_size=sig2.shape[0])
+    phi_evalb, phi_testb, mT_evalb, mT_testb= phi_bkg[phi_evalb_idx, :], phi_bkg[phi_testb_idx, :], mT_bkg[phi_evalb_idx,:], mT_bkg[phi_testb_idx, :]
+    print(phi_evalb_idx, phi_testb_idx)
+    print(phi_evalb.shape, phi_testb.shape,  mT_evalb.shape, mT_testb.shape)
+
+    
+    plot_single_variable([mT_evalb[:,2], mT_testb[:,2]],h_names= ['training and validation', 'test'],weights_ls=[mT_evalb[:,1], mT_testb[:,1]], tag_title= 'leading jet pT (QCD)', plot_dir=self.plot_dir,logy=True, tag_file='jet1_pt')
+    plot_single_variable([mT_evalb[:,3], mT_testb[:,3]],h_names= ['training and validation', 'test'],weights_ls=[mT_evalb[:,1], mT_testb[:,1]], tag_title= 'subleading jet pT (QCD)', plot_dir=self.plot_dir, logy=True, tag_file='jet2_pt')
     plot_phi(phi_evalb,tag_file="PFN_phi_train_raw",tag_title="Train") # change
     plot_phi(phi_testb,tag_file="PFN_phi_test_raw",tag_title="Test")
     plot_phi(phi_sig,tag_file="PFN_phi_sig_raw", tag_title="Signal")
@@ -124,11 +154,27 @@ class Param_ANTELOPE(Param):
     
     
     vae = get_vae(self.phi_dim,self.encoding_dim,self.latent_dim, self.learning_rate)
+   
+    # validation data set manually
+    # Prepare the training dataset
+    idx = np.random.choice( np.arange(len(phi_evalb)), size= round(.2 *len(phi_evalb)) , replace=False) # IMPT that replace=False so that event is picked only once
+    idx = np.sort(idx) 
+    # Prepare the validation dataset
+    phi_evalb_val = phi_evalb[idx, :] 
+    phi_evalb_train = np.delete(phi_evalb, idx) # doesn't modify input array 
+        
+    mT_evalb_val = mT_evalb[idx, :] 
+    mT_evalb_train = np.delete(mT_evalb, idx, axis=0) # doesn't modify input array 
+    plot_single_variable([mT_evalb_train[:,2], mT_evalb_val[:,2]],h_names= ['training', 'validation'],weights_ls=[mT_evalb_train[:,1], mT_evalb_val[:,1]], tag_title= 'leading jet pT (QCD)', plot_dir=self.plot_dir, logy=True, tag_file='jet1_pt')
+    plot_single_variable([mT_evalb_train[:,3], mT_evalb_val[:,3]],h_names= ['training', 'validation'],weights_ls=[mT_evalb_train[:,1], mT_evalb_val[:,1]], tag_title= 'subleading jet pT (QCD)', plot_dir=self.plot_dir, logy=True, tag_file='jet2_pt')
     
-    h2 = vae.fit(phi_evalb, 
+    phi_evalb_train, phi_evalb_val, _, _ = train_test_split(phi_evalb, phi_evalb, test_size=round(.2 *len(phi_evalb)))
+    h2 = vae.fit(phi_evalb_train, 
+    #h2 = vae.fit(phi_evalb, 
         epochs=self.nepochs,
         batch_size=self.batchsize_vae,
-        validation_split=0.2,
+        validation_data=phi_evalb_val,
+        #validation_split=0.2,
         verbose=1)
     
     # # simple ae
@@ -175,7 +221,11 @@ class Param_ANTELOPE(Param):
     plot_score(bkg_loss, sig_loss, False, False, tag_file=self.vae_model+'_nolog', tag_title=self.vae_model+'_nolog', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
     plot_score(bkg_kl_loss, sig_kl_loss, False, False, tag_file=self.vae_model+'_nolog'+"_KLD", tag_title=self.vae_model+'_nolog'+"_KLD", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
     plot_score(bkg_reco_loss, sig_reco_loss, False, False, tag_file=self.vae_model+'_nolog'+"_Reco", tag_title=self.vae_model+'_nolog'+"_Reco", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+
     
+    plot_score(bkg_loss, sig_loss, False, True, tag_file=self.vae_model+'_nolog', tag_title=self.vae_model+'_nolog', plot_dir=self.plot_dir, bool_pfn=False, bool_neg=True) # anomaly score
+    plot_score(bkg_kl_loss, sig_kl_loss, False, True, tag_file=self.vae_model+'_nolog'+"_KLD", tag_title=self.vae_model+'_nolog'+"_KLD", plot_dir=self.plot_dir, bool_pfn=False, bool_neg=True) # anomaly score
+    plot_score(bkg_reco_loss, sig_reco_loss, False, True, tag_file=self.vae_model+'_nolog'+"_Reco", tag_title=self.vae_model+'_nolog'+"_Reco", plot_dir=self.plot_dir, bool_pfn=False, bool_neg=True) # anomaly score
     """
     """
     # # 3. Signal Sensitivity Score
@@ -222,10 +272,23 @@ class Param_ANTELOPE(Param):
 #bkg_events = 200000
 pfn_model='PFNv6'
 """
-ls_sig=[30000]
-ls_bkg=[90000]
+sig_events=1151555
+bkg_events=3234186
+ls_sig=[100000]
+ls_bkg=[500000]
+"""
 ls_sig=[20000]
 ls_bkg=[200000]
+for sig_events, bkg_events in zip(ls_sig, ls_bkg):
+  param1=Param_ANTELOPE(pfn_model=pfn_model,bkg_events=bkg_events, sig_events=sig_events, h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
+    learning_rate=0.00001, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'])
+  stdoutOrigin=param1.open_print()
+  all_dir, auc,bkg_events_num,sig_events_num=param1.train_vae()
+  setattr(param1, 'auc',auc )
+  setattr(param1, 'sig_events_num',sig_events_num )
+  setattr(param1, 'bkg_events_num',bkg_events_num )
+  print(param1.close_print(stdoutOrigin))
+  print(param1.save_info())
 """
 for learning_rate in [0.00001, 0.0001, 0.001]:
   param1=Param_ANTELOPE(pfn_model=pfn_model,h5_dir='h5dir/antelope/aug10/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
@@ -238,17 +301,6 @@ for learning_rate in [0.00001, 0.0001, 0.001]:
   print(param1.close_print(stdoutOrigin))
   print(param1.save_info())
   sys.exit()
-"""
-for sig_events, bkg_events in zip(ls_sig, ls_bkg):
-  param1=Param_ANTELOPE(pfn_model=pfn_model,bkg_events=bkg_events, sig_events=sig_events, h5_dir='h5dir/antelope/aug10/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
-    learning_rate=0.00001)
-  stdoutOrigin=param1.open_print()
-  all_dir, auc,bkg_events_num,sig_events_num=param1.train_vae()
-  setattr(param1, 'auc',auc )
-  setattr(param1, 'sig_events_num',sig_events_num )
-  setattr(param1, 'bkg_events_num',bkg_events_num )
-  print(param1.close_print(stdoutOrigin))
-  print(param1.save_info())
 encoding_dim = 32
 latent_dim = 12
 phi_dim = 64
