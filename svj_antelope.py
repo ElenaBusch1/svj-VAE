@@ -113,17 +113,18 @@ class Param_ANTELOPE(Param):
     phi_bkg = graph.predict(bkg2)
     phi_sig = graph.predict(sig2)
  
+    print(phi_bkg.shape, mT_bkg.shape)
+    plot_1D_phi(phi_bkg, phi_sig,labels=['QCD', 'sig'], plot_dir=self.plot_dir, tag_file=self.pfn_model, tag_title=self.pfn_model)
+    print(len(phi_bkg))
     #plot_score(phi_bkg[:,11], phi_sig[:,11], False, False, "phi_11_raw")
     
     #phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=sig2.shape[0], random_state=42) # no info on labels e.g. y_train or y_test
-#    phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=sig2.shape[0])
-    print(phi_bkg.shape, mT_bkg.shape)
-    print(len(phi_bkg))
+    phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=sig2.shape[0])
+    print('before',phi_evalb.shape, phi_testb.shape) 
     phi_evalb_idx, phi_testb_idx, _, _ = train_test_split(np.arange(len(phi_bkg)), phi_bkg, test_size=sig2.shape[0])
     phi_evalb, phi_testb, mT_evalb, mT_testb= phi_bkg[phi_evalb_idx, :], phi_bkg[phi_testb_idx, :], mT_bkg[phi_evalb_idx,:], mT_bkg[phi_testb_idx, :]
-    print(phi_evalb_idx, phi_testb_idx)
-    print(phi_evalb.shape, phi_testb.shape,  mT_evalb.shape, mT_testb.shape)
-
+    print('idx',phi_evalb_idx, phi_testb_idx)
+    print('after',phi_evalb.shape, phi_testb.shape,  mT_evalb.shape, mT_testb.shape)
     
     plot_single_variable([mT_evalb[:,2], mT_testb[:,2]],h_names= ['training and validation', 'test'],weights_ls=[mT_evalb[:,1], mT_testb[:,1]], tag_title= 'leading jet pT (QCD)', plot_dir=self.plot_dir,logy=True, tag_file='jet1_pt')
     plot_single_variable([mT_evalb[:,3], mT_testb[:,3]],h_names= ['training and validation', 'test'],weights_ls=[mT_evalb[:,1], mT_testb[:,1]], tag_title= 'subleading jet pT (QCD)', plot_dir=self.plot_dir, logy=True, tag_file='jet2_pt')
@@ -162,7 +163,7 @@ class Param_ANTELOPE(Param):
     # Prepare the validation dataset
     phi_evalb_val = phi_evalb[idx, :] 
     phi_evalb_train = np.delete(phi_evalb, idx) # doesn't modify input array 
-        
+    print(f'{phi_evalb_val.shape=}, {phi_evalb_train=}')     
     mT_evalb_val = mT_evalb[idx, :] 
     mT_evalb_train = np.delete(mT_evalb, idx, axis=0) # doesn't modify input array 
     plot_single_variable([mT_evalb_train[:,2], mT_evalb_val[:,2]],h_names= ['training', 'validation'],weights_ls=[mT_evalb_train[:,1], mT_evalb_val[:,1]], tag_title= 'leading jet pT (QCD)', plot_dir=self.plot_dir, logy=True, tag_file='jet1_pt')
@@ -173,7 +174,7 @@ class Param_ANTELOPE(Param):
     #h2 = vae.fit(phi_evalb, 
         epochs=self.nepochs,
         batch_size=self.batchsize_vae,
-        validation_data=phi_evalb_val,
+        validation_data=(phi_evalb_val, phi_evalb_val),
         #validation_split=0.2,
         verbose=1)
     
@@ -189,7 +190,30 @@ class Param_ANTELOPE(Param):
     vae.get_layer('decoder').save(self.arch_dir+self.vae_model+'_decoder_arch')
     #with open(arch_dir+vae_model+"8.1_history.json", "w") as f:
     #    json.dump(h2.history, f)
+    latent_bkg_test=vae.get_layer('encoder').predict(phi_testb)
+    latent_bkg_train=vae.get_layer('encoder').predict(phi_evalb_train)
+    latent_bkg_val=vae.get_layer('encoder').predict(phi_evalb_val)
+    latent_sig=vae.get_layer('encoder').predict(phi_sig)
+
+    #latent_bkg_test is a list but latent_bkg_test[0] is a numpy array
+    latent_bkg_test, latent_bkg_train, latent_bkg_val, latent_sig=np.array(latent_bkg_test), np.array(latent_bkg_train), np.array(latent_bkg_val), np.array(latent_sig)
+    try: 
+      print('print 3')
+      print(f'{latent_bkg_test.shape=}')
+    except: 
+      print('print 4')
+      print(f'{len(latent_bkg_test)}')
     
+    for k in range(len(latent_bkg_test)):
+
+      plot_1D_phi(latent_bkg_test[k,:,:], latent_sig[k, :,:], labels=['test QCD', 'SIG'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'qcd_sig_{k}', tag_title=self.vae_model)
+      plot_1D_phi(latent_bkg_train[k,:,:], latent_bkg_val[k,:,:], labels=['train QCD', 'validation QCD'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'train_val_{k}', tag_title=self.vae_model)
+
+
+
+#    plot_1D_phi(latent_bg_test, latent_sig labels=['test QCD' 'SIG'] plot_dir=self.plot_dir tag_file=self.vae_model+f'qcd_sig' tag_title=self.vae_model)
+#    plot_1D_phi(latent_bkg_train, latent_bkg_val, labels=['train QCD', 'validation QCD'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'train_val', tag_title=self.vae_model)
+
     ######## EVALUATE SUPERVISED ######
     # # --- Eval plots 
     # 1. Loss vs. epoch 
@@ -206,6 +230,7 @@ class Param_ANTELOPE(Param):
     bkg_loss = keras.losses.mse(phi_testb, pred_phi_bkg)
     sig_loss = keras.losses.mse(phi_sig, pred_phi_sig)
 
+#    plot_1D_phi(bkg_loss, sig_loss, plot_dir=self.plot_dir, tag_file=self.vae_model, tag_title=self.vae_model)
     plot_score(bkg_loss, sig_loss, False, True, tag_file=self.vae_model+'_single_loss', tag_title=self.vae_model+'(single loss)', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
 #    """
     #start = time.time()

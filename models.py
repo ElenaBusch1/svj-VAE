@@ -4,6 +4,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Dense, Dropout, LeakyReLU
 from sklearn.svm import OneClassSVM
 from termcolor import cprint
+import numpy as np
 arch_dir = "architectures_saved/"
 
 ## ------------------------------------------------------------------------------------
@@ -320,7 +321,9 @@ def get_variational_encoder(input_dim, encoding_dim, latent_dim):
   z_mean = Dense(latent_dim, name="z_mean")(x)
   z_log_var = Dense(latent_dim, name="z_log_var")(x)
   z = Sampling()([z_mean, z_log_var])
-  
+  cprint(f'{z=}, {z_mean=}, {z_log_var=}', 'yellow')
+  try:cprint(f'{z.shape=}, {z_mean.shape=}, {z_log_var.shape=}', 'yellow')
+  except: print('not printing, shapes of z, z_mean, z_log_var')
   #x = keras.layers.Dense(encoding_dim, activation="relu")(inputs)
   #z_mean = keras.layers.Dense(latent_dim, name="z_mean")(x)
   #z_log_var = keras.layers.Dense(latent_dim, name="z_log_var")(x)
@@ -328,6 +331,12 @@ def get_variational_encoder(input_dim, encoding_dim, latent_dim):
   
   encoder = keras.Model(inputs, [z_mean, z_log_var, z], name="encoder")
   encoder.summary()
+  try: 
+    print(encoder.get_layer('sampling').output)
+    try:  
+      print(encoder.get_layer('sampling').output.shape)
+    except: print('can not print output shape of sampling')
+  except: print('cannot get layer sampling')
   return encoder
 
 ## ------------------------------------------------------------------------------------
@@ -342,6 +351,21 @@ def get_decoder(input_dim, encoding_dim, latent_dim):
   #decoder.add(Dense(input_dim, activation='sigmoid'))
 
   latent_inputs = keras.Input(shape=(latent_dim,))
+  
+  """
+  try:
+    latent_np=tf.make_ndarray(tf.make_tensor_proto(latent_inputs))
+    sig_phi = latent_np[:,0].flatten()
+  except:
+    latent_np=tf.make_ndarray(tf.make_tensor_proto(latent_inputs))
+    sig_phi = latent_np[:,0]
+  bins=np.histogram(sig_phi,bins=50)[1]
+  plt.hist(sig_phi, alpha=0.7, label='QCD ', bins=bins, density=True, color = 'darkblue', histtype='step')
+  plt.title(f'Latent Space - '+str(0))
+  plt.savefig('PFNlatent_'+str(0)+'_'+'get_decoder'+'.png')
+  plt.clf()
+  """
+ 
   x = keras.layers.Dense(encoding_dim, activation="relu")(latent_inputs)
   decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid")(x)
 

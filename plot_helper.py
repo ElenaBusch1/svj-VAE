@@ -228,18 +228,36 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
 
     #plt.xlabel('Loss')
   print("Saved score distribution for", tag_file)
-  bmax = max(max(bkg_score),max(sig_score))
-  bmin = min(min(bkg_score),min(sig_score))
-  
+     
+  try:
+    bmax = max(max(bkg_score),max(sig_score))
+    bmin = min(min(bkg_score),min(sig_score))
+  except:
+    try:
+      bmax = max(bkg_score)
+      bmin = min(bkg_score)
+    except:
+      try: 
+        bmax = max(sig_score)
+        bmin = min(sig_score)
+      except: 
+        print(f'both sig_score and bkg_score are zero for {bool_neg=} so not creating the plot for {tag_file}')
+        return
   cprint(f'{bmax}, {bmin}', 'magenta')
   if xlog and bmin == 0 and not(bool_neg) : bmin = 1e-9
   if xlog and not(bool_neg) : bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
-  else: bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
+  else: 
+    try: bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
+    except: 
+      try: bins=np.histogram(bkg_score,bins=80)[1]
+      except: bins=np.histogram(sig_score,bins=80)[1]
   #bins = np.linspace(500,4000,80)
-  #plt.hist(bkg_score, bins=bins, alpha=0.5, label="bkg (-"+str(nb)+")", density=True)
-  #plt.hist(sig_score, bins=bins, alpha=0.5, label="sig(-"+str(ns)+")", density=True)
-  plt.hist(bkg_score, bins=bins, alpha=0.5, label=f"bkg ({len(bkg_score)})", density=True)
-  plt.hist(sig_score, bins=bins, alpha=0.5, label=f"sig ({len(sig_score)})", density=True)
+  try: 
+    plt.hist(bkg_score, bins=bins, alpha=0.5, label=f"bkg ({len(bkg_score)})", density=True)
+  except: print('bkg_score not plotted could be an empty array if bool_neg = True')
+  try: 
+    plt.hist(sig_score, bins=bins, alpha=0.5, label=f"sig ({len(sig_score)})", density=True)
+  except: print('sig_score not plotted could be an empty array if bool_neg = True')
   if xlog and not(bool_neg): plt.xscale('log')
   plt.yscale('log')
   plt.legend()
@@ -327,7 +345,7 @@ def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, 
   if (logy): plt.yscale("log")
   plt.legend(loc='lower right')
   #plt.legend(loc='upper right')
-  plt.title(title)
+  plt.title(tag_title)
 
   plt.savefig(plot_dir+'hist_'+tag_file+'_weighted'+'.png')
   #plt.savefig(plot_dir+'hist_'+tag_title.replace(" ","").replace('(','')+'_weighted_cut'+'.png')
@@ -525,4 +543,25 @@ def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir=
     
 #  plt.savefig(plot_dir+'inputs_'+tag_file+'.png')
 
+
+def plot_1D_phi(bkg, sig, labels, plot_dir, tag_file, tag_title):
+  per_plot=4 # 4 plots per figure
+  length= int(bkg.shape[1]/per_plot)# 12
+  print(length)
+  for j in range(length):
+    for i in range(per_plot):
+      print('j=', j)
+      bkg_phi = bkg[:,i+j*4].flatten()
+      sig_phi = sig[:,i+j*4].flatten()
+      bins=np.histogram(np.hstack((bkg_phi,sig_phi)),bins=50)[1]
+      plt.subplot(2,2,i+1)
+      plt.tight_layout(h_pad=1, w_pad=1)
+      plt.hist(bkg_phi, alpha=0.7, label=labels[0]+f' ({len(bkg_phi)})', bins=bins, density=True, color = 'darkblue', histtype='step')
+      plt.hist(sig_phi, alpha=0.7, label=labels[1]+f' ({len(sig_phi)})', bins=bins, density=True, color = 'orange',histtype='step')
+      #plt.yscale('log')
+      plt.title(f'{tag_title} Latent Space - '+str(i+j*4))
+      if i == 1: plt.legend()
+    plt.savefig(plot_dir+'PFNlatent_'+str(j)+'_'+tag_file+'.png')
+    plt.clf()
+    print("Saved PFN latent space plot (", j, ")")
 
