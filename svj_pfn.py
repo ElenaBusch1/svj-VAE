@@ -41,7 +41,10 @@ class Param:
     self.plot_dir=self.all_dir+plot_dir
     self.h5_dir=self.parent_dir+h5_dir
 
-    dir_ls =[self.all_dir, self.arch_dir, self.print_dir, self.plot_dir] 
+    dir_ls =[self.all_dir, self.print_dir, self.plot_dir,self.arch_dir]
+       
+  
+
     for d in dir_ls:
       if not os.path.exists(d):
         os.mkdir(d)

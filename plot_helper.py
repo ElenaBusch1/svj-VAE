@@ -547,10 +547,8 @@ def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir=
 def plot_1D_phi(bkg, sig, labels, plot_dir, tag_file, tag_title):
   per_plot=4 # 4 plots per figure
   length= int(bkg.shape[1]/per_plot)# 12
-  print(length)
   for j in range(length):
     for i in range(per_plot):
-      print('j=', j)
       bkg_phi = bkg[:,i+j*4].flatten()
       sig_phi = sig[:,i+j*4].flatten()
       bins=np.histogram(np.hstack((bkg_phi,sig_phi)),bins=50)[1]

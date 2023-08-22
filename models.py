@@ -389,7 +389,6 @@ def get_vae(input_dim, encoding_dim, latent_dim, learning_rate=0.00001):
 
   vae = VAE(encoder, decoder)
   vae.compile(optimizer=keras.optimizers.Adam(learning_rate=learning_rate))
-  #vae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.00001))
   return vae
 
 ## ------------------------------------------------------------------------------------
