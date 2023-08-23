@@ -6,6 +6,7 @@ from matplotlib import colors
 from math import ceil
 from termcolor import cprint
 from matplotlib.ticker import MultipleLocator
+from scipy.stats import norm
 # tag = "pfnEvalTest"      
 #tag = "PFN_2jAvg_MM"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
@@ -13,6 +14,16 @@ from matplotlib.ticker import MultipleLocator
 #plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/sig_elena/jun12_sig/'
 #plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/bkg_elena/jun12_bkg/'
 plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun29/lala/'
+params = {'legend.fontsize': 'x-large',
+           'figure.figsize': (14, 8),
+         'axes.labelsize': 'x-large',
+          'axes.titlesize':'xx-large',
+         'xtick.labelsize':'x-large',
+         'ytick.labelsize':'x-large',
+
+         }
+plt.rcParams.update(params)
+
 def plot_ntrack(h_ls,  tag_file="", tag_title="", plot_dir="", bin_max=0):
   #label=['no cuts','ntrack >= 3','pt > 10 GeV in leading jet','pt > 10 GeV in subleading jet']
   print(len(h_ls))
@@ -210,55 +221,47 @@ def make_single_roc(rocs,aucs,ylabel, tag_file="", tag_title="",  plot_dir=""):
   plt.savefig(saveTag+'_roc_aucs_'+Ylabel.replace("/","")+tag_file+'.pdf')
   plt.clf()
 
-def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="", tag_title="",  plot_dir="", bool_pfn=True, bool_neg=False):
+def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="", tag_title="",  plot_dir="", bool_pfn=True):
   if remove_outliers:
     bkg_score,nb = detect_outliers(bkg_score)
     sig_score,ns = detect_outliers(sig_score)
-#  cprint(f'{bkg_score}, {sig_score}', 'green')
-  #bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
-  #bkg_score = np.absolute(bkg_score)
-  #sig_score = np.absolute(sig_score)
-  if xlog:
-    bkg_score,sig_score=np.array(bkg_score), np.array(sig_score)
-    if bool_neg:
-      bkg_score, sig_score=bkg_score[bkg_score<=0],sig_score[sig_score<=0]
-    else:bkg_score, sig_score=bkg_score[bkg_score>0],sig_score[sig_score>0]
-    bkg_score, sig_score=list(bkg_score), list(sig_score)
-    
 
-    #plt.xlabel('Loss')
-  print("Saved score distribution for", tag_file)
-     
+  #bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
   try:
-    bmax = max(max(bkg_score),max(sig_score))
-    bmin = min(min(bkg_score),min(sig_score))
+    bmax = np.max(np.max(bkg_score),np.max(sig_score))
+    bmin = np.min(np.min(bkg_score),np.min(sig_score))
   except:
     try:
-      bmax = max(bkg_score)
-      bmin = min(bkg_score)
+      bmax = np.max(bkg_score)
+      bmin = np.min(bkg_score)
     except:
       try: 
-        bmax = max(sig_score)
-        bmin = min(sig_score)
+        bmax = np.max(sig_score)
+        bmin = np.min(sig_score)
       except: 
-        print(f'both sig_score and bkg_score are zero for {bool_neg=} so not creating the plot for {tag_file}')
+        print(f'both sig_score and bkg_score are empty arrays so not creating the plot for {tag_file}')
         return
+  
   cprint(f'{bmax}, {bmin}', 'magenta')
-  if xlog and bmin == 0 and not(bool_neg) : bmin = 1e-9
-  if xlog and not(bool_neg) : bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
-  else: 
+  if xlog and bmin == 0  : bmin = 1e-9
+  if xlog  : bins = np.logspace(np.log10(bmin),np.log10(bmax),80)
+  else:
     try: bins=np.histogram(np.hstack((bkg_score,sig_score)),bins=80)[1]
     except: 
       try: bins=np.histogram(bkg_score,bins=80)[1]
       except: bins=np.histogram(sig_score,bins=80)[1]
-  #bins = np.linspace(500,4000,80)
   try: 
-    plt.hist(bkg_score, bins=bins, alpha=0.5, label=f"bkg ({len(bkg_score)})", density=True)
-  except: print('bkg_score not plotted could be an empty array if bool_neg = True')
+    plt.hist(bkg_score, bins=bins, alpha=0.5, label=f"bkg ({len(bkg_score)})", density=True, color='blue')
+  except: 
+    plt.hist([],[], label="bkg ({len(bkg_score)})")
+    print('bkg_score not plotted: check if it is an empty array')
   try: 
-    plt.hist(sig_score, bins=bins, alpha=0.5, label=f"sig ({len(sig_score)})", density=True)
-  except: print('sig_score not plotted could be an empty array if bool_neg = True')
-  if xlog and not(bool_neg): plt.xscale('log')
+    plt.hist(sig_score, bins=bins, alpha=0.5, label=f"sig ({len(sig_score)})", density=True, color='red')
+
+  except: 
+    plt.hist([],[], label="sig ({len(sig_score)})")
+    print('sig_score not plotted: check if it is an empty array')
+  if xlog : plt.xscale('log')
   plt.yscale('log')
   plt.legend()
   if bool_pfn:
@@ -268,7 +271,6 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
     plt.title(f'Anomaly Score {tag_title}')
     plt.xlabel('Anomaly Score')
   #plt.xlabel('Loss')
-  if bool_neg: tag_file='neg_'+tag_file
   plt.savefig(plot_dir+'score_'+tag_file+'.png')
   plt.clf()
   print("Saved score distribution for", tag_file)
@@ -544,19 +546,31 @@ def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir=
 #  plt.savefig(plot_dir+'inputs_'+tag_file+'.png')
 
 
-def plot_1D_phi(bkg, sig, labels, plot_dir, tag_file, tag_title):
+def plot_1D_phi(bkg, sig, labels, plot_dir, tag_file, tag_title, bool_norm=False, ylog=False, bins=[]):
+  
   per_plot=4 # 4 plots per figure
   length= int(bkg.shape[1]/per_plot)# 12
   for j in range(length):
     for i in range(per_plot):
       bkg_phi = bkg[:,i+j*4].flatten()
       sig_phi = sig[:,i+j*4].flatten()
-      bins=np.histogram(np.hstack((bkg_phi,sig_phi)),bins=50)[1]
+      if bins ==[]: bins=np.histogram(np.hstack((bkg_phi,sig_phi)),bins=50)[1]
+      else:bins=bins
       plt.subplot(2,2,i+1)
       plt.tight_layout(h_pad=1, w_pad=1)
       plt.hist(bkg_phi, alpha=0.7, label=labels[0]+f' ({len(bkg_phi)})', bins=bins, density=True, color = 'darkblue', histtype='step')
-      plt.hist(sig_phi, alpha=0.7, label=labels[1]+f' ({len(sig_phi)})', bins=bins, density=True, color = 'orange',histtype='step')
-      #plt.yscale('log')
+      if bool_norm:
+        (bkg_mu, bkg_sigma) = norm.fit(bkg_phi)
+        y = norm.pdf( bins, bkg_mu, bkg_sigma)
+        plt.plot(bins, y, 'b--', linewidth=2, label=f"$\sigma$={bkg_sigma}_\mu$={bkg_mu}")
+
+      plt.hist(sig_phi, alpha=0.7, label=labels[1]+f' ({len(sig_phi)})', bins=bins, density=True, color = 'darkred',histtype='step')
+      if bool_norm:
+        (sig_mu, sig_sigma) = norm.fit(sig_phi)
+        y = norm.pdf( bins, sig_mu, sig_sigma)
+        plt.plot(bins, y, 'r--', linewidth=2, label=f"$\sigma$={sig_sigma}_\mu$={sig_mu}")
+      if ylog:
+        plt.yscale('log')
       plt.title(f'{tag_title} Latent Space - '+str(i+j*4))
       if i == 1: plt.legend()
     plt.savefig(plot_dir+'PFNlatent_'+str(j)+'_'+tag_file+'.png')

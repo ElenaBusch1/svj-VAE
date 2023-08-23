@@ -63,7 +63,7 @@ class AE(keras.Model):
 ## ------------------------------------------------------------------------------------
 class VAE(keras.Model):
     #developed from https://keras.io/examples/generative/vae/
-    def __init__(self, encoder, decoder, **kwargs):
+    def __init__(self, encoder, decoder, kl_loss_scalar,**kwargs):
         super().__init__(**kwargs)
         self.encoder = encoder
         self.decoder = decoder
@@ -72,7 +72,7 @@ class VAE(keras.Model):
             name="reco_loss"
         )
         self.kl_loss_tracker = keras.metrics.Mean(name="kl_loss")
-
+        self.kl_loss_scalar=kl_loss_scalar
     @property
     def metrics(self):
         return [
@@ -83,13 +83,14 @@ class VAE(keras.Model):
 
     def train_step(self, data):
         with tf.GradientTape() as tape:
-            z_mean, z_log_var, z = self.encoder(data)
+            z_mean, z_log_var, z = self.encoder(data) # z_log_var= log(z_sig ^2) and tf.exp(z_log_var) = z_sig^2
             reconstruction = self.decoder(z)
             reconstruction_loss = tf.reduce_mean(tf.reduce_sum(keras.losses.mse(data, reconstruction)))
 
             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
             kl_loss = tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1)) # why?
-            kl_loss *= 100 # why?
+            kl_loss *=self.kl_loss_scalar # why?
+            #kl_loss *= 100 # why? b/c increase the effect of kl_loss
             #kl_loss *= 0
             total_loss = reconstruction_loss + kl_loss
         grads = tape.gradient(total_loss, self.trainable_weights)
@@ -110,7 +111,8 @@ class VAE(keras.Model):
 
         kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
         kl_loss = tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1))
-        kl_loss *= 100
+        kl_loss *=self.kl_loss_scalar # why?
+        #kl_loss *= 100
         #kl_loss *= 0
         total_loss = reconstruction_loss + kl_loss
         return {
@@ -383,11 +385,11 @@ def get_ae(input_dim, encoding_dim, latent_dim):
   return ae
 
 ## ------------------------------------------------------------------------------------
-def get_vae(input_dim, encoding_dim, latent_dim, learning_rate=0.00001):
+def get_vae(input_dim, encoding_dim, latent_dim, learning_rate=0.00001, kl_loss_scalar=100):
   encoder = get_variational_encoder(input_dim, encoding_dim, latent_dim)
   decoder = get_decoder(input_dim, encoding_dim, latent_dim)
 
-  vae = VAE(encoder, decoder)
+  vae = VAE(encoder, decoder, kl_loss_scalar)
   vae.compile(optimizer=keras.optimizers.Adam(learning_rate=learning_rate))
   return vae
 
