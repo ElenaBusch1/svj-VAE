@@ -19,7 +19,7 @@ class Param_ANTELOPE(Param):
       arch_dir_pfn, arch_dir_vae='',kl_loss_scalar=100,
       arch_dir="architectures_saved/",print_dir='',plot_dir='plots/',h5_dir='h5dir/jul28/',
       pfn_model='PFN', vae_model='vANTELOPE', bkg_events=200000, sig_events=20000,
-      num_elements=100, element_size=7, encoding_dim=32, latent_dim=12, phi_dim=64, nepochs=50, n_neuron=75, learning_rate=0.001,
+      num_elements=100, element_size=7, encoding_dim=32, latent_dim=12, phi_dim=64, nepochs=50, n_neuron=75, learning_rate=0.00001,
       nlayer_phi=3, nlayer_F=3,
       max_track=80,
       batchsize_pfn=512,
@@ -60,7 +60,7 @@ class Param_ANTELOPE(Param):
 
     return f'saved info in {self.print_dir}\n {df}'
 
-  def transform_sig(arr):
+  def transform_sigma(self, arr):
     # transform z_log_var= log(z_sig ^2)=2* log (z_sig) 
     # z_sig = exp(.5 *z_log_var) 
     return np.exp(.5 * arr)
@@ -198,8 +198,8 @@ class Param_ANTELOPE(Param):
       print('training successful')
 
     #complex ae
-    #with open(arch_dir+vae_model+"8.1_history.json", "w") as f:
-    #    json.dump(h2.history, f)
+    #with open(arch_dir+vae_model+"8.1_predstory.json", "w") as f:
+    #    json.dump(h2.predstory, f)
     latent_bkg_test=vae.get_layer('encoder').predict(phi_testb)
     latent_bkg_train=vae.get_layer('encoder').predict(phi_evalb_train)
     latent_bkg_val=vae.get_layer('encoder').predict(phi_evalb_val)
@@ -208,17 +208,16 @@ class Param_ANTELOPE(Param):
     #latent_bkg_test is a list but latent_bkg_test[0] is a numpy array
     latent_bkg_test, latent_bkg_train, latent_bkg_val, latent_sig=np.array(latent_bkg_test), np.array(latent_bkg_train), np.array(latent_bkg_val), np.array(latent_sig)
     print(f'{latent_bkg_test.shape=}')
-    latent_bkg_test_sigma, latent_sig_sigma = transform_sigma(latent_bkg_test[1,:,:]), transform_sigma(latent_sig[1, :,:])
+    latent_bkg_test_sigma, latent_sig_sigma = self.transform_sigma(latent_bkg_test[1,:,:]), self.transform_sigma(latent_sig[1, :,:])
 
 #    for k in range(len(latent_bkg_test)):
-    plot_1D_phi(latent_bkg_test[0,:,:], latent_sig[0, :,:], labels=['test QCD', 'SIG'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'qcd_sig_0', tag_title=self.vae_model, ylog=True)
-    plot_1D_phi(latent_bkg_test_sigma, latent_sig_sigma, labels=['test QCD', 'SIG'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'qcd_sig_1', tag_title=self.vae_model, ylog=True)
+    plot_1D_phi(latent_bkg_test[0,:,:], latent_sig[0, :,:], labels=['test QCD', 'SIG'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'qcd_sig_mu', tag_title=self.vae_model +r" $\mu$", ylog=True)
+    plot_1D_phi(latent_bkg_test_sigma, latent_sig_sigma, labels=['test QCD', 'SIG'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'qcd_sig_sigma', tag_title=self.vae_model  +r" $\sigma$", ylog=True)
 
-    plot_1D_phi(latent_bkg_test[0,:,:], latent_sig[0, :,:], labels=['test QCD', 'SIG'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'qcd_sig_0_custom', tag_title=self.vae_model, bins=np.linspace(-0.0002,0.0002, num=50))
-    plot_1D_phi(latent_bkg_test_sigma,latent_sig_sigma, labels=['test QCD', 'SIG'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'qcd_sig_1_custom', tag_title=self.vae_model, bins=np.linspace(0.99,1.01,num=50))
+    plot_1D_phi(latent_bkg_test[0,:,:], latent_sig[0, :,:], labels=['test QCD', 'SIG'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'qcd_sig_mu_custom', tag_title=self.vae_model +r" $\mu$", bins=np.linspace(-0.0001,0.0001, num=50))
+    plot_1D_phi(latent_bkg_test_sigma,latent_sig_sigma, labels=['test QCD', 'SIG'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'qcd_sig_sigma_custom', tag_title=self.vae_model +r" $\sigma$", bins=np.linspace(0.9998,1.0002,num=50))
 
-    plot_1D_phi(latent_bkg_test[2,:,:], latent_sig[2, :,:], labels=['test QCD', 'SIG'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'qcd_sig_2', tag_title=self.vae_model,bool_norm=True)
-     #plot_1D_phi(latent_bkg_train[k,:,:], latent_bkg_val[k,:,:], labels=['train QCD', 'validation QCD'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'train_val_{k}', tag_title=self.vae_model)
+    plot_1D_phi(latent_bkg_test[2,:,:], latent_sig[2, :,:], labels=['test QCD', 'SIG'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'qcd_sig_sampling', tag_title=self.vae_model +" Sampling",bool_norm=True)
 
     ######## EVALUATE SUPERVISED ######
     # # --- Eval plots 
@@ -236,7 +235,7 @@ class Param_ANTELOPE(Param):
     bkg_loss_mse = keras.losses.mse(phi_testb, pred_phi_bkg)
     sig_loss_mse = keras.losses.mse(phi_sig, pred_phi_sig)
 
-    plot_score(bkg_loss_mse, sig_loss_mse, False, True, tag_file=self.vae_model+'_single_loss', tag_title=self.vae_model+'(single loss)', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_loss_mse, sig_loss_mse, False, True, tag_file=self.vae_model+'_single_loss', tag_title=self.vae_model+' (MSE)', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
 #    """
     #start = time.time()
     bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss, sig_reco_loss = get_multi_loss(vae, phi_testb, phi_sig)
@@ -248,27 +247,27 @@ class Param_ANTELOPE(Param):
     print('\n')
 
     # xlog=True plots 
-    plot_score(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], False, True, tag_file=self.vae_model, tag_title=self.vae_model, plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-    plot_score(bkg_kl_loss[bkg_kl_loss>0], sig_kl_loss[sig_kl_loss>0], False, True, tag_file=self.vae_model+"_KLD", tag_title=self.vae_model+"_KLD", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-    plot_score(bkg_reco_loss[bkg_reco_loss>0], sig_reco_loss[sig_reco_loss>0], False, True, tag_file=self.vae_model+"_Reco", tag_title=self.vae_model+"_Reco", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], False, True, tag_file=self.vae_model, tag_title=self.vae_model + ' (score > 0)', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_kl_loss[bkg_kl_loss>0], sig_kl_loss[sig_kl_loss>0], False, True, tag_file=self.vae_model+"_KLD", tag_title=self.vae_model+" KLD (score > 0)", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_reco_loss[bkg_reco_loss>0], sig_reco_loss[sig_reco_loss>0], False, True, tag_file=self.vae_model+"_Reco", tag_title=self.vae_model+" Reco (score > 0)", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
 
     # xlog=False plots
     plot_score(bkg_loss, sig_loss, False, False, tag_file=self.vae_model, tag_title=self.vae_model, plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-    plot_score(bkg_kl_loss, sig_kl_loss, False, False, tag_file=self.vae_model+"_KLD", tag_title=self.vae_model+"_KLD", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-    plot_score(bkg_reco_loss, sig_reco_loss, False, False, tag_file=self.vae_model+"_Reco", tag_title=self.vae_model+"_Reco", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_kl_loss, sig_kl_loss, False, False, tag_file=self.vae_model+"_KLD", tag_title=self.vae_model+" KLD", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_reco_loss, sig_reco_loss, False, False, tag_file=self.vae_model+"_Reco", tag_title=self.vae_model+" Reco", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
 
     # xlog= False plots plot only points less than 0 
-    plot_score(bkg_loss[bkg_loss<=0], sig_loss[sig_loss<=0], False, False, tag_file=self.vae_model+'_neg', tag_title=self.vae_model+'_neg', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-    plot_score(bkg_kl_loss[bkg_kl_loss<=0], sig_kl_loss[sig_kl_loss<=0], False, False, tag_file=self.vae_model+"_KLD_neg", tag_title=self.vae_model+"_KLD_neg", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-    plot_score(bkg_reco_loss[bkg_reco_loss<=0], sig_reco_loss[sig_reco_loss<=0], False, False, tag_file=self.vae_model+"_Reco_neg", tag_title=self.vae_model+"_Reco", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_loss[bkg_loss<=0], sig_loss[sig_loss<=0], False, False, tag_file=self.vae_model+'_neg', tag_title=self.vae_model+' (score <= 0)', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_kl_loss[bkg_kl_loss<=0], sig_kl_loss[sig_kl_loss<=0], False, False, tag_file=self.vae_model+"_KLD_neg", tag_title=self.vae_model+" KLD (score <= 0)", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_reco_loss[bkg_reco_loss<=0], sig_reco_loss[sig_reco_loss<=0], False, False, tag_file=self.vae_model+"_Reco_neg", tag_title=self.vae_model+" Reco (score <= 0)", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
     # # 3. Signal Sensitivity Score
 
     score = getSignalSensitivityScore(bkg_loss, sig_loss)
     print("95 percentile score = ",score)
     # # 4. ROCs/AUCs using sklearn functions imported above  
     sic_vals=do_roc(bkg_loss, sig_loss, tag_file=self.vae_model, tag_title=self.vae_model,make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
-    sic_vals_kl=do_roc(bkg_kl_loss, sig_kl_loss, tag_file=self.vae_model+"_KLD", tag_title=self.vae_model+"_KLD",make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
-    sic_vals_reco=do_roc(bkg_reco_loss, sig_reco_loss, tag_file=self.vae_model+"_Reco", tag_title=self.vae_model+"_Reco",make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
+    sic_vals_kl=do_roc(bkg_kl_loss, sig_kl_loss, tag_file=self.vae_model+"_KLD", tag_title=self.vae_model+" KLD",make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
+    sic_vals_reco=do_roc(bkg_reco_loss, sig_reco_loss, tag_file=self.vae_model+"_Reco", tag_title=self.vae_model+" Reco",make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
     auc={sic_vals['auc'], sic_vals_kl['auc'], sic_vals_reco['auc']}
     bkg_events_num,sig_events_num=len(phi_bkg), len(phi_sig) 
     #do_roc(bkg_reco_loss, sig_reco_loss, vself.vae_model+"_Reco", True)
@@ -282,7 +281,6 @@ class Param_ANTELOPE(Param):
     print("95 percentile score = ",score)
     # # 4. ROCs/AUCs using sklearn functions imported above  
     do_roc(bkg_loss_mse, sig_loss_mse, tag_file=self.vae_model+'log', tag_title=self.vae_model+'log',make_transformed_plot= True, plot_dir=self.plot_dir,  bool_pfn=False)
-    sys.exit()
     return self.all_dir, auc, bkg_events_num,sig_events_num
 
 ## AE events
@@ -300,7 +298,17 @@ ls_bkg=[200000]
 for sig_events, bkg_events in zip(ls_sig, ls_bkg):
   param1=Param_ANTELOPE(pfn_model=pfn_model,bkg_events=bkg_events, sig_events=sig_events, h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
 #    learning_rate=0.00001, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=100)
-    learning_rate=0.00001, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], arch_dir_vae='/data/users/kpark/svj-vae/results/antelope/08_21_23_12_04/architectures_saved/')
+    extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], arch_dir_vae='/data/users/kpark/svj-vae/results/antelope/08_21_23_12_04/architectures_saved/')
+  stdoutOrigin=param1.open_print()
+  all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae()
+  setattr(param1, 'auc',auc )
+  setattr(param1, 'sig_events_num',sig_events_num )
+  setattr(param1, 'bkg_events_num',bkg_events_num )
+  print(param1.close_print(stdoutOrigin))
+  print(param1.save_info())
+for  kl_loss_scalar in [1,10000, 100]:
+  param1=Param_ANTELOPE(pfn_model=pfn_model,bkg_events=bkg_events,  h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
+    extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar)
   stdoutOrigin=param1.open_print()
   all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae()
   setattr(param1, 'auc',auc )

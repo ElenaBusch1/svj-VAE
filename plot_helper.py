@@ -15,7 +15,7 @@ from scipy.stats import norm
 #plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/bkg_elena/jun12_bkg/'
 plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun29/lala/'
 params = {'legend.fontsize': 'x-large',
-           'figure.figsize': (14, 8),
+           'figure.figsize': (8, 8),
          'axes.labelsize': 'x-large',
           'axes.titlesize':'xx-large',
          'xtick.labelsize':'x-large',
@@ -23,7 +23,14 @@ params = {'legend.fontsize': 'x-large',
 
          }
 plt.rcParams.update(params)
-
+"""
+bkg_sigma=.7123
+bkg_mu=.234
+plt.plot([],[], label=f"$\sigma$ = {round(bkg_sigma,3)}, $\mu$ = {round(bkg_mu,3)}")
+plt.legend()
+plt.show()
+sys.exit()
+"""
 def plot_ntrack(h_ls,  tag_file="", tag_title="", plot_dir="", bin_max=0):
   #label=['no cuts','ntrack >= 3','pt > 10 GeV in leading jet','pt > 10 GeV in subleading jet']
   print(len(h_ls))
@@ -102,6 +109,7 @@ def plot_loss(h, loss='loss', tag_file="", tag_title="", plot_dir=""):
   plt.yscale('log')
   plt.legend(['train', 'val'], loc='upper left')
 #  plt.savefig(plot_dir+loss+'VsEpoch_'+model+'_'+tag+'.png')
+  plt.tight_layout()
   plt.savefig(plot_dir+loss+'VsEpoch_'+tag_file+'.png')
   plt.clf()
   print("Saved loss plot for ", tag_file, loss)
@@ -114,6 +122,7 @@ def plot_saved_loss(h, loss='loss', tag_file="", tag_title="", plot_dir=""):
   plt.xlabel('epoch')
   plt.yscale('log')
   plt.legend(['train', 'val'], loc='upper left')
+  plt.tight_layout()
   #plt.savefig(plot_dir+loss+'VsEpoch_'+model+'_'+tag+'log.png')
   plt.savefig(plot_dir+loss+'VsEpoch_'+tag_file+'log.png')
   plt.clf()
@@ -149,6 +158,7 @@ def make_roc(fpr,tpr,auc, tag_file="", tag_title="", plot_dir=""):
   plt.ylabel("True Positive Rate")
   plt.title("SVJ "+" ROC" +f' {tag_title}')
   plt.legend()
+  plt.tight_layout()
   plt.savefig(plot_dir+'roc_'+tag_file+'.png')
   plt.clf()
   print("Saved ROC curve for ", tag_file)
@@ -172,6 +182,7 @@ def make_sic(fpr,tpr,auc, bkg, tag_file="", tag_title="",  plot_dir=""):
   plt.ylabel("Signal Sensitivity ($TPR/\sqrt{FPR}$)")
   plt.title("Significance Improvement Characteristic " )
   plt.legend()
+  plt.tight_layout()
   plt.savefig(plot_dir+'sic_'+tag_file+'.png')
   plt.clf()
   print("Saved SIC ")
@@ -208,16 +219,18 @@ def make_grid_plot(values,title,method,plot_dir,tag=''):
   ax.set_ylabel('$R_{inv}$')
   
   ax.set_title(method+"; "+title)
+  plt.tight_layout()
   plt.savefig(plot_dir+'table_'+method+'_'+title+'_'+tag+'.png')
   print("Saved grid plot for", title)
 
 def make_single_roc(rocs,aucs,ylabel, tag_file="", tag_title="",  plot_dir=""):
-  plt.plot(rocs[0],rocs[1],label=str(np.round(r,4))+", $\sigma$="+str(sigs)+": AUC="+str(np.round(aucs,3)))
+  plt.plot(rocs[0],rocs[1],label=str(np.round(r,4))+r", $\sigma$="+str(sigs)+": AUC="+str(np.round(aucs,3)))
   plt.xlabel('fpr')
   plt.ylabel(Ylabel)
   plt.title('ROC: '+saveTag+f' {tag_title}')
   plt.figtext(0.7,0.95,"size="+str(sizeeach)+", nvars="+str(nInputs))
   plt.legend()
+  plt.tight_layout()
   plt.savefig(saveTag+'_roc_aucs_'+Ylabel.replace("/","")+tag_file+'.pdf')
   plt.clf()
 
@@ -271,6 +284,7 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
     plt.title(f'Anomaly Score {tag_title}')
     plt.xlabel('Anomaly Score')
   #plt.xlabel('Loss')
+  plt.tight_layout()
   plt.savefig(plot_dir+'score_'+tag_file+'.png')
   plt.clf()
   print("Saved score distribution for", tag_file)
@@ -296,6 +310,7 @@ def plot_phi(phis, tag_file="", tag_title="",  plot_dir=""):
   ax.set_xlabel('Value')
   ax.set_ylabel('Index')
   ax.set_title(f'PFN Set Representation - {tag_title}')
+  plt.tight_layout()
   plt.savefig(plot_dir+f'phi2D_{tag_file}.png')
   plt.clf()
   print("Saved 2D plot of phi-rep for", tag_file)
@@ -349,6 +364,7 @@ def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, 
   #plt.legend(loc='upper right')
   plt.title(tag_title)
 
+  plt.tight_layout()
   plt.savefig(plot_dir+'hist_'+tag_file+'_weighted'+'.png')
   #plt.savefig(plot_dir+'hist_'+tag_title.replace(" ","").replace('(','')+'_weighted_cut'+'.png')
   plt.clf()
@@ -561,18 +577,22 @@ def plot_1D_phi(bkg, sig, labels, plot_dir, tag_file, tag_title, bool_norm=False
       plt.hist(bkg_phi, alpha=0.7, label=labels[0]+f' ({len(bkg_phi)})', bins=bins, density=True, color = 'darkblue', histtype='step')
       if bool_norm:
         (bkg_mu, bkg_sigma) = norm.fit(bkg_phi)
+        bkg_mu_rd, bkg_sigma_rd=str(round(bkg_mu,3)), str(round(bkg_sigma,3))
+        print(r"$\mu$ = "+ str(round(bkg_mu,3)))
         y = norm.pdf( bins, bkg_mu, bkg_sigma)
-        plt.plot(bins, y, 'b--', linewidth=2, label=f"$\sigma$={bkg_sigma}_\mu$={bkg_mu}")
-
+        plt.plot(bins, y, 'b+', linewidth=1, label=r"$\mu_rd$ = "+ bkg_mu_rd +", $\sigma_rd$ = " + bkg_sigma_rd, alpha=0.5)
       plt.hist(sig_phi, alpha=0.7, label=labels[1]+f' ({len(sig_phi)})', bins=bins, density=True, color = 'darkred',histtype='step')
       if bool_norm:
         (sig_mu, sig_sigma) = norm.fit(sig_phi)
+        sig_mu_rd, sig_sigma_rd=str(round(sig_mu,3)), str(round(sig_sigma,3))
         y = norm.pdf( bins, sig_mu, sig_sigma)
-        plt.plot(bins, y, 'r--', linewidth=2, label=f"$\sigma$={sig_sigma}_\mu$={sig_mu}")
+        #plt.plot(bins, y, 'r--', linewidth=2, label=f"$\mu_rd$ = {sig_mu_rd}, $\sigma_rd$ = {sig_sigma_rd}", alpha=0.5)
+        plt.plot(bins, y, 'r--', linewidth=1, label=r"$\mu_rd$ = "+ sig_mu_rd +", $\sigma_rd$ = " + sig_sigma_rd, alpha=0.5)
       if ylog:
         plt.yscale('log')
       plt.title(f'{tag_title} Latent Space - '+str(i+j*4))
       if i == 1: plt.legend()
+#    plt.tight_layout()
     plt.savefig(plot_dir+'PFNlatent_'+str(j)+'_'+tag_file+'.png')
     plt.clf()
     print("Saved PFN latent space plot (", j, ")")
