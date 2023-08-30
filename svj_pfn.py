@@ -32,7 +32,8 @@ class Param:
     self.time_dir=time.strftime("%m_%d/", time.localtime())
 #    self. all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/stats/'+self.time+'/' # for statistics
     self.parent_dir='/nevis/katya01/data/users/kpark/svj-vae/'
-    self.all_dir=self.parent_dir+'results/antelope/'+self.time+'/' # for statistics
+    self.all_dir=self.parent_dir+'results/test/'+self.time+'/' # for statistics
+    #self.all_dir=self.parent_dir+'results/antelope/'+self.time+'/' # for statistics
     #self.all_dir=self.parent_dir+'results/test/'+self.time+'/' # for statistics
 #    self.all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/'+self.time+'/'
 

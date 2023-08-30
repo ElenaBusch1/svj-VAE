@@ -15,13 +15,21 @@ from scipy.stats import norm
 #plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/bkg_elena/jun12_bkg/'
 plot_dir = '/nevis/katya01/data/users/kpark/svj-vae/plots_result/jun29/lala/'
 params = {'legend.fontsize': 'x-large',
-           'figure.figsize': (8, 8),
+           'figure.figsize': (10, 8),
+         'axes.labelsize': 'large',
+          'axes.titlesize':'x-large',
+         'xtick.labelsize':'large',
+         'ytick.labelsize':'large',
+
+         }
+"""
+
          'axes.labelsize': 'x-large',
           'axes.titlesize':'xx-large',
          'xtick.labelsize':'x-large',
          'ytick.labelsize':'x-large',
 
-         }
+"""
 plt.rcParams.update(params)
 """
 bkg_sigma=.7123
@@ -573,25 +581,25 @@ def plot_1D_phi(bkg, sig, labels, plot_dir, tag_file, tag_title, bool_norm=False
       if bins ==[]: bins=np.histogram(np.hstack((bkg_phi,sig_phi)),bins=50)[1]
       else:bins=bins
       plt.subplot(2,2,i+1)
-      plt.tight_layout(h_pad=1, w_pad=1)
+#      plt.tight_layout(h_pad=1, w_pad=1)
       plt.hist(bkg_phi, alpha=0.7, label=labels[0]+f' ({len(bkg_phi)})', bins=bins, density=True, color = 'darkblue', histtype='step')
       if bool_norm:
         (bkg_mu, bkg_sigma) = norm.fit(bkg_phi)
         bkg_mu_rd, bkg_sigma_rd=str(round(bkg_mu,3)), str(round(bkg_sigma,3))
         print(r"$\mu$ = "+ str(round(bkg_mu,3)))
         y = norm.pdf( bins, bkg_mu, bkg_sigma)
-        plt.plot(bins, y, 'b+', linewidth=1, label=r"$\mu_rd$ = "+ bkg_mu_rd +", $\sigma_rd$ = " + bkg_sigma_rd, alpha=0.5)
+        plt.plot(bins, y, 'b+', linewidth=1, label=r"$\mu$ = "+ bkg_mu_rd +", $\sigma$ = " + bkg_sigma_rd, alpha=0.5)
       plt.hist(sig_phi, alpha=0.7, label=labels[1]+f' ({len(sig_phi)})', bins=bins, density=True, color = 'darkred',histtype='step')
       if bool_norm:
         (sig_mu, sig_sigma) = norm.fit(sig_phi)
         sig_mu_rd, sig_sigma_rd=str(round(sig_mu,3)), str(round(sig_sigma,3))
         y = norm.pdf( bins, sig_mu, sig_sigma)
         #plt.plot(bins, y, 'r--', linewidth=2, label=f"$\mu_rd$ = {sig_mu_rd}, $\sigma_rd$ = {sig_sigma_rd}", alpha=0.5)
-        plt.plot(bins, y, 'r--', linewidth=1, label=r"$\mu_rd$ = "+ sig_mu_rd +", $\sigma_rd$ = " + sig_sigma_rd, alpha=0.5)
+        plt.plot(bins, y, 'r--', linewidth=1, label=r"$\mu$ = "+ sig_mu_rd +", $\sigma$ = " + sig_sigma_rd, alpha=0.5)
       if ylog:
         plt.yscale('log')
       plt.title(f'{tag_title} Latent Space - '+str(i+j*4))
-      if i == 1: plt.legend()
+      if i == 1: plt.legend(loc='upper right')
 #    plt.tight_layout()
     plt.savefig(plot_dir+'PFNlatent_'+str(j)+'_'+tag_file+'.png')
     plt.clf()

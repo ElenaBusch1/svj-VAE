@@ -6,7 +6,8 @@ from sklearn.svm import OneClassSVM
 from termcolor import cprint
 import numpy as np
 arch_dir = "architectures_saved/"
-
+import decimal
+from decimal import Decimal
 ## ------------------------------------------------------------------------------------
 ##				Classes
 ## ------------------------------------------------------------------------------------
@@ -88,6 +89,7 @@ class VAE(keras.Model):
             reconstruction_loss = tf.reduce_mean(tf.reduce_sum(keras.losses.mse(data, reconstruction)))
 
             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
+            #kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
             kl_loss = tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1)) # why?
             kl_loss *=self.kl_loss_scalar # why?
             #kl_loss *= 100 # why? b/c increase the effect of kl_loss

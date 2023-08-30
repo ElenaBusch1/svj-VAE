@@ -278,13 +278,19 @@ def get_multi_loss(model_svj, x_test, y_test, step_size=1):
     nevents = min(len(y_test),len(x_test))
 #    step_size = 1
     for i in range(0,nevents, step_size):
-        xt = x_test[i:i+step_size]
+        xt = x_test[i:i+step_size] # if nevents is not exactly divisible by step_size, it only select upto the last element without throwing an error
         yt = y_test[i:i+step_size]
       
         # NOTE - unclear why they are printed in this order, but it seems to be the case
         x_loss,x_reco,x_kld = model_svj.evaluate(xt, batch_size = step_size, verbose=0)
         y_loss,y_reco,y_kld = model_svj.evaluate(yt, batch_size = step_size, verbose=0)
-      
+        """
+        print(f'{type(x_kld)=}')
+        try: 
+          print(f'{x_kld.shape=}')
+        except: print(f'{len(x_kld)=}')
+       
+        """
         bkg_total_loss.append(x_loss)
         sig_total_loss.append(y_loss)
         bkg_kld_loss.append(x_kld)
