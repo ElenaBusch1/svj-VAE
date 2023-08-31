@@ -11,7 +11,9 @@ from plot_helper import *
 from eval_helper import *
 import time
 from svj_pfn import Param
-
+#import imageio
+#import IPython 
+#import cv2 
 
 import pandas as pd
 # Example usage
@@ -108,13 +110,37 @@ class Param_ANTELOPE(Param):
     cprint(f'before{x_evalb.shape=}', 'yellow')
     cprint(f'before{type(x_evalb[0])}', 'yellow')
     cprint(f'before{type(y_evalb[0])}', 'yellow')
-
-    x_evalb, x_testb= self.sample_flatten(x_evalb), self.sample_flatten(x_testb) 
+    print(y_evalb, y_testb)
+    x_evalb, x_testb= self.sample_flatten(x_evalb), self.sample_flatten(x_testb)
+    y_evalb, y_testb= y_evalb.astype('float32'), y_testb.astype('float32') 
     print(x_evalb.shape, x_testb.shape)
     #x_evalb = x_evalb.reshape(x_evalb.shape[0], 28, 28, 1).astype('float32')
     cprint(f'after{type(x_evalb[0])}', 'yellow')
     cprint(f'after{type(y_evalb[0])}', 'yellow')
-   
+
+    # SHUFFLE?
+    # plot input
+    # select 15 samples since there are 10000
+    nsample=10
+    x_testb= x_testb[:nsample]
+    # reshape
+    x_testb=x_testb.reshape(x_testb.shape[0], 28,28, 1) # should be (x, 28, 28,1)
+    cprint(f'reshape {x_testb.shape=}')
+    fig = plt.figure(figsize=(15, 10))
+ 
+    for i in range(nsample):
+      ax = fig.add_subplot(5, 5, i+1)
+      ax.axis('off')
+#      ax.text(0.5, -0.15, str(label_dict[y_test[i]]), fontsize=10, ha='center', transform=ax.transAxes)
+     
+      ax.imshow(x_testb[i, :,:,0]*255, cmap = 'gray') 
+
+
+    fig.suptitle('Input Image')
+    plt.tight_layout()
+    plt.show()
+    plt.savefig(self.plot_dir + f'input.png')
+    plt.clf()
     
     print(f'after{x_evalb.shape=}', 'yellow')
 
@@ -226,7 +252,8 @@ class Param_ANTELOPE(Param):
         #validation_split=0.2,
         verbose=1)
     else: 
-      h2 = vae.fit(phi_evalb_train,y_phi_evalb_train, 
+      h2 = vae.fit(phi_evalb_train, 
+      #h2 = vae.fit(phi_evalb_train,y_phi_evalb_train, 
         epochs=self.nepochs,
         batch_size=self.batchsize_vae,
         validation_data=(phi_evalb_val, phi_evalb_val),
@@ -252,23 +279,58 @@ class Param_ANTELOPE(Param):
       vae,h2 = self.train_vae( x_evalb_train, x_evalb_val, y_evalb_train, y_evalb_val)
       print('training successful')
 
-    latent_bkg_test=vae.get_layer('encoder').predict(x_testb)
-    latent_bkg_train=vae.get_layer('encoder').predict(x_evalb_train)
-    latent_bkg_val=vae.get_layer('encoder').predict(x_evalb_val)
+    latent_test=vae.get_layer('encoder').predict(x_testb)
+    latent_train=vae.get_layer('encoder').predict(x_evalb_train)
+    latent_val=vae.get_layer('encoder').predict(x_evalb_val)
 
-    #latent_bkg_test is a list but latent_bkg_test[0] is a numpy array
-    latent_bkg_test, latent_bkg_train, latent_bkg_val=np.array(latent_bkg_test), np.array(latent_bkg_train), np.array(latent_bkg_val)
-    print(f'{latent_bkg_test.shape=}')
-    latent_bkg_test_sigma, latent_bkg_train_sigma = self.transform_sigma(latent_bkg_test[1,:,:]), self.transform_sigma(latent_bkg_train[1, :,:])
 
-#    for k in range(len(latent_bkg_test)):
-    plot_1D_phi(latent_bkg_test[0,:,:],latent_bkg_train[0,:,:] , labels=['test', 'train'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_train_mu', tag_title=self.vae_model +r" $\mu$", ylog=True)
-    plot_1D_phi(latent_bkg_test_sigma, latent_bkg_sigma, labels=['test', 'train'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_train_sigma', tag_title=self.vae_model  +r" $\sigma$", ylog=True)
 
-    plot_1D_phi(latent_bkg_test[0,:,:], latent_bkg_train[0, :,:], labels=['test', 'train'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_train_mu_custom', tag_title=self.vae_model +r" $\mu$", bins=np.linspace(-0.0001,0.0001, num=50))
-    plot_1D_phi(latent_bkg_test_sigma,latent_bkg_sigma, labels=['test', 'train'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_train_sigma_custom', tag_title=self.vae_model +r" $\sigma$", bins=np.linspace(0.9998,1.0002,num=50))
+    #latent_test is a list but latent_test[0] is a numpy array
+    latent_test, latent_train, latent_val=np.array(latent_test), np.array(latent_train), np.array(latent_val)
+    print(f'{latent_test.shape=}')
 
-    plot_1D_phi(latent_bkg_test[2,:,:], latent_bkg_train[2, :,:], labels=['test', 'train'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_train_sampling', tag_title=self.vae_model +" Sampling",bool_norm=True)
+
+
+    # reconstruct output
+    print(f'{latent_test=}')
+#    print(f'{latent_test.shape=}')
+    latent_test_recon = vae.get_layer('decoder').predict(latent_test[2,:,:])
+    print(f'{latent_test_recon.shape=}')
+    # select 15 samples since there are 10000
+    nsample=10
+    latent_test_recon= latent_test_recon[:nsample]
+    # reshape
+    latent_test_recon=latent_test_recon.reshape(latent_test_recon.shape[0], 28, -1) # should be (x, 28, 28)
+    cprint(f'reshape 1 {latent_test_recon.shape=}')
+    latent_test_recon=latent_test_recon.reshape(latent_test_recon.shape[0], 28,28, 1) # should be (x, 28, 28,1)
+    cprint(f'reshape 2 {latent_test_recon.shape=}')
+    fig = plt.figure(figsize=(15, 10))
+ 
+    for i in range(nsample):
+      ax = fig.add_subplot(5, 5, i+1)
+      ax.axis('off')
+#      ax.text(0.5, -0.15, str(label_dict[y_test[i]]), fontsize=10, ha='center', transform=ax.transAxes)
+     
+      ax.imshow(latent_test_recon[i, :,:,0]*255, cmap = 'gray') 
+    #ax.imshow(latent_test_recon[i, :,:,0]*255, cmap = 'gray') 
+    fig.suptitle('Reconstructed Image')
+    plt.tight_layout()
+    plt.show()
+    plt.savefig(self.plot_dir + f'output.png')
+    plt.clf()
+
+
+
+    latent_test_sigma, latent_train_sigma = self.transform_sigma(latent_test[1,:,:]), self.transform_sigma(latent_train[1, :,:])
+
+#    for k in range(len(latent_test)):
+    plot_1D_phi(latent_test[0,:,:],latent_train[0,:,:] , labels=['test', 'train'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_train_mu', tag_title=self.vae_model +r" $\mu$", ylog=True)
+    plot_1D_phi(latent_test_sigma, latent_train_sigma, labels=['test', 'train'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_train_sigma', tag_title=self.vae_model  +r" $\sigma$", ylog=True)
+
+    plot_1D_phi(latent_test[0,:,:], latent_train[0, :,:], labels=['test', 'train'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_train_mu_custom', tag_title=self.vae_model +r" $\mu$", bins=np.linspace(-0.0001,0.0001, num=50))
+    plot_1D_phi(latent_test_sigma,latent_train_sigma, labels=['test', 'train'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_train_sigma_custom', tag_title=self.vae_model +r" $\sigma$", bins=np.linspace(0.9998,1.0002,num=50))
+
+    plot_1D_phi(latent_test[2,:,:], latent_train[2, :,:], labels=['test', 'train'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_train_sampling', tag_title=self.vae_model +" Sampling",bool_norm=True)
 
     ######## EVALUATE SUPERVISED ######
     # # --- Eval plots 
