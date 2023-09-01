@@ -344,6 +344,56 @@ def get_variational_encoder(input_dim, encoding_dim, latent_dim):
   return encoder
 
 ## ------------------------------------------------------------------------------------
+def get_variational_encoder_test(input_dim, encoding_dim, latent_dim):
+  
+  inputs = keras.Input(shape=(28,28,1))
+  #inputs = keras.Input(shape=(input_dim,))
+
+  x = keras.layers.Conv2D(32, 3, activation="relu", strides=2, padding="same")(inputs)
+  x = keras.layers.Conv2D(64, 3, activation="relu", strides=2, padding="same")(x)
+  x = keras.layers.Flatten()(x)
+  x = keras.layers.Dense(16, activation="relu")(x)
+  """
+  x = Dropout(0.1, input_shape=(input_dim,))(inputs)
+  x = Dense(392)(x)
+  #x = Dense(32)(x)
+  x = Dropout(0.1)(x)
+  x = LeakyReLU(alpha=0.3)(x)
+  x = Dense(encoding_dim)(x)
+  x = Dropout(0.1)(x)
+  x = LeakyReLU(alpha=0.3)(x)
+
+ # 392 56 28 12
+ # 392 196 98 49 
+  x = Dense(int(encoding_dim)/2.)(x) # 392/7 = 56
+  #x = Dense(int(encoding_dim)/7.)(x) # 392/7 = 56
+  x = Dropout(0.1)(x)
+  x = LeakyReLU(alpha=0.3)(x)
+
+
+  x = Dense(int(encoding_dim)/4.)(x) # 392/14 =28
+  #x = Dense(int(encoding_dim)/14.)(x) # 392/14 =28
+  x = Dropout(0.1)(x)
+  x = LeakyReLU(alpha=0.3)(x)
+
+  """
+  z_mean = Dense(latent_dim, name="z_mean")(x)
+  z_log_var = Dense(latent_dim, name="z_log_var")(x)
+  z = Sampling()([z_mean, z_log_var])
+  cprint(f'{z=}, {z_mean=}, {z_log_var=}', 'yellow')
+  cprint(f'{z.shape=}, {z_mean.shape=}, {z_log_var.shape=}', 'yellow')
+  
+  encoder = keras.Model(inputs, [z_mean, z_log_var, z], name="encoder")
+  encoder.summary()
+  try: 
+    print(encoder.get_layer('sampling').output)
+    try:  
+      print(encoder.get_layer('sampling').output.shape)
+    except: print('can not print output shape of sampling')
+  except: print('cannot get layer sampling')
+  return encoder
+
+## ------------------------------------------------------------------------------------
 def get_decoder(input_dim, encoding_dim, latent_dim):
   #decoder = tf.keras.models.Sequential(name="decoder")
   #decoder.add(Dense(encoding_dim, input_dim=latent_dim))
@@ -378,6 +428,37 @@ def get_decoder(input_dim, encoding_dim, latent_dim):
   return decoder
 
 ## ------------------------------------------------------------------------------------
+def get_decoder_test(input_dim, encoding_dim, latent_dim):
+  #decoder = tf.keras.models.Sequential(name="decoder")
+  #decoder.add(Dense(encoding_dim, input_dim=latent_dim))
+  #decoder.add(Dropout(0.1))
+  #decoder.add(LeakyReLU(alpha=0.3))
+  #decoder.add(Dense(32, input_dim=latent_dim))
+  #decoder.add(Dropout(0.1))
+  #decoder.add(LeakyReLU(alpha=0.3))
+  #decoder.add(Dense(input_dim, activation='sigmoid'))
+
+  latent_inputs = keras.Input(shape=(latent_dim,))
+
+ # 392 196 98 49 
+
+  x = keras.layers.Dense(7 * 7 * 64, activation="relu")(latent_inputs)
+  x = keras.layers.Reshape((7, 7, 64))(x)
+  x = keras.layers.Conv2DTranspose(64, 3, activation="relu", strides=2, padding="same")(x)
+  x = keras.layers.Conv2DTranspose(32, 3, activation="relu", strides=2, padding="same")(x)
+  
+  """
+  x = keras.layers.Dense(encoding_dim/2., activation="relu")(latent_inputs)
+  x = keras.layers.Dense(encoding_dim, activation="relu")(x)
+  x = keras.layers.Dense(392, activation="relu")(x)
+  decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid")(x)
+  """
+  decoder_outputs = keras.layers.Conv2DTranspose(1, 3,1,  activation="sigmoid", padding="same")(x)
+
+  decoder = keras.Model(latent_inputs, decoder_outputs, name="decoder")
+  decoder.summary()
+  return decoder
+## ------------------------------------------------------------------------------------
 def get_ae(input_dim, encoding_dim, latent_dim):
   encoder = get_encoder(input_dim, encoding_dim, latent_dim)
   decoder = get_decoder(input_dim, encoding_dim, latent_dim)
@@ -387,9 +468,12 @@ def get_ae(input_dim, encoding_dim, latent_dim):
   return ae
 
 ## ------------------------------------------------------------------------------------
-def get_vae(input_dim, encoding_dim, latent_dim, learning_rate=0.00001, kl_loss_scalar=100):
-  encoder = get_variational_encoder(input_dim, encoding_dim, latent_dim)
-  decoder = get_decoder(input_dim, encoding_dim, latent_dim)
+def get_vae(input_dim, encoding_dim, latent_dim, learning_rate=0.00001, kl_loss_scalar=100, bool_test=False):
+  if bool_test: encoder = get_variational_encoder_test(input_dim, encoding_dim, latent_dim)
+  else: encoder = get_variational_encoder(input_dim, encoding_dim, latent_dim)
+  
+  if bool_test: decoder = get_decoder_test(input_dim, encoding_dim, latent_dim)
+  else:decoder = get_decoder(input_dim, encoding_dim, latent_dim)
 
   vae = VAE(encoder, decoder, kl_loss_scalar)
   vae.compile(optimizer=keras.optimizers.Adam(learning_rate=learning_rate))

@@ -97,7 +97,15 @@ class Param_ANTELOPE(Param):
     if arr.ndim != 3.:
       print('not 3 D array: check sample_flatten')
       sys.exit()
-    return arr.reshape(arr.shape[0], -1).astype('float32')
+    return arr.reshape(arr.shape[0], -1)
+
+
+  def shuffle_two(self, arr1, arr2):
+    shuffler = np.random.permutation(len(arr1))
+    arr1_shuffled = arr1[shuffler]
+    arr2_shuffled = arr2[shuffler]
+    return arr1, arr2 
+
   def prepare_test(self):
     # apply scaling # is it already applied
     # plot vectors
@@ -107,24 +115,34 @@ class Param_ANTELOPE(Param):
 # vae save
 # reconstruct
     (x_evalb, y_evalb), (x_testb, y_testb) = tf.keras.datasets.fashion_mnist.load_data()
+
+    # shuffle before flattening!
+    x_evalb, y_evalb=self.shuffle_two(x_evalb, y_evalb)
+    x_testb, y_testb=self.shuffle_two(x_testb, y_testb)
     cprint(f'before{x_evalb.shape=}', 'yellow')
     cprint(f'before{type(x_evalb[0])}', 'yellow')
     cprint(f'before{type(y_evalb[0])}', 'yellow')
     print(y_evalb, y_testb)
+
+    #flatten
+    """
     x_evalb, x_testb= self.sample_flatten(x_evalb), self.sample_flatten(x_testb)
+    """
+    x_evalb, x_testb= x_evalb.reshape(x_evalb.shape[0], 28,28, 1), x_testb.reshape(x_testb.shape[0], 28,28, 1)
+    x_evalb, x_testb= x_evalb.astype('float32'), x_testb.astype('float32') 
     y_evalb, y_testb= y_evalb.astype('float32'), y_testb.astype('float32') 
     print(x_evalb.shape, x_testb.shape)
     #x_evalb = x_evalb.reshape(x_evalb.shape[0], 28, 28, 1).astype('float32')
     cprint(f'after{type(x_evalb[0])}', 'yellow')
     cprint(f'after{type(y_evalb[0])}', 'yellow')
 
-    # SHUFFLE?
-    # plot input
+
+    # plot test input
     # select 15 samples since there are 10000
     nsample=10
-    x_testb= x_testb[:nsample]
+    x_testb_plt= x_testb[:nsample]
     # reshape
-    x_testb=x_testb.reshape(x_testb.shape[0], 28,28, 1) # should be (x, 28, 28,1)
+#    x_testb_plt=x_testb.reshape(x_testb.shape[0], 28,28, 1) # should be (x, 28, 28,1)
     cprint(f'reshape {x_testb.shape=}')
     fig = plt.figure(figsize=(15, 10))
  
@@ -133,13 +151,13 @@ class Param_ANTELOPE(Param):
       ax.axis('off')
 #      ax.text(0.5, -0.15, str(label_dict[y_test[i]]), fontsize=10, ha='center', transform=ax.transAxes)
      
-      ax.imshow(x_testb[i, :,:,0]*255, cmap = 'gray') 
+      ax.imshow(x_testb_plt[i, :,:,0]*255, cmap = 'gray') 
 
 
     fig.suptitle('Input Image')
     plt.tight_layout()
-    plt.show()
     plt.savefig(self.plot_dir + f'input.png')
+    plt.show()
     plt.clf()
     
     print(f'after{x_evalb.shape=}', 'yellow')
@@ -241,24 +259,15 @@ class Param_ANTELOPE(Param):
 
   def train_vae(self, phi_evalb_train, phi_evalb_val, y_phi_evalb_train=[], y_phi_evalb_val=[]):
 
-    vae = get_vae(self.phi_dim,self.encoding_dim,self.latent_dim, self.learning_rate, self.kl_loss_scalar)
-    if len( y_phi_evalb_train) ==0:
+    vae = get_vae(self.phi_dim,self.encoding_dim,self.latent_dim, self.learning_rate, self.kl_loss_scalar, bool_test=True)
       
-      h2 = vae.fit(phi_evalb_train, 
+    h2 = vae.fit(phi_evalb_train, 
     #h2 = vae.fit(phi_evalb, 
         epochs=self.nepochs,
         batch_size=self.batchsize_vae,
-        validation_data=(phi_evalb_val, phi_evalb_val),
-        #validation_split=0.2,
+      #  validation_data=(phi_evalb_val, phi_evalb_val),
+        validation_split=0.2,
         verbose=1)
-    else: 
-      h2 = vae.fit(phi_evalb_train, 
-      #h2 = vae.fit(phi_evalb_train,y_phi_evalb_train, 
-        epochs=self.nepochs,
-        batch_size=self.batchsize_vae,
-        validation_data=(phi_evalb_val, phi_evalb_val),
-        #validation_split=0.2,
-        verbose=1)  
     # # simple ae
     vae.get_layer('encoder').save_weights(self.arch_dir+self.vae_model+'_encoder_weights.h5')
     vae.get_layer('decoder').save_weights(self.arch_dir+self.vae_model+'_decoder_weights.h5')
@@ -289,10 +298,7 @@ class Param_ANTELOPE(Param):
     latent_test, latent_train, latent_val=np.array(latent_test), np.array(latent_train), np.array(latent_val)
     print(f'{latent_test.shape=}')
 
-
-
     # reconstruct output
-    print(f'{latent_test=}')
 #    print(f'{latent_test.shape=}')
     latent_test_recon = vae.get_layer('decoder').predict(latent_test[2,:,:])
     print(f'{latent_test_recon.shape=}')
@@ -315,8 +321,8 @@ class Param_ANTELOPE(Param):
     #ax.imshow(latent_test_recon[i, :,:,0]*255, cmap = 'gray') 
     fig.suptitle('Reconstructed Image')
     plt.tight_layout()
-    plt.show()
     plt.savefig(self.plot_dir + f'output.png')
+    plt.show()
     plt.clf()
 
 
@@ -358,7 +364,7 @@ class Param_ANTELOPE(Param):
     print('\n')
 
     # xlog=True plots
-    sig_loss=np.array([]) 
+    sig_loss, sig_kl_loss, sig_reco_loss=np.array([]), np.array([]), np.array([]) 
     plot_score(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], False, True, tag_file=self.vae_model+'_pos', tag_title=self.vae_model + ' (score > 0)', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
     plot_score(bkg_kl_loss[bkg_kl_loss>0], sig_kl_loss[sig_kl_loss>0], False, True, tag_file=self.vae_model+"_KLD_pos", tag_title=self.vae_model+" KLD (score > 0)", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
     plot_score(bkg_reco_loss[bkg_reco_loss>0], sig_reco_loss[sig_reco_loss>0], False, True, tag_file=self.vae_model+"_MSE_pos", tag_title=self.vae_model+" MSE (score > 0)", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
@@ -374,6 +380,7 @@ class Param_ANTELOPE(Param):
     plot_score(bkg_reco_loss[bkg_reco_loss<=0], sig_reco_loss[sig_reco_loss<=0], False, False, tag_file=self.vae_model+"_MSE_neg", tag_title=self.vae_model+" MSE (score <= 0)", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
     # # 3. Signal Sensitivity Score
 
+    """
     score = getSignalSensitivityScore(bkg_loss, sig_loss)
     print("95 percentile score = ",score)
     # # 4. ROCs/AUCs using sklearn functions imported above  
@@ -382,12 +389,11 @@ class Param_ANTELOPE(Param):
     sic_vals_kl=do_roc(bkg_kl_loss[bkg_kl_loss>0], sig_kl_loss[sig_kl_loss>0], tag_file=self.vae_model+"_KLD_pos", tag_title=self.vae_model+" KLD (score > 0)"+ f'(batch size = {self.batchsize_vae}',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
     sic_vals_reco=do_roc(bkg_reco_loss, sig_reco_loss, tag_file=self.vae_model+"_MSE", tag_title=self.vae_model+" MSE"+ f'(batch size = {self.batchsize_vae}',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
     auc={sic_vals['auc'], sic_vals_kl['auc'], sic_vals_reco['auc']}
+    """
+    auc= {np.nan, np.nan, np.nan}
     bkg_events_num,sig_events_num=np.nan, np.nan 
     
-    # LOG score
-    print("Taking log of score...")
   
-    bkg_loss_mse = np.log(bkg_loss_mse)
     return self.all_dir, auc, bkg_events_num,sig_events_num
 
  
@@ -505,7 +511,8 @@ if __name__=="__main__":
   ls_bkg=[200000]
   for  kl_loss_scalar in [1]:
     param1=Param_ANTELOPE(pfn_model=pfn_model,  h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
-      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim= 784)
+      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar)
+      #extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim= 784, encoding_dim=196, latent_dim=49)
 #    stdoutOrigin=param1.open_print()
     all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_test()
     #all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae(bool_pfn=False)

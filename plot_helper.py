@@ -586,7 +586,7 @@ def plot_1D_phi(bkg, sig, labels, plot_dir, tag_file, tag_title, bool_norm=False
       if bool_norm:
         (bkg_mu, bkg_sigma) = norm.fit(bkg_phi)
         bkg_mu_rd, bkg_sigma_rd=str(round(bkg_mu,3)), str(round(bkg_sigma,3))
-        print(r"$\mu$ = "+ str(round(bkg_mu,3)))
+#        print(r"$\mu$ = "+ str(round(bkg_mu,3)))
         y = norm.pdf( bins, bkg_mu, bkg_sigma)
         plt.plot(bins, y, 'b+', linewidth=1, label=r"$\mu$ = "+ bkg_mu_rd +", $\sigma$ = " + bkg_sigma_rd, alpha=0.5)
       plt.hist(sig_phi, alpha=0.7, label=labels[1]+f' ({len(sig_phi)})', bins=bins, density=True, color = 'darkred',histtype='step')
