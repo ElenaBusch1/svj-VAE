@@ -7,6 +7,9 @@ from math import ceil
 from termcolor import cprint
 from matplotlib.ticker import MultipleLocator
 from scipy.stats import norm
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+import pandas as pd
 # tag = "pfnEvalTest"      
 #tag = "PFN_2jAvg_MM"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
@@ -39,6 +42,49 @@ plt.legend()
 plt.show()
 sys.exit()
 """
+def plot_pca(latent,latent_label, nlabel,  n_components=2, tag_file="", tag_title="", plot_dir=""): # if the number of features is very high
+  # n_components is number of dimensions I want for the scatter plot -> usually 2 for x and y axes
+  # nlabel is the number of classification label types
+  # latent_label is a list of labels so the length of this should be the same as the number of samples
+  pca = PCA(n_components=n_components)
+  x_transform = pca.fit_transform(latent)
+  print(x_transform.shape)
+  if n_components==2:
+    plt.scatter(x_transform[:,0], x_transform[:,1], c=latent_label, cmap=plt.cm.get_cmap("jet", nlabel))
+    plt.colorbar(ticks=range(10))
+    plt.clim(-0.5, 9.5)
+    plt.title(f'{tag_title} Latent Space Visualization (PCA)')
+    plt.xlabel('z1')
+    plt.ylabel('z2')
+    plt.legend(loc='upper right')
+    plt.savefig(plot_dir+'/pca'+tag_file+'.png')
+  #plt.show()
+    plt.clf()
+
+  else: print('cannot plot a scatter plot of PCA as n_components is not 2D')
+  return x_transform  
+
+def plot_tsne(latent, n_components=2, tag_file="", tag_title="", plot_dir=""):
+  #https://github.com/npitsillos/mnist-vae/blob/master/main.py
+  # draw just the z_means
+  tsne = TSNE(n_components=2, init="pca", random_state=0)
+  x_transform = tsne.fit_transform(latent)
+  if n_components==2:
+    data = np.vstack((x_transform.T, target)).T
+    df = pd.DataFrame(data=data, columns=["z1", "z2", "label"])
+    df["label"] = df["label"].astype(str)
+
+    df.plot.scatter(x='z1', y= 'z2', c='label') # color determined by label column
+    plt.title(f'{tag_title} Latent Space Visualization (TSNE)')
+    plt.xlabel('z1')
+    plt.ylabel('z2')
+    plt.legend(loc='upper right')
+    plt.savefig(plot_dir+'/tsne'+tag_file+'.png')
+  #plt.show()
+    plt.clf()
+ 
+  return x_transform 
+
 def plot_ntrack(h_ls,  tag_file="", tag_title="", plot_dir="", bin_max=0):
   #label=['no cuts','ntrack >= 3','pt > 10 GeV in leading jet','pt > 10 GeV in subleading jet']
   print(len(h_ls))

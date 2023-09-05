@@ -106,7 +106,85 @@ class Param_ANTELOPE(Param):
     arr2_shuffled = arr2[shuffler]
     return arr1, arr2 
 
-  def prepare_test(self):
+  def prepare_test_ECG(self, bool_flat=False):
+    # apply scaling # is it already applied
+    # plot vectors
+# just the VAE
+# choose validation and train
+# vae fitting
+# vae save
+# reconstruct
+
+
+    (x_evalb, y_evalb), (x_testb, y_testb) = tf.keras.datasets.fashion_mnist.load_data()
+
+    # shuffle before flattening!
+    x_evalb, y_evalb=self.shuffle_two(x_evalb, y_evalb)
+    x_testb, y_testb=self.shuffle_two(x_testb, y_testb)
+    cprint(f'before{x_evalb.shape=}', 'yellow')
+    cprint(f'before{type(x_evalb[0])}', 'yellow')
+    cprint(f'before{type(y_evalb[0])}', 'yellow')
+    print(y_evalb, y_testb)
+
+    #flatten
+    if bool_flat:
+      x_evalb, x_testb= self.sample_flatten(x_evalb), self.sample_flatten(x_testb)
+
+    else:   x_evalb, x_testb= x_evalb.reshape(x_evalb.shape[0], 28,28, 1), x_testb.reshape(x_testb.shape[0], 28,28, 1)
+    x_evalb, x_testb= x_evalb.astype('float32'), x_testb.astype('float32') 
+    y_evalb, y_testb= y_evalb.astype('float32'), y_testb.astype('float32') 
+    print(x_evalb.shape, x_testb.shape)
+    #x_evalb = x_evalb.reshape(x_evalb.shape[0], 28, 28, 1).astype('float32')
+    cprint(f'after{type(x_evalb[0])}', 'yellow')
+    cprint(f'after{type(y_evalb[0])}', 'yellow')
+
+
+    # plot test input
+    # select 15 samples since there are 10000
+    nsample=10
+    x_testb_plt= x_testb[:nsample]
+    # reshape
+    if bool_flat:
+      x_testb_plt=x_testb.reshape(x_testb.shape[0], 28,28, 1) # should be (x, 28, 28,1)
+    cprint(f'reshape {x_testb.shape=}')
+    fig = plt.figure(figsize=(15, 10))
+ 
+    for i in range(nsample):
+      ax = fig.add_subplot(5, 5, i+1)
+      ax.axis('off')
+#      ax.text(0.5, -0.15, str(label_dict[y_test[i]]), fontsize=10, ha='center', transform=ax.transAxes)
+     
+      ax.imshow(x_testb_plt[i, :,:,0]*255, cmap = 'gray') 
+
+
+    fig.suptitle('Input Image')
+    plt.tight_layout()
+    plt.savefig(self.plot_dir + f'input.png')
+#    plt.show()
+    plt.clf()
+    
+    print(f'after{x_evalb.shape=}', 'yellow')
+
+    #x_testb = x_testb.astype('float32')
+#    cprint(f'after{(x_evalb[0])}', 'yellow')
+    print(f'{np.max(x_evalb)=}')
+    x_evalb = x_evalb / 255.
+    x_testb = x_testb / 255.
+    # validation data set manually
+    # Prepare the training dataset
+    idx = np.random.choice( np.arange(len(x_evalb)), size= round(.2 *len(x_evalb)) , replace=False) # IMPT that replace=False so that event is picked only once
+    idx = np.sort(idx) 
+    # Prepare the validation dataset
+    x_evalb_val = x_evalb[idx, :] 
+    x_evalb_train = np.delete(x_evalb, idx) # doesn't modify input array 
+    print(f'{x_evalb_val.shape=}, {x_evalb_train=}')     
+    
+    x_evalb_train, x_evalb_val, y_evalb_train, y_evalb_val = train_test_split(x_evalb, y_evalb, test_size=round(.2 *len(x_evalb)))
+    #phi_evalb_train, phi_evalb_val, _, _ = train_testb_split(phi_evalb, phi_evalb, testb_size=round(.2 *len(phi_evalb)))
+    return  x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val
+
+
+  def prepare_test(self, bool_flat=False):
     # apply scaling # is it already applied
     # plot vectors
 # just the VAE
@@ -125,10 +203,10 @@ class Param_ANTELOPE(Param):
     print(y_evalb, y_testb)
 
     #flatten
-    """
-    x_evalb, x_testb= self.sample_flatten(x_evalb), self.sample_flatten(x_testb)
-    """
-    x_evalb, x_testb= x_evalb.reshape(x_evalb.shape[0], 28,28, 1), x_testb.reshape(x_testb.shape[0], 28,28, 1)
+    if bool_flat:
+      x_evalb, x_testb= self.sample_flatten(x_evalb), self.sample_flatten(x_testb)
+
+    else:   x_evalb, x_testb= x_evalb.reshape(x_evalb.shape[0], 28,28, 1), x_testb.reshape(x_testb.shape[0], 28,28, 1)
     x_evalb, x_testb= x_evalb.astype('float32'), x_testb.astype('float32') 
     y_evalb, y_testb= y_evalb.astype('float32'), y_testb.astype('float32') 
     print(x_evalb.shape, x_testb.shape)
@@ -142,7 +220,8 @@ class Param_ANTELOPE(Param):
     nsample=10
     x_testb_plt= x_testb[:nsample]
     # reshape
-#    x_testb_plt=x_testb.reshape(x_testb.shape[0], 28,28, 1) # should be (x, 28, 28,1)
+    if bool_flat:
+      x_testb_plt=x_testb.reshape(x_testb.shape[0], 28,28, 1) # should be (x, 28, 28,1)
     cprint(f'reshape {x_testb.shape=}')
     fig = plt.figure(figsize=(15, 10))
  
@@ -157,7 +236,155 @@ class Param_ANTELOPE(Param):
     fig.suptitle('Input Image')
     plt.tight_layout()
     plt.savefig(self.plot_dir + f'input.png')
-    plt.show()
+#    plt.show()
+    plt.clf()
+    
+    print(f'after{x_evalb.shape=}', 'yellow')
+
+    #x_testb = x_testb.astype('float32')
+#    cprint(f'after{(x_evalb[0])}', 'yellow')
+    print(f'{np.max(x_evalb)=}')
+    x_evalb = x_evalb / 255.
+    x_testb = x_testb / 255.
+    # validation data set manually
+    # Prepare the training dataset
+    idx = np.random.choice( np.arange(len(x_evalb)), size= round(.2 *len(x_evalb)) , replace=False) # IMPT that replace=False so that event is picked only once
+    idx = np.sort(idx) 
+    # Prepare the validation dataset
+    x_evalb_val = x_evalb[idx, :] 
+    x_evalb_train = np.delete(x_evalb, idx) # doesn't modify input array 
+    print(f'{x_evalb_val.shape=}, {x_evalb_train=}')     
+    
+    x_evalb_train, x_evalb_val, y_evalb_train, y_evalb_val = train_test_split(x_evalb, y_evalb, test_size=round(.2 *len(x_evalb)))
+    #phi_evalb_train, phi_evalb_val, _, _ = train_testb_split(phi_evalb, phi_evalb, testb_size=round(.2 *len(phi_evalb)))
+    return  x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val
+  def prepare_test(self, bool_flat=False):
+    # apply scaling # is it already applied
+    # plot vectors
+# just the VAE
+# choose validation and train
+# vae fitting
+# vae save
+# reconstruct
+    (x_evalb, y_evalb), (x_testb, y_testb) = tf.keras.datasets.fashion_mnist.load_data()
+
+    # shuffle before flattening!
+    x_evalb, y_evalb=self.shuffle_two(x_evalb, y_evalb)
+    x_testb, y_testb=self.shuffle_two(x_testb, y_testb)
+    cprint(f'before{x_evalb.shape=}', 'yellow')
+    cprint(f'before{type(x_evalb[0])}', 'yellow')
+    cprint(f'before{type(y_evalb[0])}', 'yellow')
+    print(y_evalb, y_testb)
+
+    #flatten
+    if bool_flat:
+      x_evalb, x_testb= self.sample_flatten(x_evalb), self.sample_flatten(x_testb)
+
+    else:   x_evalb, x_testb= x_evalb.reshape(x_evalb.shape[0], 28,28, 1), x_testb.reshape(x_testb.shape[0], 28,28, 1)
+    x_evalb, x_testb= x_evalb.astype('float32'), x_testb.astype('float32') 
+    y_evalb, y_testb= y_evalb.astype('float32'), y_testb.astype('float32') 
+    print(x_evalb.shape, x_testb.shape)
+    #x_evalb = x_evalb.reshape(x_evalb.shape[0], 28, 28, 1).astype('float32')
+    cprint(f'after{type(x_evalb[0])}', 'yellow')
+    cprint(f'after{type(y_evalb[0])}', 'yellow')
+
+
+    # plot test input
+    # select 15 samples since there are 10000
+    nsample=10
+    x_testb_plt= x_testb[:nsample]
+    # reshape
+    if bool_flat:
+      x_testb_plt=x_testb.reshape(x_testb.shape[0], 28,28, 1) # should be (x, 28, 28,1)
+    cprint(f'reshape {x_testb.shape=}')
+    fig = plt.figure(figsize=(15, 10))
+ 
+    for i in range(nsample):
+      ax = fig.add_subplot(5, 5, i+1)
+      ax.axis('off')
+#      ax.text(0.5, -0.15, str(label_dict[y_test[i]]), fontsize=10, ha='center', transform=ax.transAxes)
+     
+      ax.imshow(x_testb_plt[i, :,:,0]*255, cmap = 'gray') 
+
+
+    fig.suptitle('Input Image')
+    plt.tight_layout()
+    plt.savefig(self.plot_dir + f'input.png')
+#    plt.show()
+    plt.clf()
+    
+    print(f'after{x_evalb.shape=}', 'yellow')
+
+    #x_testb = x_testb.astype('float32')
+#    cprint(f'after{(x_evalb[0])}', 'yellow')
+    print(f'{np.max(x_evalb)=}')
+    x_evalb = x_evalb / 255.
+    x_testb = x_testb / 255.
+    # validation data set manually
+    # Prepare the training dataset
+    idx = np.random.choice( np.arange(len(x_evalb)), size= round(.2 *len(x_evalb)) , replace=False) # IMPT that replace=False so that event is picked only once
+    idx = np.sort(idx) 
+    # Prepare the validation dataset
+    x_evalb_val = x_evalb[idx, :] 
+    x_evalb_train = np.delete(x_evalb, idx) # doesn't modify input array 
+    print(f'{x_evalb_val.shape=}, {x_evalb_train=}')     
+    
+    x_evalb_train, x_evalb_val, y_evalb_train, y_evalb_val = train_test_split(x_evalb, y_evalb, test_size=round(.2 *len(x_evalb)))
+    #phi_evalb_train, phi_evalb_val, _, _ = train_testb_split(phi_evalb, phi_evalb, testb_size=round(.2 *len(phi_evalb)))
+    return  x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val
+  def prepare_test(self, bool_flat=False):
+    # apply scaling # is it already applied
+    # plot vectors
+# just the VAE
+# choose validation and train
+# vae fitting
+# vae save
+# reconstruct
+    (x_evalb, y_evalb), (x_testb, y_testb) = tf.keras.datasets.fashion_mnist.load_data()
+
+    # shuffle before flattening!
+    x_evalb, y_evalb=self.shuffle_two(x_evalb, y_evalb)
+    x_testb, y_testb=self.shuffle_two(x_testb, y_testb)
+    cprint(f'before{x_evalb.shape=}', 'yellow')
+    cprint(f'before{type(x_evalb[0])}', 'yellow')
+    cprint(f'before{type(y_evalb[0])}', 'yellow')
+    print(y_evalb, y_testb)
+
+    #flatten
+    if bool_flat:
+      x_evalb, x_testb= self.sample_flatten(x_evalb), self.sample_flatten(x_testb)
+
+    else:   x_evalb, x_testb= x_evalb.reshape(x_evalb.shape[0], 28,28, 1), x_testb.reshape(x_testb.shape[0], 28,28, 1)
+    x_evalb, x_testb= x_evalb.astype('float32'), x_testb.astype('float32') 
+    y_evalb, y_testb= y_evalb.astype('float32'), y_testb.astype('float32') 
+    print(x_evalb.shape, x_testb.shape)
+    #x_evalb = x_evalb.reshape(x_evalb.shape[0], 28, 28, 1).astype('float32')
+    cprint(f'after{type(x_evalb[0])}', 'yellow')
+    cprint(f'after{type(y_evalb[0])}', 'yellow')
+
+
+    # plot test input
+    # select 15 samples since there are 10000
+    nsample=10
+    x_testb_plt= x_testb[:nsample]
+    # reshape
+    if bool_flat:
+      x_testb_plt=x_testb.reshape(x_testb.shape[0], 28,28, 1) # should be (x, 28, 28,1)
+    cprint(f'reshape {x_testb.shape=}')
+    fig = plt.figure(figsize=(15, 10))
+ 
+    for i in range(nsample):
+      ax = fig.add_subplot(5, 5, i+1)
+      ax.axis('off')
+#      ax.text(0.5, -0.15, str(label_dict[y_test[i]]), fontsize=10, ha='center', transform=ax.transAxes)
+     
+      ax.imshow(x_testb_plt[i, :,:,0]*255, cmap = 'gray') 
+
+
+    fig.suptitle('Input Image')
+    plt.tight_layout()
+    plt.savefig(self.plot_dir + f'input.png')
+#    plt.show()
     plt.clf()
     
     print(f'after{x_evalb.shape=}', 'yellow')
@@ -279,7 +506,7 @@ class Param_ANTELOPE(Param):
 
 
   def evaluate_test(self):
-    x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val= self.prepare_test()
+    x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val= self.prepare_test(bool_flat=True)
     print('prepare_test')
       
     try: vae = self.load_vae()
@@ -293,10 +520,13 @@ class Param_ANTELOPE(Param):
     latent_val=vae.get_layer('encoder').predict(x_evalb_val)
 
 
-
     #latent_test is a list but latent_test[0] is a numpy array
     latent_test, latent_train, latent_val=np.array(latent_test), np.array(latent_train), np.array(latent_val)
     print(f'{latent_test.shape=}')
+
+    print(f'{y_testb=}{y_testb.shape}')
+    plot_pca(latent_test[0,:,:], latent_label=np.array(y_testb), nlabel=10,n_components=2, tag_file=self.vae_model+'_test', tag_title=self.vae_model+' Test', plot_dir=self.plot_dir)
+    plot_pca(latent_train[0,:,:],latent_label=np.array(y_evalb_train), nlabel=10, n_components=2, tag_file=self.vae_model+'_train', tag_title=self.vae_model+' Train', plot_dir=self.plot_dir)
 
     # reconstruct output
 #    print(f'{latent_test.shape=}')
@@ -322,7 +552,7 @@ class Param_ANTELOPE(Param):
     fig.suptitle('Reconstructed Image')
     plt.tight_layout()
     plt.savefig(self.plot_dir + f'output.png')
-    plt.show()
+#    plt.show()
     plt.clf()
 
 
@@ -420,6 +650,7 @@ class Param_ANTELOPE(Param):
     print(f'{latent_bkg_test.shape=}')
     latent_bkg_test_sigma, latent_sig_sigma = self.transform_sigma(latent_bkg_test[1,:,:]), self.transform_sigma(latent_sig[1, :,:])
 
+
 #    for k in range(len(latent_bkg_test)):
     plot_1D_phi(latent_bkg_test[0,:,:], latent_sig[0, :,:], labels=['test QCD', 'SIG'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'qcd_sig_mu', tag_title=self.vae_model +r" $\mu$", ylog=True)
     plot_1D_phi(latent_bkg_test_sigma, latent_sig_sigma, labels=['test QCD', 'SIG'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'qcd_sig_sigma', tag_title=self.vae_model  +r" $\sigma$", ylog=True)
@@ -511,16 +742,16 @@ if __name__=="__main__":
   ls_bkg=[200000]
   for  kl_loss_scalar in [1]:
     param1=Param_ANTELOPE(pfn_model=pfn_model,  h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
-      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar)
-      #extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim= 784, encoding_dim=196, latent_dim=49)
-#    stdoutOrigin=param1.open_print()
+#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar)
+      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim= 784, encoding_dim=196, latent_dim=49)
+    stdoutOrigin=param1.open_print()
     all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_test()
     #all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae(bool_pfn=False)
     setattr(param1, 'auc',auc )
     setattr(param1, 'sig_events_num',sig_events_num )
     setattr(param1, 'bkg_events_num',bkg_events_num )
-#    print(param1.close_print(stdoutOrigin))
-#    print(param1.save_info())
+    print(param1.close_print(stdoutOrigin))
+    print(param1.save_info())
 """
   ls_sig=[20000]
   ls_bkg=[200000]
