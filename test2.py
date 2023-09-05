@@ -29,6 +29,12 @@ s = x + y + z
 
 print(type(s),s, type(float(s)), float(s))
 print(0.1+0.1+0.1)
+
+import pandas as pd
+dataframe = pd.read_csv('http://storage.googleapis.com/download.tensorflow.org/data/ecg.csv', header=None)
+raw_data = dataframe.values
+dataframe.head()
+print(dataframe)
 sys.exit()
 
 

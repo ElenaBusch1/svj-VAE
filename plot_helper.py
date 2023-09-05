@@ -646,7 +646,7 @@ def plot_1D_phi(bkg, sig, labels, plot_dir, tag_file, tag_title, bool_norm=False
         plt.yscale('log')
       plt.title(f'{tag_title} Latent Space - '+str(i+j*4))
       if i == 1: plt.legend(loc='upper right')
-#    plt.tight_layout()
+    plt.tight_layout()
     plt.savefig(plot_dir+'PFNlatent_'+str(j)+'_'+tag_file+'.png')
     plt.clf()
     print("Saved PFN latent space plot (", j, ")")

@@ -106,7 +106,7 @@ class Param_ANTELOPE(Param):
     arr2_shuffled = arr2[shuffler]
     return arr1, arr2 
 
-  def prepare_test_ECG(self, bool_flat=False):
+  def prepare_test_ECG(self):
     # apply scaling # is it already applied
     # plot vectors
 # just the VAE
@@ -115,9 +115,25 @@ class Param_ANTELOPE(Param):
 # vae save
 # reconstruct
 
+    dataframe = pd.read_csv('http://storage.googleapis.com/download.tensorflow.org/data/ecg.csv', header=None)
+    raw_data = dataframe.values
+    dataframe.head()
+    y=raw_data[:,-1] # label
+    x=raw_data[:, 0:-1]
+    
+   # scale
+    
+    min_val = tf.reduce_min(x)
+    max_val = tf.reduce_max(x)
+    print('before',type(x), x.shape)  
+    x = (x - min_val) / (max_val - min_val)
+    x = tf.cast(x, tf.float32)
+    x= x.numpy()
+    print('after converting',type(x), x.shape)  
+    # split 
+    x_evalb,  x_testb, y_evalb, y_testb = train_test_split(x, y, test_size=0.2)
 
-    (x_evalb, y_evalb), (x_testb, y_testb) = tf.keras.datasets.fashion_mnist.load_data()
-
+    print(f'{x_evalb.shape=}, {x_testb.shape=}, {y_evalb.shape=}, {y_testb.shape=}')
     # shuffle before flattening!
     x_evalb, y_evalb=self.shuffle_two(x_evalb, y_evalb)
     x_testb, y_testb=self.shuffle_two(x_testb, y_testb)
@@ -126,40 +142,51 @@ class Param_ANTELOPE(Param):
     cprint(f'before{type(y_evalb[0])}', 'yellow')
     print(y_evalb, y_testb)
 
-    #flatten
-    if bool_flat:
-      x_evalb, x_testb= self.sample_flatten(x_evalb), self.sample_flatten(x_testb)
-
-    else:   x_evalb, x_testb= x_evalb.reshape(x_evalb.shape[0], 28,28, 1), x_testb.reshape(x_testb.shape[0], 28,28, 1)
     x_evalb, x_testb= x_evalb.astype('float32'), x_testb.astype('float32') 
     y_evalb, y_testb= y_evalb.astype('float32'), y_testb.astype('float32') 
     print(x_evalb.shape, x_testb.shape)
-    #x_evalb = x_evalb.reshape(x_evalb.shape[0], 28, 28, 1).astype('float32')
     cprint(f'after{type(x_evalb[0])}', 'yellow')
     cprint(f'after{type(y_evalb[0])}', 'yellow')
 
+    # separate the normal rhythms from abnormal rhythms
+    test_labels = y_testb.astype(bool)
+    normal_test = x_testb[test_labels]
+    anomalous_test = x_testb[~test_labels]
 
     # plot test input
     # select 15 samples since there are 10000
-    nsample=10
-    x_testb_plt= x_testb[:nsample]
+    nsample=15
+    x_testb_plt= anomalous_test[:nsample]
     # reshape
-    if bool_flat:
-      x_testb_plt=x_testb.reshape(x_testb.shape[0], 28,28, 1) # should be (x, 28, 28,1)
-    cprint(f'reshape {x_testb.shape=}')
     fig = plt.figure(figsize=(15, 10))
  
     for i in range(nsample):
       ax = fig.add_subplot(5, 5, i+1)
-      ax.axis('off')
-#      ax.text(0.5, -0.15, str(label_dict[y_test[i]]), fontsize=10, ha='center', transform=ax.transAxes)
-     
-      ax.imshow(x_testb_plt[i, :,:,0]*255, cmap = 'gray') 
+      ax.set(xlabel='Time', ylabel='Voltage')
+      ax.plot(np.arange(140),x_testb_plt[i]) 
+      ax.grid()
 
-
-    fig.suptitle('Input Image')
+    fig.suptitle('Input Anomalous ECG')
     plt.tight_layout()
-    plt.savefig(self.plot_dir + f'input.png')
+    plt.savefig(self.plot_dir + f'input_anomalous.png')
+#    plt.show()
+    plt.clf()
+
+    
+    nsample=15
+    x_testb_plt= normal_test[:nsample]
+    # reshape
+    fig = plt.figure(figsize=(15, 10))
+ 
+    for i in range(nsample):
+      ax = fig.add_subplot(5, 5, i+1)
+      ax.set(xlabel='Time', ylabel='Voltage')
+      ax.plot(np.arange(140),x_testb_plt[i]) 
+      ax.grid()
+
+    fig.suptitle('Input Normal ECG')
+    plt.tight_layout()
+    plt.savefig(self.plot_dir + f'input_normal.png')
 #    plt.show()
     plt.clf()
     
@@ -168,8 +195,6 @@ class Param_ANTELOPE(Param):
     #x_testb = x_testb.astype('float32')
 #    cprint(f'after{(x_evalb[0])}', 'yellow')
     print(f'{np.max(x_evalb)=}')
-    x_evalb = x_evalb / 255.
-    x_testb = x_testb / 255.
     # validation data set manually
     # Prepare the training dataset
     idx = np.random.choice( np.arange(len(x_evalb)), size= round(.2 *len(x_evalb)) , replace=False) # IMPT that replace=False so that event is picked only once
@@ -184,154 +209,6 @@ class Param_ANTELOPE(Param):
     return  x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val
 
 
-  def prepare_test(self, bool_flat=False):
-    # apply scaling # is it already applied
-    # plot vectors
-# just the VAE
-# choose validation and train
-# vae fitting
-# vae save
-# reconstruct
-    (x_evalb, y_evalb), (x_testb, y_testb) = tf.keras.datasets.fashion_mnist.load_data()
-
-    # shuffle before flattening!
-    x_evalb, y_evalb=self.shuffle_two(x_evalb, y_evalb)
-    x_testb, y_testb=self.shuffle_two(x_testb, y_testb)
-    cprint(f'before{x_evalb.shape=}', 'yellow')
-    cprint(f'before{type(x_evalb[0])}', 'yellow')
-    cprint(f'before{type(y_evalb[0])}', 'yellow')
-    print(y_evalb, y_testb)
-
-    #flatten
-    if bool_flat:
-      x_evalb, x_testb= self.sample_flatten(x_evalb), self.sample_flatten(x_testb)
-
-    else:   x_evalb, x_testb= x_evalb.reshape(x_evalb.shape[0], 28,28, 1), x_testb.reshape(x_testb.shape[0], 28,28, 1)
-    x_evalb, x_testb= x_evalb.astype('float32'), x_testb.astype('float32') 
-    y_evalb, y_testb= y_evalb.astype('float32'), y_testb.astype('float32') 
-    print(x_evalb.shape, x_testb.shape)
-    #x_evalb = x_evalb.reshape(x_evalb.shape[0], 28, 28, 1).astype('float32')
-    cprint(f'after{type(x_evalb[0])}', 'yellow')
-    cprint(f'after{type(y_evalb[0])}', 'yellow')
-
-
-    # plot test input
-    # select 15 samples since there are 10000
-    nsample=10
-    x_testb_plt= x_testb[:nsample]
-    # reshape
-    if bool_flat:
-      x_testb_plt=x_testb.reshape(x_testb.shape[0], 28,28, 1) # should be (x, 28, 28,1)
-    cprint(f'reshape {x_testb.shape=}')
-    fig = plt.figure(figsize=(15, 10))
- 
-    for i in range(nsample):
-      ax = fig.add_subplot(5, 5, i+1)
-      ax.axis('off')
-#      ax.text(0.5, -0.15, str(label_dict[y_test[i]]), fontsize=10, ha='center', transform=ax.transAxes)
-     
-      ax.imshow(x_testb_plt[i, :,:,0]*255, cmap = 'gray') 
-
-
-    fig.suptitle('Input Image')
-    plt.tight_layout()
-    plt.savefig(self.plot_dir + f'input.png')
-#    plt.show()
-    plt.clf()
-    
-    print(f'after{x_evalb.shape=}', 'yellow')
-
-    #x_testb = x_testb.astype('float32')
-#    cprint(f'after{(x_evalb[0])}', 'yellow')
-    print(f'{np.max(x_evalb)=}')
-    x_evalb = x_evalb / 255.
-    x_testb = x_testb / 255.
-    # validation data set manually
-    # Prepare the training dataset
-    idx = np.random.choice( np.arange(len(x_evalb)), size= round(.2 *len(x_evalb)) , replace=False) # IMPT that replace=False so that event is picked only once
-    idx = np.sort(idx) 
-    # Prepare the validation dataset
-    x_evalb_val = x_evalb[idx, :] 
-    x_evalb_train = np.delete(x_evalb, idx) # doesn't modify input array 
-    print(f'{x_evalb_val.shape=}, {x_evalb_train=}')     
-    
-    x_evalb_train, x_evalb_val, y_evalb_train, y_evalb_val = train_test_split(x_evalb, y_evalb, test_size=round(.2 *len(x_evalb)))
-    #phi_evalb_train, phi_evalb_val, _, _ = train_testb_split(phi_evalb, phi_evalb, testb_size=round(.2 *len(phi_evalb)))
-    return  x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val
-  def prepare_test(self, bool_flat=False):
-    # apply scaling # is it already applied
-    # plot vectors
-# just the VAE
-# choose validation and train
-# vae fitting
-# vae save
-# reconstruct
-    (x_evalb, y_evalb), (x_testb, y_testb) = tf.keras.datasets.fashion_mnist.load_data()
-
-    # shuffle before flattening!
-    x_evalb, y_evalb=self.shuffle_two(x_evalb, y_evalb)
-    x_testb, y_testb=self.shuffle_two(x_testb, y_testb)
-    cprint(f'before{x_evalb.shape=}', 'yellow')
-    cprint(f'before{type(x_evalb[0])}', 'yellow')
-    cprint(f'before{type(y_evalb[0])}', 'yellow')
-    print(y_evalb, y_testb)
-
-    #flatten
-    if bool_flat:
-      x_evalb, x_testb= self.sample_flatten(x_evalb), self.sample_flatten(x_testb)
-
-    else:   x_evalb, x_testb= x_evalb.reshape(x_evalb.shape[0], 28,28, 1), x_testb.reshape(x_testb.shape[0], 28,28, 1)
-    x_evalb, x_testb= x_evalb.astype('float32'), x_testb.astype('float32') 
-    y_evalb, y_testb= y_evalb.astype('float32'), y_testb.astype('float32') 
-    print(x_evalb.shape, x_testb.shape)
-    #x_evalb = x_evalb.reshape(x_evalb.shape[0], 28, 28, 1).astype('float32')
-    cprint(f'after{type(x_evalb[0])}', 'yellow')
-    cprint(f'after{type(y_evalb[0])}', 'yellow')
-
-
-    # plot test input
-    # select 15 samples since there are 10000
-    nsample=10
-    x_testb_plt= x_testb[:nsample]
-    # reshape
-    if bool_flat:
-      x_testb_plt=x_testb.reshape(x_testb.shape[0], 28,28, 1) # should be (x, 28, 28,1)
-    cprint(f'reshape {x_testb.shape=}')
-    fig = plt.figure(figsize=(15, 10))
- 
-    for i in range(nsample):
-      ax = fig.add_subplot(5, 5, i+1)
-      ax.axis('off')
-#      ax.text(0.5, -0.15, str(label_dict[y_test[i]]), fontsize=10, ha='center', transform=ax.transAxes)
-     
-      ax.imshow(x_testb_plt[i, :,:,0]*255, cmap = 'gray') 
-
-
-    fig.suptitle('Input Image')
-    plt.tight_layout()
-    plt.savefig(self.plot_dir + f'input.png')
-#    plt.show()
-    plt.clf()
-    
-    print(f'after{x_evalb.shape=}', 'yellow')
-
-    #x_testb = x_testb.astype('float32')
-#    cprint(f'after{(x_evalb[0])}', 'yellow')
-    print(f'{np.max(x_evalb)=}')
-    x_evalb = x_evalb / 255.
-    x_testb = x_testb / 255.
-    # validation data set manually
-    # Prepare the training dataset
-    idx = np.random.choice( np.arange(len(x_evalb)), size= round(.2 *len(x_evalb)) , replace=False) # IMPT that replace=False so that event is picked only once
-    idx = np.sort(idx) 
-    # Prepare the validation dataset
-    x_evalb_val = x_evalb[idx, :] 
-    x_evalb_train = np.delete(x_evalb, idx) # doesn't modify input array 
-    print(f'{x_evalb_val.shape=}, {x_evalb_train=}')     
-    
-    x_evalb_train, x_evalb_val, y_evalb_train, y_evalb_val = train_test_split(x_evalb, y_evalb, test_size=round(.2 *len(x_evalb)))
-    #phi_evalb_train, phi_evalb_val, _, _ = train_testb_split(phi_evalb, phi_evalb, testb_size=round(.2 *len(phi_evalb)))
-    return  x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val
   def prepare_test(self, bool_flat=False):
     # apply scaling # is it already applied
     # plot vectors
@@ -486,7 +363,7 @@ class Param_ANTELOPE(Param):
 
   def train_vae(self, phi_evalb_train, phi_evalb_val, y_phi_evalb_train=[], y_phi_evalb_val=[]):
 
-    vae = get_vae(self.phi_dim,self.encoding_dim,self.latent_dim, self.learning_rate, self.kl_loss_scalar, bool_test=True)
+    vae = get_vae(self.phi_dim,self.encoding_dim,self.latent_dim, self.learning_rate, self.kl_loss_scalar, bool_test=False)
       
     h2 = vae.fit(phi_evalb_train, 
     #h2 = vae.fit(phi_evalb, 
@@ -505,7 +382,154 @@ class Param_ANTELOPE(Param):
     return vae, h2
 
 
+  def evaluate_test_ECG(self):
+    x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val= self.prepare_test_ECG()
+    print('prepare_test_ECG')
+      
+    try: vae = self.load_vae()
+    except: 
+      print('loading vae not successful so will start the training process')
+      vae,h2 = self.train_vae( x_evalb_train, x_evalb_val, y_evalb_train, y_evalb_val)
+      print('training successful')
+
+    latent_test=vae.get_layer('encoder').predict(x_testb)
+    latent_train=vae.get_layer('encoder').predict(x_evalb_train)
+    latent_val=vae.get_layer('encoder').predict(x_evalb_val)
+
+
+    #latent_test is a list but latent_test[0] is a numpy array
+    latent_test, latent_train, latent_val=np.array(latent_test), np.array(latent_train), np.array(latent_val)
+    print(f'{latent_test.shape=}')
+
+    plot_pca(latent_test[0,:,:], latent_label=np.array(y_testb), nlabel=2,n_components=2, tag_file=self.vae_model+'_test', tag_title=self.vae_model+' Test', plot_dir=self.plot_dir)
+    plot_pca(latent_train[0,:,:],latent_label=np.array(y_evalb_train), nlabel=2, n_components=2, tag_file=self.vae_model+'_train', tag_title=self.vae_model+' Train', plot_dir=self.plot_dir)
+
+    # reconstruct output
+    nsample=10
+    test_labels = y_testb.astype(bool)
+    normal_test = x_testb[test_labels]
+    anomalous_test = x_testb[~test_labels]
+    normal_latent_test=latent_test[:,test_labels,:]
+    anomalous_latent_test=latent_test[:,~test_labels,:]
+    
+    print(f'{normal_latent_test.shape=}')
+    print(f'{anomalous_latent_test.shape=}')
+
+#    print(f'{latent_test.shape=}')
+    #latent_test_recon = vae.get_layer('decoder').predict(latent_test[2,:,:])
+    normal_latent_test_recon = vae.get_layer('decoder').predict(normal_latent_test[2,:,:])
+    anomalous_latent_test_recon = vae.get_layer('decoder').predict(anomalous_latent_test[2,:,:])
+    print(f'{normal_latent_test_recon.shape=}')
+    print(f'{anomalous_latent_test_recon.shape=}')
+    # select 15 samples since there are 10000
+    # reshape
+    
+    fig = plt.figure(figsize=(15, 10))
+ 
+    for i in range(nsample):
+      ax = fig.add_subplot(5, 5, i+1)
+      plt.plot(normal_test[i], 'b', label='Input')
+      plt.plot(normal_latent_test_recon[i], 'r', label='Reconstruction')
+      ax.fill_between(np.arange(140),normal_latent_test_recon[i], normal_test[i], color='lightcoral', label='Error') 
+      ax.set(xlabel='Time', ylabel='Voltage')
+      ax.grid()
+    #ax.imshow(latent_test_recon[i, :,:,0]*255, cmap = 'gray') 
+    fig.suptitle('Output Normal ECG')
+    plt.tight_layout()
+    plt.savefig(self.plot_dir + f'output_normal.png')
+#    plt.show()
+    plt.clf()
+
+
+    fig = plt.figure(figsize=(15, 10))
+ 
+    for i in range(nsample):
+      ax = fig.add_subplot(5, 5, i+1)
+      plt.plot(anomalous_test[i], 'b', label='Input')
+      plt.plot(anomalous_latent_test_recon[i], 'r', label='Reconstruction')
+      ax.fill_between(np.arange(140),anomalous_latent_test_recon[i], anomalous_test[i], color='lightcoral', label='Error') 
+      ax.set(xlabel='Time', ylabel='Voltage')
+      ax.grid()
+    #ax.imshow(latent_test_recon[i, :,:,0]*255, cmap = 'gray') 
+    fig.suptitle('Output Anomalous ECG')
+    plt.tight_layout()
+    plt.savefig(self.plot_dir + f'output_anomalous.png')
+#    plt.show()
+    plt.clf()
+
+    normal_latent_test_sigma, anomalous_latent_test_sigma = self.transform_sigma(normal_latent_test[1,:,:]), self.transform_sigma(anomalous_latent_test[1, :,:])
+
+#    for k in range(len(latent_test)):
+    plot_1D_phi(normal_latent_test[0,:,:],anomalous_latent_test[0,:,:] , labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_mu', tag_title=self.vae_model +r" $\mu$", ylog=True)
+    plot_1D_phi(normal_latent_test_sigma,anomalous_latent_test_sigma , labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sigma', tag_title=self.vae_model +r" $\sigma$", ylog=True)
+
+    plot_1D_phi(normal_latent_test[0,:,:],anomalous_latent_test[0,:,:] , labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_mu_custom', tag_title=self.vae_model +r" $\mu$",  bins=np.linspace(-0.0001,0.0001, num=50))
+    plot_1D_phi(normal_latent_test_sigma,anomalous_latent_test_sigma , labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sigma', tag_title=self.vae_model +r" $\sigma$", bins=np.linspace(0.9998,1.0002,num=50))
+
+    plot_1D_phi(normal_latent_test[2,:,:],anomalous_latent_test[2,:,:] , labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sampling', tag_title=self.vae_model +" Sampling", bool_norm=True)
+
+    ######## EVALUATE SUPERVISED ######
+    # # --- Eval plots 
+    # 1. Loss vs. epoch 
+    try:plot_loss(h2, loss='loss', tag_file=self.vae_model, tag_title=self.vae_model, plot_dir=self.plot_dir)
+    except: print('loading vae_model so cannot draw regular loss plot -> no h2')
+    #plot_loss(h2, vae_model, "kl_loss")
+    #plot_loss(h2, vae_model, "reco_loss")
+    
+    #2. Get loss
+#    """
+    pred_x_test = vae.predict(x_testb)['reconstruction']
+    bkg_loss_mse = keras.losses.mse(x_testb, pred_x_test)
+
+#    plot_score(bkg_loss_mse, np.array([]), False, True, tag_file=self.vae_model+'_single_loss', tag_title=self.vae_model+' (MSE)', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+#    """
+    #start = time.time()
+    step_size=self.batchsize_vae
+    bkg_loss,  bkg_kl_loss,  bkg_reco_loss  = get_multi_loss_each(vae, x_testb, step_size=step_size)
+    bkg_loss,  bkg_kl_loss,  bkg_reco_loss = np.array(bkg_loss),  np.array( bkg_kl_loss), np.array(bkg_reco_loss)
+    #end = time.time()
+#    print("Elapsed (with get_multi_loss) = %s" % (end - start))
+#    try:cprint(f'{min(bkg_loss)}, {min(sig_loss)}, {max(bkg_loss)}, {max(sig_loss)}', 'yellow')
+#    except: cprint(f'{np.min(bkg_loss)}, {np.min(sig_loss)},{np.max(bkg_loss)}, {np.max(sig_loss)}', 'blue')
+    print('\n')
+
+    # xlog=True plots
+    sig_loss, sig_kl_loss, sig_reco_loss=np.array([]), np.array([]), np.array([]) 
+    plot_score(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], False, True, tag_file=self.vae_model+'_pos', tag_title=self.vae_model + ' (score > 0)', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_kl_loss[bkg_kl_loss>0], sig_kl_loss[sig_kl_loss>0], False, True, tag_file=self.vae_model+"_KLD_pos", tag_title=self.vae_model+" KLD (score > 0)", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_reco_loss[bkg_reco_loss>0], sig_reco_loss[sig_reco_loss>0], False, True, tag_file=self.vae_model+"_MSE_pos", tag_title=self.vae_model+" MSE (score > 0)", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+
+    # xlog=False plots
+    plot_score(bkg_loss, sig_loss, False, False, tag_file=self.vae_model, tag_title=self.vae_model, plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_kl_loss, sig_kl_loss, False, False, tag_file=self.vae_model+"_KLD", tag_title=self.vae_model+" KLD", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_reco_loss, sig_reco_loss, False, False, tag_file=self.vae_model+"_MSE", tag_title=self.vae_model+" MSE", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+
+    # xlog= False plots plot only points less than 0 
+    plot_score(bkg_loss[bkg_loss<=0], sig_loss[sig_loss<=0], False, False, tag_file=self.vae_model+'_neg', tag_title=self.vae_model+' (score <= 0)', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_kl_loss[bkg_kl_loss<=0], sig_kl_loss[sig_kl_loss<=0], False, False, tag_file=self.vae_model+"_KLD_neg", tag_title=self.vae_model+" KLD (score <= 0)", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    plot_score(bkg_reco_loss[bkg_reco_loss<=0], sig_reco_loss[sig_reco_loss<=0], False, False, tag_file=self.vae_model+"_MSE_neg", tag_title=self.vae_model+" MSE (score <= 0)", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    # # 3. Signal Sensitivity Score
+
+    """
+    score = getSignalSensitivityScore(bkg_loss, sig_loss)
+    print("95 percentile score = ",score)
+    # # 4. ROCs/AUCs using sklearn functions imported above  
+    sic_vals=do_roc(bkg_loss, sig_loss, tag_file=self.vae_model, tag_title=self.vae_model+ f'(batch size = {self.batchsize_vae}',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
+    sic_vals_kl=do_roc(bkg_kl_loss, sig_kl_loss, tag_file=self.vae_model+"_KLD", tag_title=self.vae_model+" KLD"+ f'(batch size = {self.batchsize_vae}',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
+    sic_vals_kl=do_roc(bkg_kl_loss[bkg_kl_loss>0], sig_kl_loss[sig_kl_loss>0], tag_file=self.vae_model+"_KLD_pos", tag_title=self.vae_model+" KLD (score > 0)"+ f'(batch size = {self.batchsize_vae}',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
+    sic_vals_reco=do_roc(bkg_reco_loss, sig_reco_loss, tag_file=self.vae_model+"_MSE", tag_title=self.vae_model+" MSE"+ f'(batch size = {self.batchsize_vae}',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
+    auc={sic_vals['auc'], sic_vals_kl['auc'], sic_vals_reco['auc']}
+    """
+    auc= {np.nan, np.nan, np.nan}
+    bkg_events_num,sig_events_num=np.nan, np.nan 
+    
+  
+    return self.all_dir, auc, bkg_events_num,sig_events_num
+
   def evaluate_test(self):
+    test_labels = y_evalb.astype(bool)
+    normal_test = x_evalb[test_labels]
+    anomalous_test = x_evalb[~test_labels]
     x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val= self.prepare_test(bool_flat=True)
     print('prepare_test')
       
@@ -742,16 +766,16 @@ if __name__=="__main__":
   ls_bkg=[200000]
   for  kl_loss_scalar in [1]:
     param1=Param_ANTELOPE(pfn_model=pfn_model,  h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
-#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar)
-      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim= 784, encoding_dim=196, latent_dim=49)
-    stdoutOrigin=param1.open_print()
-    all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_test()
+      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140)
+#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim= 784, encoding_dim=196, latent_dim=49)# if flattening
+#    stdoutOrigin=param1.open_print()
+    all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_test_ECG()
     #all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae(bool_pfn=False)
     setattr(param1, 'auc',auc )
     setattr(param1, 'sig_events_num',sig_events_num )
     setattr(param1, 'bkg_events_num',bkg_events_num )
-    print(param1.close_print(stdoutOrigin))
-    print(param1.save_info())
+#    print(param1.close_print(stdoutOrigin))
+#    print(param1.save_info())
 """
   ls_sig=[20000]
   ls_bkg=[200000]
