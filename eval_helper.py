@@ -271,8 +271,8 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
 def get_multi_loss(model_svj, x_test, y_test, step_size=1):
     bkg_total_loss = []
     sig_total_loss = []
-    bkg_kld_loss = []
-    sig_kld_loss = []
+    bkg_kl_loss = []
+    sig_kl_loss = []
     bkg_reco_loss = []
     sig_reco_loss = []
     nevents = min(len(y_test),len(x_test))
@@ -282,28 +282,30 @@ def get_multi_loss(model_svj, x_test, y_test, step_size=1):
         yt = y_test[i:i+step_size]
       
         # NOTE - unclear why they are printed in this order, but it seems to be the case
-        x_loss,x_reco,x_kld = model_svj.evaluate(xt, batch_size = step_size, verbose=0)
-        y_loss,y_reco,y_kld = model_svj.evaluate(yt, batch_size = step_size, verbose=0)
+        x_loss,x_reco,x_kl = model_svj.evaluate(xt, batch_size = step_size, verbose=0)
+        y_loss,y_reco,y_kl = model_svj.evaluate(yt, batch_size = step_size, verbose=0)
         """
-        print(f'{type(x_kld)=}')
+        print(f'{type(x_kl)=}')
         try: 
-          print(f'{x_kld.shape=}')
-        except: print(f'{len(x_kld)=}')
+          print(f'{x_kl.shape=}')
+        except: print(f'{len(x_kl)=}')
        
         """
         bkg_total_loss.append(x_loss)
         sig_total_loss.append(y_loss)
-        bkg_kld_loss.append(x_kld)
-        sig_kld_loss.append(y_kld)
+        bkg_kl_loss.append(x_kl)
+        sig_kl_loss.append(y_kl)
         bkg_reco_loss.append(x_reco)
         sig_reco_loss.append(y_reco)
         if i%100 == 0: print("Processed", i, "events")
 
-    return bkg_total_loss, sig_total_loss, bkg_kld_loss, sig_kld_loss, bkg_reco_loss, sig_reco_loss
+    bkg_total_loss,  bkg_kl_loss,  bkg_reco_loss = np.array(bkg_total_loss),  np.array( bkg_kl_loss), np.array(bkg_reco_loss)
+    sig_total_loss,  sig_kl_loss,  sig_reco_loss = np.array(sig_total_loss),  np.array( sig_kl_loss), np.array(sig_reco_loss)
+    return bkg_total_loss, sig_total_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss, sig_reco_loss
 
 def get_multi_loss_each(model_svj, x_test, step_size=1):
     bkg_total_loss = []
-    bkg_kld_loss = []
+    bkg_kl_loss = []
     bkg_reco_loss = []
     nevents = len(x_test)
 #    step_size = 1
@@ -311,14 +313,15 @@ def get_multi_loss_each(model_svj, x_test, step_size=1):
         xt = x_test[i:i+step_size]
       
         # NOTE - unclear why they are printed in this order, but it seems to be the case
-        x_loss,x_reco,x_kld = model_svj.evaluate(xt, batch_size = step_size, verbose=0)
+        x_loss,x_reco,x_kl = model_svj.evaluate(xt, batch_size = step_size, verbose=0)
       
         bkg_total_loss.append(x_loss)
-        bkg_kld_loss.append(x_kld)
+        bkg_kl_loss.append(x_kl)
         bkg_reco_loss.append(x_reco)
         if i%100 == 0: print("Processed", i, "events")
 
-    return bkg_total_loss, bkg_kld_loss,  bkg_reco_loss
+    bkg_total_loss,  bkg_kl_loss,  bkg_reco_loss = np.array(bkg_total_loss),  np.array( bkg_kl_loss), np.array(bkg_reco_loss)
+    return bkg_total_loss, bkg_kl_loss,  bkg_reco_loss
 
 def get_single_loss(model_svj, x_test, y_test):
     bkg_loss = []

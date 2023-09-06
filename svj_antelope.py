@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras import layers
-from sklearn.metrics import roc_auc_score, roc_curve
+from sklearn.metrics import roc_auc_score, roc_curve, accuracy_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
 import json
 from joblib import dump, load
@@ -17,6 +17,23 @@ from svj_pfn import Param
 
 import pandas as pd
 # Example usage
+params = {'legend.fontsize': 'x-large', 
+           'figure.figsize': (10, 8), 
+         'axes.labelsize': 'large', 
+          'axes.titlesize':'x-large', 
+         'xtick.labelsize':'large', 
+         'ytick.labelsize':'large', 
+ 
+         } 
+""" 
+ 
+         'axes.labelsize': 'x-large', 
+          'axes.titlesize':'xx-large', 
+         'xtick.labelsize':'x-large', 
+         'ytick.labelsize':'x-large', 
+ 
+""" 
+plt.rcParams.update(params) 
 class Param_ANTELOPE(Param):
   def __init__(self,  
       arch_dir_pfn, arch_dir_vae='',kl_loss_scalar=100,
@@ -29,6 +46,7 @@ class Param_ANTELOPE(Param):
 #      batchsize_pfn=500,
       batchsize_vae=32, # batchsize_pfn=500 -> 512 or any power of 2
       bool_pt=False,
+      step_size=1,
       sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim0.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],seed=0 ):
       #changeable: encoding_dim,latent_dim, nepochs, learning_rate, bkg_events, sig_events
 
@@ -45,6 +63,7 @@ class Param_ANTELOPE(Param):
     self.arch_dir_pfn=arch_dir_pfn
     self.arch_dir_vae=arch_dir_vae
     self.kl_loss_scalar=kl_loss_scalar
+    self.step_size=step_size
 
   def save_info(self, bool_csv=True): # always saves info.txt -> info.csv is optional
     if bool_csv: # save in csv
@@ -107,14 +126,8 @@ class Param_ANTELOPE(Param):
     return arr1, arr2 
 
   def prepare_test_ECG(self):
-    # apply scaling # is it already applied
-    # plot vectors
-# just the VAE
-# choose validation and train
-# vae fitting
-# vae save
-# reconstruct
-
+    #https://www.tensorflow.org/tutorials/generative/autoencoder
+    # classify an ECG as anomalous if the total reconstruction error is greater than one standard deviation 
     dataframe = pd.read_csv('http://storage.googleapis.com/download.tensorflow.org/data/ecg.csv', header=None)
     raw_data = dataframe.values
     dataframe.head()
@@ -122,7 +135,6 @@ class Param_ANTELOPE(Param):
     x=raw_data[:, 0:-1]
     
    # scale
-    
     min_val = tf.reduce_min(x)
     max_val = tf.reduce_max(x)
     print('before',type(x), x.shape)  
@@ -132,7 +144,7 @@ class Param_ANTELOPE(Param):
     print('after converting',type(x), x.shape)  
     # split 
     x_evalb,  x_testb, y_evalb, y_testb = train_test_split(x, y, test_size=0.2)
-
+    print(f'{np.unique(np.array(y_evalb))=}')
     print(f'{x_evalb.shape=}, {x_testb.shape=}, {y_evalb.shape=}, {y_testb.shape=}')
     # shuffle before flattening!
     x_evalb, y_evalb=self.shuffle_two(x_evalb, y_evalb)
@@ -140,7 +152,6 @@ class Param_ANTELOPE(Param):
     cprint(f'before{x_evalb.shape=}', 'yellow')
     cprint(f'before{type(x_evalb[0])}', 'yellow')
     cprint(f'before{type(y_evalb[0])}', 'yellow')
-    print(y_evalb, y_testb)
 
     x_evalb, x_testb= x_evalb.astype('float32'), x_testb.astype('float32') 
     y_evalb, y_testb= y_evalb.astype('float32'), y_testb.astype('float32') 
@@ -152,39 +163,55 @@ class Param_ANTELOPE(Param):
     test_labels = y_testb.astype(bool)
     normal_test = x_testb[test_labels]
     anomalous_test = x_testb[~test_labels]
+    y_normal_test = y_testb[test_labels]
+    y_anomalous_test = y_testb[~test_labels]
+
+    train_labels = y_evalb.astype(bool)
+    normal_train = x_evalb[train_labels]
+    anomalous_train = x_evalb[~train_labels]
+    y_normal_train = y_evalb[train_labels]
+    y_anomalous_train = y_evalb[~train_labels]
+
+    # Only train with normal train data -> remove all the
+    x_evalb = normal_train
+    y_evalb = y_normal_train 
 
     # plot test input
     # select 15 samples since there are 10000
-    nsample=15
+    nsample=9
     x_testb_plt= anomalous_test[:nsample]
     # reshape
-    fig = plt.figure(figsize=(15, 10))
+    fig = plt.figure()
  
     for i in range(nsample):
-      ax = fig.add_subplot(5, 5, i+1)
+      ax = fig.add_subplot(3, 3, i+1)
       ax.set(xlabel='Time', ylabel='Voltage')
       ax.plot(np.arange(140),x_testb_plt[i]) 
       ax.grid()
+      handles, labels = ax.get_legend_handles_labels()
 
-    fig.suptitle('Input Anomalous ECG')
+    fig.legend(handles, labels, loc='upper right')
+    fig.suptitle('Input Anomalous ECG [Normalized]')
     plt.tight_layout()
     plt.savefig(self.plot_dir + f'input_anomalous.png')
 #    plt.show()
     plt.clf()
 
     
-    nsample=15
+    nsample=9
     x_testb_plt= normal_test[:nsample]
     # reshape
-    fig = plt.figure(figsize=(15, 10))
+    fig = plt.figure()
  
     for i in range(nsample):
-      ax = fig.add_subplot(5, 5, i+1)
+      ax = fig.add_subplot(3, 3, i+1)
       ax.set(xlabel='Time', ylabel='Voltage')
       ax.plot(np.arange(140),x_testb_plt[i]) 
       ax.grid()
+      handles, labels = ax.get_legend_handles_labels()
 
-    fig.suptitle('Input Normal ECG')
+    fig.legend(handles, labels, loc='upper right')
+    fig.suptitle('Input Normal ECG [Normalized]')
     plt.tight_layout()
     plt.savefig(self.plot_dir + f'input_normal.png')
 #    plt.show()
@@ -202,7 +229,7 @@ class Param_ANTELOPE(Param):
     # Prepare the validation dataset
     x_evalb_val = x_evalb[idx, :] 
     x_evalb_train = np.delete(x_evalb, idx) # doesn't modify input array 
-    print(f'{x_evalb_val.shape=}, {x_evalb_train=}')     
+    print(f'{x_evalb_val.shape=}, {x_evalb_train.shape=}')     
     
     x_evalb_train, x_evalb_val, y_evalb_train, y_evalb_val = train_test_split(x_evalb, y_evalb, test_size=round(.2 *len(x_evalb)))
     #phi_evalb_train, phi_evalb_val, _, _ = train_testb_split(phi_evalb, phi_evalb, testb_size=round(.2 *len(phi_evalb)))
@@ -242,16 +269,16 @@ class Param_ANTELOPE(Param):
 
     # plot test input
     # select 15 samples since there are 10000
-    nsample=10
+    nsample=9
     x_testb_plt= x_testb[:nsample]
     # reshape
     if bool_flat:
       x_testb_plt=x_testb.reshape(x_testb.shape[0], 28,28, 1) # should be (x, 28, 28,1)
     cprint(f'reshape {x_testb.shape=}')
-    fig = plt.figure(figsize=(15, 10))
+    fig = plt.figure()
  
     for i in range(nsample):
-      ax = fig.add_subplot(5, 5, i+1)
+      ax = fig.add_subplot(3, 3, i+1)
       ax.axis('off')
 #      ax.text(0.5, -0.15, str(label_dict[y_test[i]]), fontsize=10, ha='center', transform=ax.transAxes)
      
@@ -381,6 +408,48 @@ class Param_ANTELOPE(Param):
 
     return vae, h2
 
+  def calculate_loss(self,model,bkg,sig, y_bkg, y_sig ): # move
+    assert len(sig)==len(y_sig)
+    assert len(bkg)==len(y_bkg)
+      
+    pred_bkg = model.predict(bkg)['reconstruction']
+    loss_dict={}
+    methods=['mse', 'mae', 'multi_mse', 'multi_kl', 'multi_reco'] 
+    # using 'non' reduction type -> default is 'sum_over_batch_size'
+    loss_dict['mse']={}
+    mse = keras.losses.MeanSquaredError(reduction=tf.keras.losses.Reduction.NONE)
+    loss_dict['mse']['bkg'] = mse(bkg, pred_bkg).numpy()
+  
+    loss_dict['mae']={}
+    mae = keras.losses.MeanAbsoluteError(reduction=tf.keras.losses.Reduction.NONE)
+    loss_dict['mae']['bkg'] = mae(bkg, pred_bkg).numpy()
+  
+    loss_dict['multi_mse'], loss_dict['multi_kl'], loss_dict['multi_reco']= {}, {}, {} 
+    loss_dict['multi_mse']['bkg'], loss_dict['multi_kl']['bkg'], loss_dict['multi_reco']['bkg']= get_multi_loss_each(model, bkg, step_size=self.step_size)
+    if len(sig)!=0:
+      y= np.concatenate((y_bkg,y_sig), axis=0) 
+      pred_sig = model.predict(sig)['reconstruction']
+      loss_dict['mse']['sig'] = mse(sig, pred_sig).numpy()
+      loss_dict['mae']['sig'] = mae(sig, pred_sig).numpy()
+      loss_dict['multi_mse']['sig'], loss_dict['multi_kl']['sig'], loss_dict['multi_reco']['sig']= get_multi_loss_each(model, sig, step_size=self.step_size)
+    else: y=y_bkg 
+    return loss_dict, methods, y
+
+  def calculate_metric(self, loss_dict, methods, y):
+    for method in methods:
+      loss_dict[method]['all']= np.concatenate((loss_dict[method]['sig'],loss_dict[method]['bkg']), axis=0)
+      if method == 'mae': 
+        loss_dict[method]['threshold'] = np.mean(loss_dict[method]['all']) + np.std(loss_dict[method]['all'])
+      else: 
+        loss_dict[method]['threshold'] = np.mean(loss_dict[method]['all']) + np.std(loss_dict[method]['all'])
+      print(f'{method}, {y.shape}, {loss_dict[method]["all"].shape}, {loss_dict[method]["sig"].shape}, {loss_dict[method]["bkg"].shape}')
+      loss_dict[method]['pred']=np.less(loss_dict[method]['all'], loss_dict[method]['threshold']) # returns True if smaller than threshold -> what we want /smaller than 1 std dev
+      loss_dict[method]['accuracy']=accuracy_score(y, loss_dict[method]['pred'])
+      loss_dict[method]['precision']=precision_score(y, loss_dict[method]['pred'])
+      loss_dict[method]['recall']=recall_score(y, loss_dict[method]['pred'])
+
+    return loss_dict # loss_dict[method]={'bkg', 'sig', 'all', 'threshold', 'accuracy', 'precision'} 
+    
 
   def evaluate_test_ECG(self):
     x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val= self.prepare_test_ECG()
@@ -396,62 +465,66 @@ class Param_ANTELOPE(Param):
     latent_train=vae.get_layer('encoder').predict(x_evalb_train)
     latent_val=vae.get_layer('encoder').predict(x_evalb_val)
 
-
     #latent_test is a list but latent_test[0] is a numpy array
     latent_test, latent_train, latent_val=np.array(latent_test), np.array(latent_train), np.array(latent_val)
     print(f'{latent_test.shape=}')
 
-    plot_pca(latent_test[0,:,:], latent_label=np.array(y_testb), nlabel=2,n_components=2, tag_file=self.vae_model+'_test', tag_title=self.vae_model+' Test', plot_dir=self.plot_dir)
-    plot_pca(latent_train[0,:,:],latent_label=np.array(y_evalb_train), nlabel=2, n_components=2, tag_file=self.vae_model+'_train', tag_title=self.vae_model+' Train', plot_dir=self.plot_dir)
+    plot_pca(latent_test[0,:,:], latent_label=np.array(y_testb), nlabel=10,n_components=2, tag_file=self.vae_model+'_test', tag_title=self.vae_model+' Test', plot_dir=self.plot_dir)
+    plot_pca(latent_train[0,:,:],latent_label=np.array(y_evalb_train), nlabel=10, n_components=2, tag_file=self.vae_model+'_train', tag_title=self.vae_model+' Train', plot_dir=self.plot_dir)
 
     # reconstruct output
-    nsample=10
+    # select 9 samples since there are 10000
+    nsample=9
     test_labels = y_testb.astype(bool)
     normal_test = x_testb[test_labels]
+    y_normal_test = y_testb[test_labels]
+    y_anomalous_test = y_testb[~test_labels]
     anomalous_test = x_testb[~test_labels]
     normal_latent_test=latent_test[:,test_labels,:]
     anomalous_latent_test=latent_test[:,~test_labels,:]
-    
+
+    train_labels = y_evalb_train.astype(bool)
+    normal_train = x_evalb_train[train_labels]
+    anomalous_train = x_evalb_train[~train_labels]
+    y_normal_train = y_evalb_train[train_labels]
+    y_anomalous_train = y_evalb_train[~train_labels]
     print(f'{normal_latent_test.shape=}')
     print(f'{anomalous_latent_test.shape=}')
 
-#    print(f'{latent_test.shape=}')
-    #latent_test_recon = vae.get_layer('decoder').predict(latent_test[2,:,:])
     normal_latent_test_recon = vae.get_layer('decoder').predict(normal_latent_test[2,:,:])
     anomalous_latent_test_recon = vae.get_layer('decoder').predict(anomalous_latent_test[2,:,:])
     print(f'{normal_latent_test_recon.shape=}')
     print(f'{anomalous_latent_test_recon.shape=}')
-    # select 15 samples since there are 10000
-    # reshape
     
-    fig = plt.figure(figsize=(15, 10))
- 
+    fig = plt.figure()
     for i in range(nsample):
-      ax = fig.add_subplot(5, 5, i+1)
+      ax = fig.add_subplot(3, 3, i+1)
       plt.plot(normal_test[i], 'b', label='Input')
       plt.plot(normal_latent_test_recon[i], 'r', label='Reconstruction')
       ax.fill_between(np.arange(140),normal_latent_test_recon[i], normal_test[i], color='lightcoral', label='Error') 
       ax.set(xlabel='Time', ylabel='Voltage')
       ax.grid()
-    #ax.imshow(latent_test_recon[i, :,:,0]*255, cmap = 'gray') 
-    fig.suptitle('Output Normal ECG')
+      handles, labels = ax.get_legend_handles_labels()
+ 
+    fig.legend(handles, labels, loc='upper right')
+    fig.suptitle('Output Normal ECG [Normalized]')
     plt.tight_layout()
     plt.savefig(self.plot_dir + f'output_normal.png')
 #    plt.show()
     plt.clf()
 
-
-    fig = plt.figure(figsize=(15, 10))
- 
+    fig = plt.figure()
     for i in range(nsample):
-      ax = fig.add_subplot(5, 5, i+1)
+      ax = fig.add_subplot(3, 3, i+1)
       plt.plot(anomalous_test[i], 'b', label='Input')
       plt.plot(anomalous_latent_test_recon[i], 'r', label='Reconstruction')
       ax.fill_between(np.arange(140),anomalous_latent_test_recon[i], anomalous_test[i], color='lightcoral', label='Error') 
       ax.set(xlabel='Time', ylabel='Voltage')
       ax.grid()
-    #ax.imshow(latent_test_recon[i, :,:,0]*255, cmap = 'gray') 
-    fig.suptitle('Output Anomalous ECG')
+      handles, labels = ax.get_legend_handles_labels()
+
+    fig.legend(handles, labels, loc='upper right')
+    fig.suptitle('Output Anomalous ECG [Normalized]')
     plt.tight_layout()
     plt.savefig(self.plot_dir + f'output_anomalous.png')
 #    plt.show()
@@ -459,12 +532,11 @@ class Param_ANTELOPE(Param):
 
     normal_latent_test_sigma, anomalous_latent_test_sigma = self.transform_sigma(normal_latent_test[1,:,:]), self.transform_sigma(anomalous_latent_test[1, :,:])
 
-#    for k in range(len(latent_test)):
     plot_1D_phi(normal_latent_test[0,:,:],anomalous_latent_test[0,:,:] , labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_mu', tag_title=self.vae_model +r" $\mu$", ylog=True)
     plot_1D_phi(normal_latent_test_sigma,anomalous_latent_test_sigma , labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sigma', tag_title=self.vae_model +r" $\sigma$", ylog=True)
 
     plot_1D_phi(normal_latent_test[0,:,:],anomalous_latent_test[0,:,:] , labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_mu_custom', tag_title=self.vae_model +r" $\mu$",  bins=np.linspace(-0.0001,0.0001, num=50))
-    plot_1D_phi(normal_latent_test_sigma,anomalous_latent_test_sigma , labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sigma', tag_title=self.vae_model +r" $\sigma$", bins=np.linspace(0.9998,1.0002,num=50))
+    plot_1D_phi(normal_latent_test_sigma,anomalous_latent_test_sigma , labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sigma_custom', tag_title=self.vae_model +r" $\sigma$", bins=np.linspace(0.9998,1.0002,num=50))
 
     plot_1D_phi(normal_latent_test[2,:,:],anomalous_latent_test[2,:,:] , labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sampling', tag_title=self.vae_model +" Sampling", bool_norm=True)
 
@@ -476,39 +548,33 @@ class Param_ANTELOPE(Param):
     #plot_loss(h2, vae_model, "kl_loss")
     #plot_loss(h2, vae_model, "reco_loss")
     
-    #2. Get loss
 #    """
-    pred_x_test = vae.predict(x_testb)['reconstruction']
-    bkg_loss_mse = keras.losses.mse(x_testb, pred_x_test)
+    loss_dict_all={}
+    print(normal_train.shape) 
 
-#    plot_score(bkg_loss_mse, np.array([]), False, True, tag_file=self.vae_model+'_single_loss', tag_title=self.vae_model+' (MSE)', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-#    """
-    #start = time.time()
-    step_size=self.batchsize_vae
-    bkg_loss,  bkg_kl_loss,  bkg_reco_loss  = get_multi_loss_each(vae, x_testb, step_size=step_size)
-    bkg_loss,  bkg_kl_loss,  bkg_reco_loss = np.array(bkg_loss),  np.array( bkg_kl_loss), np.array(bkg_reco_loss)
-    #end = time.time()
-#    print("Elapsed (with get_multi_loss) = %s" % (end - start))
-#    try:cprint(f'{min(bkg_loss)}, {min(sig_loss)}, {max(bkg_loss)}, {max(sig_loss)}', 'yellow')
-#    except: cprint(f'{np.min(bkg_loss)}, {np.min(sig_loss)},{np.max(bkg_loss)}, {np.max(sig_loss)}', 'blue')
-    print('\n')
-
-    # xlog=True plots
-    sig_loss, sig_kl_loss, sig_reco_loss=np.array([]), np.array([]), np.array([]) 
-    plot_score(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], False, True, tag_file=self.vae_model+'_pos', tag_title=self.vae_model + ' (score > 0)', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-    plot_score(bkg_kl_loss[bkg_kl_loss>0], sig_kl_loss[sig_kl_loss>0], False, True, tag_file=self.vae_model+"_KLD_pos", tag_title=self.vae_model+" KLD (score > 0)", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-    plot_score(bkg_reco_loss[bkg_reco_loss>0], sig_reco_loss[sig_reco_loss>0], False, True, tag_file=self.vae_model+"_MSE_pos", tag_title=self.vae_model+" MSE (score > 0)", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-
-    # xlog=False plots
-    plot_score(bkg_loss, sig_loss, False, False, tag_file=self.vae_model, tag_title=self.vae_model, plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-    plot_score(bkg_kl_loss, sig_kl_loss, False, False, tag_file=self.vae_model+"_KLD", tag_title=self.vae_model+" KLD", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-    plot_score(bkg_reco_loss, sig_reco_loss, False, False, tag_file=self.vae_model+"_MSE", tag_title=self.vae_model+" MSE", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-
-    # xlog= False plots plot only points less than 0 
-    plot_score(bkg_loss[bkg_loss<=0], sig_loss[sig_loss<=0], False, False, tag_file=self.vae_model+'_neg', tag_title=self.vae_model+' (score <= 0)', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-    plot_score(bkg_kl_loss[bkg_kl_loss<=0], sig_kl_loss[sig_kl_loss<=0], False, False, tag_file=self.vae_model+"_KLD_neg", tag_title=self.vae_model+" KLD (score <= 0)", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-    plot_score(bkg_reco_loss[bkg_reco_loss<=0], sig_reco_loss[sig_reco_loss<=0], False, False, tag_file=self.vae_model+"_MSE_neg", tag_title=self.vae_model+" MSE (score <= 0)", plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+    loss_dict_train, methods,y = self.calculate_loss(model = vae, bkg = normal_train, sig = anomalous_train, y_bkg = y_normal_train, y_sig = y_anomalous_train)
+    loss_dict_all['train'] = loss_dict_train # cannot calculate a metric b/c anomalous_train is empty
+    loss_dict_test, methods,y  = self.calculate_loss(model = vae, bkg = normal_test, sig = anomalous_test, y_bkg = y_normal_test, y_sig = y_anomalous_test)
+    loss_dict_all['test'] = self.calculate_metric(loss_dict_test, methods,y)
+    for key in loss_dict_all:    # train or test 
+      for method in loss_dict_all[key]: # mse, mae, etc
+        bkg_loss=loss_dict_all[key][method]['bkg'] 
+        if key=='test':sig_loss=loss_dict_all[key][method]['sig']
+        else: sig_loss=np.array([]) 
+        plot_score(bkg_loss, sig_loss, False, True, tag_file=self.vae_model+f'_{method}_{key}', tag_title=self.vae_model+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+      # xlog=True plots
+        plot_score(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], False, True, tag_file=self.vae_model+'_pos_'+f'_{method}_{key}', tag_title=self.vae_model + ' (score > 0)'+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+  
+      # xlog=False plots
+        plot_score(bkg_loss, sig_loss, False, False, tag_file=self.vae_model+f'_{method}_{key}', tag_title=self.vae_model+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+      # xlog= False plots plot only points less than 0 
+        plot_score(bkg_loss[bkg_loss<=0], sig_loss[sig_loss<=0], False, False, tag_file=self.vae_model+f'_neg_{method}_{key}', tag_title=self.vae_model+f' (score <= 0) {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+        if key=='test':
+          for metric in {'accuracy', 'precision', 'recall'}:
+            print(f'{loss_dict_all[key][method][metric]=}')
     # # 3. Signal Sensitivity Score
+    # Choose a threshold value that is one standard deviations above the mean.
+     
 
     """
     score = getSignalSensitivityScore(bkg_loss, sig_loss)
@@ -523,7 +589,6 @@ class Param_ANTELOPE(Param):
     auc= {np.nan, np.nan, np.nan}
     bkg_events_num,sig_events_num=np.nan, np.nan 
     
-  
     return self.all_dir, auc, bkg_events_num,sig_events_num
 
   def evaluate_test(self):
@@ -557,17 +622,17 @@ class Param_ANTELOPE(Param):
     latent_test_recon = vae.get_layer('decoder').predict(latent_test[2,:,:])
     print(f'{latent_test_recon.shape=}')
     # select 15 samples since there are 10000
-    nsample=10
+    nsample=9
     latent_test_recon= latent_test_recon[:nsample]
     # reshape
     latent_test_recon=latent_test_recon.reshape(latent_test_recon.shape[0], 28, -1) # should be (x, 28, 28)
     cprint(f'reshape 1 {latent_test_recon.shape=}')
     latent_test_recon=latent_test_recon.reshape(latent_test_recon.shape[0], 28,28, 1) # should be (x, 28, 28,1)
     cprint(f'reshape 2 {latent_test_recon.shape=}')
-    fig = plt.figure(figsize=(15, 10))
+    fig = plt.figure()
  
     for i in range(nsample):
-      ax = fig.add_subplot(5, 5, i+1)
+      ax = fig.add_subplot(3, 3, i+1)
       ax.axis('off')
 #      ax.text(0.5, -0.15, str(label_dict[y_test[i]]), fontsize=10, ha='center', transform=ax.transAxes)
      
@@ -608,9 +673,8 @@ class Param_ANTELOPE(Param):
 #    plot_score(bkg_loss_mse, np.array([]), False, True, tag_file=self.vae_model+'_single_loss', tag_title=self.vae_model+' (MSE)', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
 #    """
     #start = time.time()
-    step_size=self.batchsize_vae
-    bkg_loss,  bkg_kl_loss,  bkg_reco_loss  = get_multi_loss_each(vae, x_testb, step_size=step_size)
-    bkg_loss,  bkg_kl_loss,  bkg_reco_loss = np.array(bkg_loss),  np.array( bkg_kl_loss), np.array(bkg_reco_loss)
+    #step_size=self.batchsize_vae
+    bkg_loss,  bkg_kl_loss,  bkg_reco_loss  = get_multi_loss_each(vae, x_testb, step_size=self.step_size)
     #end = time.time()
 #    print("Elapsed (with get_multi_loss) = %s" % (end - start))
 #    try:cprint(f'{min(bkg_loss)}, {min(sig_loss)}, {max(bkg_loss)}, {max(sig_loss)}', 'yellow')
@@ -703,11 +767,8 @@ class Param_ANTELOPE(Param):
     plot_score(bkg_loss_mse, sig_loss_mse, False, True, tag_file=self.vae_model+'_single_loss', tag_title=self.vae_model+' (MSE)', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
 #    """
     #start = time.time()
-    step_size=self.batchsize_vae
 #    bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss, sig_reco_loss = get_multi_loss(vae, phi_testb, phi_sig)
-    bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss, sig_reco_loss = get_multi_loss(vae, phi_testb, phi_sig, step_size=step_size)
-    #bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss, sig_reco_loss = get_multi_loss(vae, phi_testb, phi_sig, step_size=100)
-    bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss, sig_reco_loss= np.array(bkg_loss), np.array(sig_loss), np.array( bkg_kl_loss), np.array(sig_kl_loss), np.array(bkg_reco_loss), np.array(sig_reco_loss)
+    bkg_loss, sig_loss, bkg_kl_loss, sig_kl_loss, bkg_reco_loss, sig_reco_loss = get_multi_loss(vae, phi_testb, phi_sig, step_size=self.step_size)
     #end = time.time()
 #    print("Elapsed (with get_multi_loss) = %s" % (end - start))
     try:cprint(f'{min(bkg_loss)}, {min(sig_loss)}, {max(bkg_loss)}, {max(sig_loss)}', 'yellow')
@@ -768,14 +829,14 @@ if __name__=="__main__":
     param1=Param_ANTELOPE(pfn_model=pfn_model,  h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
       extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim= 784, encoding_dim=196, latent_dim=49)# if flattening
-#    stdoutOrigin=param1.open_print()
+    stdoutOrigin=param1.open_print()
     all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_test_ECG()
     #all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae(bool_pfn=False)
     setattr(param1, 'auc',auc )
     setattr(param1, 'sig_events_num',sig_events_num )
     setattr(param1, 'bkg_events_num',bkg_events_num )
-#    print(param1.close_print(stdoutOrigin))
-#    print(param1.save_info())
+    print(param1.close_print(stdoutOrigin))
+    print(param1.save_info())
 """
   ls_sig=[20000]
   ls_bkg=[200000]
