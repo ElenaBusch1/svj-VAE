@@ -315,11 +315,23 @@ def get_encoder(input_dim, encoding_dim, latent_dim):
 ## ------------------------------------------------------------------------------------
 def get_variational_encoder(input_dim, encoding_dim, latent_dim):
   inputs = keras.Input(shape=(input_dim,))
+  """ original
   x = Dropout(0.1, input_shape=(input_dim,))(inputs)
   x = Dense(32)(x)
   x = Dropout(0.1)(x)
   x = LeakyReLU(alpha=0.3)(x)
   x = Dense(encoding_dim)(x) # should this be diff than 32?
+  x = Dropout(0.1)(x)
+  x = LeakyReLU(alpha=0.3)(x)
+  """ 
+  x = Dropout(0.1, input_shape=(input_dim,))(inputs)
+  x = Dense(32)(x)
+  x = Dropout(0.1)(x)
+  x = LeakyReLU(alpha=0.3)(x)
+  x = Dense(encoding_dim)(x) # should this be diff than 32?
+  x = Dropout(0.1)(x)
+  x = LeakyReLU(alpha=0.3)(x)
+  x = Dense(encoding_dim/2.)(x) # should this be diff than 32?
   x = Dropout(0.1)(x)
   x = LeakyReLU(alpha=0.3)(x)
   z_mean = Dense(latent_dim, name="z_mean")(x)
@@ -443,6 +455,7 @@ def get_decoder(input_dim, encoding_dim, latent_dim):
   """
  
   x = keras.layers.Dense(encoding_dim, activation="relu")(latent_inputs)
+  x = keras.layers.Dense(encoding_dim*2., activation="relu")(x)
   decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid")(x)
 
   decoder = keras.Model(latent_inputs, decoder_outputs, name="decoder")

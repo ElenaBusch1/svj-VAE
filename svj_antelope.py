@@ -47,6 +47,7 @@ class Param_ANTELOPE(Param):
       batchsize_vae=32, # batchsize_pfn=500 -> 512 or any power of 2
       bool_pt=False,
       step_size=1,
+      metric_dict={},
       sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim0.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],seed=0 ):
       #changeable: encoding_dim,latent_dim, nepochs, learning_rate, bkg_events, sig_events
 
@@ -64,6 +65,7 @@ class Param_ANTELOPE(Param):
     self.arch_dir_vae=arch_dir_vae
     self.kl_loss_scalar=kl_loss_scalar
     self.step_size=step_size
+    self.metric_dict=metric_dict
 
   def save_info(self, bool_csv=True): # always saves info.txt -> info.csv is optional
     if bool_csv: # save in csv
@@ -436,6 +438,7 @@ class Param_ANTELOPE(Param):
     return loss_dict, methods, y
 
   def calculate_metric(self, loss_dict, methods, y):
+    y = y.astype(bool)
     for method in methods:
       loss_dict[method]['all']= np.concatenate((loss_dict[method]['sig'],loss_dict[method]['bkg']), axis=0)
       if method == 'mae': 
@@ -444,10 +447,14 @@ class Param_ANTELOPE(Param):
         loss_dict[method]['threshold'] = np.mean(loss_dict[method]['all']) + np.std(loss_dict[method]['all'])
       print(f'{method}, {y.shape}, {loss_dict[method]["all"].shape}, {loss_dict[method]["sig"].shape}, {loss_dict[method]["bkg"].shape}')
       loss_dict[method]['pred']=np.less(loss_dict[method]['all'], loss_dict[method]['threshold']) # returns True if smaller than threshold -> what we want /smaller than 1 std dev
+      print(f'{y[:5]=}')
+      print(f'{loss_dict[method]["all"][:5]=}')
+      print(f'{loss_dict[method]["threshold"]=}')
+      print(f'{loss_dict[method]["pred"][:5]=}')
       loss_dict[method]['accuracy']=accuracy_score(y, loss_dict[method]['pred'])
       loss_dict[method]['precision']=precision_score(y, loss_dict[method]['pred'])
       loss_dict[method]['recall']=recall_score(y, loss_dict[method]['pred'])
-
+    
     return loss_dict # loss_dict[method]={'bkg', 'sig', 'all', 'threshold', 'accuracy', 'precision'} 
     
 
@@ -551,7 +558,7 @@ class Param_ANTELOPE(Param):
 #    """
     loss_dict_all={}
     print(normal_train.shape) 
-
+    auc={}
     loss_dict_train, methods,y = self.calculate_loss(model = vae, bkg = normal_train, sig = anomalous_train, y_bkg = y_normal_train, y_sig = y_anomalous_train)
     loss_dict_all['train'] = loss_dict_train # cannot calculate a metric b/c anomalous_train is empty
     loss_dict_test, methods,y  = self.calculate_loss(model = vae, bkg = normal_test, sig = anomalous_test, y_bkg = y_normal_test, y_sig = y_anomalous_test)
@@ -570,23 +577,20 @@ class Param_ANTELOPE(Param):
       # xlog= False plots plot only points less than 0 
         plot_score(bkg_loss[bkg_loss<=0], sig_loss[sig_loss<=0], False, False, tag_file=self.vae_model+f'_neg_{method}_{key}', tag_title=self.vae_model+f' (score <= 0) {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
         if key=='test':
+          self.metric_dict[method]={}
           for metric in {'accuracy', 'precision', 'recall'}:
-            print(f'{loss_dict_all[key][method][metric]=}')
+            self.metric_dict[method][metric]=loss_dict_all[key][method][metric]
+            print(f'{method}{metric},{loss_dict_all[key][method][metric]=}')
     # # 3. Signal Sensitivity Score
     # Choose a threshold value that is one standard deviations above the mean.
-     
-
-    """
-    score = getSignalSensitivityScore(bkg_loss, sig_loss)
-    print("95 percentile score = ",score)
-    # # 4. ROCs/AUCs using sklearn functions imported above  
-    sic_vals=do_roc(bkg_loss, sig_loss, tag_file=self.vae_model, tag_title=self.vae_model+ f'(batch size = {self.batchsize_vae}',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
-    sic_vals_kl=do_roc(bkg_kl_loss, sig_kl_loss, tag_file=self.vae_model+"_KLD", tag_title=self.vae_model+" KLD"+ f'(batch size = {self.batchsize_vae}',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
-    sic_vals_kl=do_roc(bkg_kl_loss[bkg_kl_loss>0], sig_kl_loss[sig_kl_loss>0], tag_file=self.vae_model+"_KLD_pos", tag_title=self.vae_model+" KLD (score > 0)"+ f'(batch size = {self.batchsize_vae}',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
-    sic_vals_reco=do_roc(bkg_reco_loss, sig_reco_loss, tag_file=self.vae_model+"_MSE", tag_title=self.vae_model+" MSE"+ f'(batch size = {self.batchsize_vae}',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
-    auc={sic_vals['auc'], sic_vals_kl['auc'], sic_vals_reco['auc']}
-    """
-    auc= {np.nan, np.nan, np.nan}
+        if key=='test':
+          score = getSignalSensitivityScore(bkg_loss, sig_loss)
+          print("95 percentile score = ",score)
+          # # 4. ROCs/AUCs using sklearn functions imported above  
+          sic_vals=do_roc(bkg_loss, sig_loss, tag_file=self.vae_model+f'_{method}', tag_title=self.vae_model+ f'(batch size={self.batchsize_vae} {method}',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
+          sic_vals=do_roc(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], tag_file=self.vae_model+f'_{method}_pos', tag_title=self.vae_model+ f'(batch size={self.batchsize_vae} {method} (score>0)',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
+          auc[method]=sic_vals
+    #auc= {np.nan, np.nan, np.nan}
     bkg_events_num,sig_events_num=np.nan, np.nan 
     
     return self.all_dir, auc, bkg_events_num,sig_events_num
@@ -827,7 +831,7 @@ if __name__=="__main__":
   ls_bkg=[200000]
   for  kl_loss_scalar in [1]:
     param1=Param_ANTELOPE(pfn_model=pfn_model,  h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
-      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140)
+      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim= 784, encoding_dim=196, latent_dim=49)# if flattening
     stdoutOrigin=param1.open_print()
     all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_test_ECG()
