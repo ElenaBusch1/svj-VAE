@@ -13,8 +13,14 @@ from models_archive import *
 from eval_helper import *
 import h5py
 
-tag = "PFNv6_phi"
+tag = "PFNv6_shift"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
+
+def scale_phi(phis,max_phi):
+  phi_nonzero = phis!=0.0 #only shift non-zero phis
+  phi_shift = phis[phi_nonzero]/max_phi*1.1+0.1 #restrict range for non-zero phi to [0.1,1]
+  phis[phi_nonzero]=phi_shift #insert shifted values
+  return phis
 
 def plot_1D_phi(qcd,met,sig):
   for j in range(16):
@@ -53,9 +59,9 @@ graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
 graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
 graph.compile()
 
-qcd = getTwoJetSystem(50000,"../v9.1/skim0.user.ebusch.QCDskim.root", [], True)
-met = getTwoJetSystem(50000,"../v9.1/skim0.user.ebusch.METbkg.root", [], False)
-sig = getTwoJetSystem(50000,"../v8.1/skim3_0.user.ebusch.SIGall.root", [], False)
+qcd = getTwoJetSystem(500,"../v9.1/skim0.user.ebusch.QCDskim.root", [], True)
+met = getTwoJetSystem(500,"../v9.1/skim0.user.ebusch.METbkg.root", [], False)
+sig = getTwoJetSystem(500,"../v8.1/skim3_0.user.ebusch.SIGall.root", [], False)
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 qcd2,_ = apply_StandardScaling(qcd,scaler,False) 
 met2,_ = apply_StandardScaling(met,scaler,False) 
@@ -63,5 +69,12 @@ sig2,_ = apply_StandardScaling(sig,scaler,False)
 phi_qcd = graph.predict(qcd2)
 phi_met = graph.predict(met2)
 phi_sig = graph.predict(sig2)
+
+max_qcd = np.amax(phi_qcd)
+max_met = np.amax(phi_met)
+max_sig = np.amax(phi_sig)
+phi_qcd = scale_phi(phi_qcd,max_sig)
+phi_met = scale_phi(phi_met,max_sig)
+phi_sig = scale_phi(phi_sig,max_sig)
 
 plot_1D_phi(phi_qcd,phi_met,phi_sig)
