@@ -328,10 +328,10 @@ def get_variational_encoder(input_dim, encoding_dim, latent_dim):
   x = Dense(32)(x)
   x = Dropout(0.1)(x)
   x = LeakyReLU(alpha=0.3)(x)
-  x = Dense(encoding_dim)(x) # should this be diff than 32?
+  x = Dense(encoding_dim)(x) 
   x = Dropout(0.1)(x)
   x = LeakyReLU(alpha=0.3)(x)
-  x = Dense(encoding_dim/2.)(x) # should this be diff than 32?
+  x = Dense(encoding_dim/2.)(x) 
   x = Dropout(0.1)(x)
   x = LeakyReLU(alpha=0.3)(x)
   z_mean = Dense(latent_dim, name="z_mean")(x)

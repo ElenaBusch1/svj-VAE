@@ -235,7 +235,8 @@ class Param_ANTELOPE(Param):
     
     x_evalb_train, x_evalb_val, y_evalb_train, y_evalb_val = train_test_split(x_evalb, y_evalb, test_size=round(.2 *len(x_evalb)))
     #phi_evalb_train, phi_evalb_val, _, _ = train_testb_split(phi_evalb, phi_evalb, testb_size=round(.2 *len(phi_evalb)))
-    return  x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val
+    #return  x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val
+    return  x_testb, x_evalb, y_testb, y_evalb
 
 
   def prepare_test(self, bool_flat=False):
@@ -390,12 +391,13 @@ class Param_ANTELOPE(Param):
     return   phi_bkg,phi_testb, phi_evalb_train, phi_evalb_val, phi_sig
  
 
-  def train_vae(self, phi_evalb_train, phi_evalb_val, y_phi_evalb_train=[], y_phi_evalb_val=[]):
+  def train_vae(self, phi_evalb, y_phi_evalb=[]):
+  #def train_vae(self, phi_evalb_train, phi_evalb_val, y_phi_evalb_train=[], y_phi_evalb_val=[]):
 
     vae = get_vae(self.phi_dim,self.encoding_dim,self.latent_dim, self.learning_rate, self.kl_loss_scalar, bool_test=False)
       
-    h2 = vae.fit(phi_evalb_train, 
-    #h2 = vae.fit(phi_evalb, 
+#    h2 = vae.fit(phi_evalb_train, 
+    h2 = vae.fit(phi_evalb, 
         epochs=self.nepochs,
         batch_size=self.batchsize_vae,
       #  validation_data=(phi_evalb_val, phi_evalb_val),
@@ -459,21 +461,27 @@ class Param_ANTELOPE(Param):
     
 
   def evaluate_test_ECG(self):
-    x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val= self.prepare_test_ECG()
+    x_testb, x_evalb, y_testb, y_evalb= self.prepare_test_ECG()
+    #x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val= self.prepare_test_ECG()
     print('prepare_test_ECG')
       
     try: vae = self.load_vae()
     except: 
       print('loading vae not successful so will start the training process')
-      vae,h2 = self.train_vae( x_evalb_train, x_evalb_val, y_evalb_train, y_evalb_val)
+      vae,h2 = self.train_vae( x_evalb, y_evalb)
+      #vae,h2 = self.train_vae( x_evalb_train, x_evalb_val, y_evalb_train, y_evalb_val)
       print('training successful')
+
+    # if want to use validation_split instead of manual splitting
+    x_evalb_train, y_evalb_train = x_evalb, y_evalb
 
     latent_test=vae.get_layer('encoder').predict(x_testb)
     latent_train=vae.get_layer('encoder').predict(x_evalb_train)
-    latent_val=vae.get_layer('encoder').predict(x_evalb_val)
+#    latent_val=vae.get_layer('encoder').predict(x_evalb_val)
 
     #latent_test is a list but latent_test[0] is a numpy array
-    latent_test, latent_train, latent_val=np.array(latent_test), np.array(latent_train), np.array(latent_val)
+    latent_test, latent_train =np.array(latent_test), np.array(latent_train)
+    #latent_test, latent_train, latent_val=np.array(latent_test), np.array(latent_train), np.array(latent_val)
     print(f'{latent_test.shape=}')
 
     plot_pca(latent_test[0,:,:], latent_label=np.array(y_testb), nlabel=10,n_components=2, tag_file=self.vae_model+'_test', tag_title=self.vae_model+' Test', plot_dir=self.plot_dir)
