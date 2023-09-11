@@ -318,19 +318,19 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
       try: bins=np.histogram(bkg_score,bins=80)[1]
       except: bins=np.histogram(sig_score,bins=80)[1]
   try: 
-    plt.hist(bkg_score, bins=bins, alpha=0.5, label=f"normal ({len(bkg_score)})", density=True, color='blue')
-    #plt.hist(bkg_score, bins=bins, alpha=0.5, label=f"bkg ({len(bkg_score)})", density=True, color='blue')
+    #plt.hist(bkg_score, bins=bins, alpha=0.5, label=f"normal ({len(bkg_score)})", density=True, color='blue')
+    plt.hist(bkg_score, bins=bins, alpha=0.5, label=f"bkg ({len(bkg_score)})", density=True, color='blue')
   except: 
-    plt.hist([],[], label="normal ({len(bkg_score)})")
-    #plt.hist([],[], label="bkg ({len(bkg_score)})")
+    #plt.hist([],[], label="normal ({len(bkg_score)})")
+    plt.hist([],[], label="bkg ({len(bkg_score)})")
     print('bkg_score not plotted: check if it is an empty array')
   try: 
-    plt.hist(sig_score, bins=bins, alpha=0.5, label=f"anomalous ({len(sig_score)})", density=True, color='red')
-    #plt.hist(sig_score, bins=bins, alpha=0.5, label=f"sig ({len(sig_score)})", density=True, color='red')
+    #plt.hist(sig_score, bins=bins, alpha=0.5, label=f"anomalous ({len(sig_score)})", density=True, color='red')
+    plt.hist(sig_score, bins=bins, alpha=0.5, label=f"sig ({len(sig_score)})", density=True, color='red')
 
   except: 
-    plt.hist([],[], label="anomalous ({len(sig_score)})")
-    #plt.hist([],[], label="sig ({len(sig_score)})")
+    #plt.hist([],[], label="anomalous ({len(sig_score)})")
+    plt.hist([],[], label="sig ({len(sig_score)})")
     print('sig_score not plotted: check if it is an empty array')
   if xlog : plt.xscale('log')
   plt.yscale('log')
