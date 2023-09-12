@@ -48,6 +48,8 @@ class Param_ANTELOPE(Param):
       bool_pt=False,
       step_size=1,
       metric_dict={},
+      bool_shift=True,
+      bool_no_scaling=False,
       sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim0.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],seed=0 ):
       #changeable: encoding_dim,latent_dim, nepochs, learning_rate, bkg_events, sig_events
 
@@ -66,6 +68,8 @@ class Param_ANTELOPE(Param):
     self.kl_loss_scalar=kl_loss_scalar
     self.step_size=step_size
     self.metric_dict=metric_dict
+    self.bool_shift=True
+    self.bool_no_scaling=False # this overrides bool_shift
 
   def save_info(self, bool_csv=True): # always saves info.txt -> info.csv is optional
     if bool_csv: # save in csv
@@ -131,14 +135,15 @@ class Param_ANTELOPE(Param):
     #title2 = 'normal' or 'anomalous'
     # select 9 samples since there are 10000
     nsample=9
-    x= anomalous_test[:nsample]
+    x= x[:nsample]
+    if x_latent_recon.size !=0:    x_latent_recon= x_latent_recon[:nsample]
     fig = plt.figure()
 
     for i in range(nsample):
       ax = fig.add_subplot(3, 3, i+1)
       ax.set(xlabel='Time', ylabel='Voltage')
       if x_latent_recon.size ==0: 
-      ax.plot(np.arange(140),x[i], label=f'{title1.capitalize()}')
+        ax.plot(np.arange(140),x[i], label=f'{title1.capitalize()}')
       else:
         plt.plot(x[i], 'b', label=f'{title1.capitalize()}')
         plt.plot(x_latent_recon[i], 'r', label='Reconstruction')
@@ -228,6 +233,7 @@ class Param_ANTELOPE(Param):
     return  x_testb, x_evalb, y_testb, y_evalb
 
   def prepare_pfn(self, graph,scaler):
+    # phi_bkg -> (phi_evalb and phi_testb) ; phi_sig 
     # scale values
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e","jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
     track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e","jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
@@ -257,15 +263,21 @@ class Param_ANTELOPE(Param):
     phi_evalb, phi_testb, mT_evalb, mT_testb= phi_bkg[phi_evalb_idx, :], phi_bkg[phi_testb_idx, :], mT_bkg[phi_evalb_idx,:], mT_bkg[phi_testb_idx, :]
     print('idx',phi_evalb_idx, phi_testb_idx)
     print('after',phi_evalb.shape, phi_testb.shape,  mT_evalb.shape, mT_testb.shape)
-    
+
     plot_single_variable([mT_evalb[:,2], mT_testb[:,2]],h_names= ['training and validation', 'test'],weights_ls=[mT_evalb[:,1], mT_testb[:,1]], tag_title= 'leading jet pT (QCD)', plot_dir=self.plot_dir,logy=True, tag_file='jet1_pt')
     plot_single_variable([mT_evalb[:,3], mT_testb[:,3]],h_names= ['training and validation', 'test'],weights_ls=[mT_evalb[:,1], mT_testb[:,1]], tag_title= 'subleading jet pT (QCD)', plot_dir=self.plot_dir, logy=True, tag_file='jet2_pt')
-    """
-    plot_phi(phi_evalb,tag_file="PFN_phi_train_raw",tag_title="Train",plot_dir=self.plot_dir) # change
-    plot_phi(phi_testb,tag_file="PFN_phi_test_raw",tag_title="Test", plot_dir=self.plot_dir)
+
+    #plot_phi(phi_evalb,tag_file="PFN_phi_train_raw",tag_title="Train",plot_dir=self.plot_dir) # change
+    #plot_phi(phi_testb,tag_file="PFN_phi_test_raw",tag_title="Test", plot_dir=self.plot_dir)
     plot_phi(phi_sig,tag_file="PFN_phi_sig_raw", tag_title="Signal", plot_dir=self.plot_dir)
-    """
+    plot_phi(phi_bkg,tag_file="PFN_phi_bkg_raw",tag_title="QCD",plot_dir=self.plot_dir) # change
     
+    if self.bool_no_scaling:
+      plot_phi(phi_sig,tag_file="PFN_phi_sig_input", tag_title="Signal Input", plot_dir=self.plot_dir)
+      plot_phi(phi_bkg,tag_file="PFN_phi_bkg_input", tag_title="QCD Input", plot_dir=self.plot_dir)
+      print('---no scaling or shifting for phis---')
+      return  phi_bkg, phi_testb, phi_evalb, phi_sig
+
     eval_max = np.amax(phi_evalb)
     eval_min = np.amin(phi_evalb)
     sig_max = np.amax(phi_sig)
@@ -274,18 +286,33 @@ class Param_ANTELOPE(Param):
     if (sig_max > eval_max): eval_max = sig_max
     print("Final Max: ", eval_max)
 
-    phi_evalb = (phi_evalb - eval_min)/(eval_max-eval_min)
-    phi_testb = (phi_testb - eval_min)/(eval_max-eval_min)
-    phi_sig = (phi_sig - eval_min)/(eval_max-eval_min)
-    
+    phi_evalb_pre = (phi_evalb - eval_min)/(eval_max-eval_min)
+    phi_testb_pre = (phi_testb - eval_min)/(eval_max-eval_min)
+    phi_sig_pre = (phi_sig - eval_min)/(eval_max-eval_min)
+    phi_bkg_pre = (phi_bkg - eval_min)/(eval_max-eval_min)
+
+    phi_evalb = scale_phi(phi_evalb, max_phi=eval_max)    
+    phi_testb = scale_phi(phi_testb, max_phi=eval_max)    
+    phi_sig = scale_phi(phi_sig, max_phi=eval_max)    
+    phi_bkg = scale_phi(phi_bkg, max_phi=eval_max)   
+
+ 
+    plot_1D_phi(phi_bkg_pre, phi_sig_pre,labels=['QCD', 'sig'], plot_dir=self.plot_dir, tag_file=self.pfn_model+'_scaling', tag_title=self.pfn_model + ' (after scaling)')
+    plot_1D_phi(phi_bkg, phi_sig,labels=['QCD', 'sig'], plot_dir=self.plot_dir, tag_file=self.pfn_model+'_shifting', tag_title=self.pfn_model + f'(after shifting)')
     #phi_evalb, phi_scaler = apply_StandardScaling(phi_evalb)
     #phi_testb, _ = apply_StandardScaling(phi_testb,phi_scaler,False)
     #phi_sig, _ = apply_StandardScaling(phi_sig,phi_scaler,False)
+    # set representation plot
+    #plot_phi(phi_evalb,tag_file="PFN_phi_train_shifted",tag_title="Train Shifted", plot_dir=self.plot_dir) # change
+    #plot_phi(phi_testb,tag_file="PFN_phi_test_shifted",tag_title="Test Shifted", plot_dir=self.plot_dir)
+    plot_phi(phi_sig,tag_file="PFN_phi_sig_shifted", tag_title="Signal Shifted", plot_dir=self.plot_dir)
+    plot_phi(phi_bkg,tag_file="PFN_phi_bkg_shifted",tag_title="QCD Shifted",plot_dir=self.plot_dir) # change
+
     
-    plot_phi(phi_evalb,tag_file="PFN_phi_train_scaled",tag_title="Train Scaled", plot_dir=self.plot_dir) # change
-    plot_phi(phi_testb,tag_file="PFN_phi_test_scaled",tag_title="Test Scaled", plot_dir=self.plot_dir)
-    plot_phi(phi_sig,tag_file="PFN_phi_sig_scaled", tag_title="Signal Scaled", plot_dir=self.plot_dir)
-    
+#    plot_phi(phi_evalb_pre,tag_file="PFN_phi_train_scaled",tag_title="Train Scaled ", plot_dir=self.plot_dir) # change
+#    plot_phi(phi_testb_pre,tag_file="PFN_phi_test_scaled",tag_title="Test Scaled", plot_dir=self.plot_dir)
+    plot_phi(phi_sig_pre,tag_file="PFN_phi_sig_scaled", tag_title="Signal Scaled", plot_dir=self.plot_dir)
+    plot_phi(phi_bkg_pre,tag_file="PFN_phi_bkg_scaled", tag_title="QCD Scaled", plot_dir=self.plot_dir)
     # validation data set manually
     # Prepare the training dataset
     """
@@ -304,6 +331,10 @@ class Param_ANTELOPE(Param):
 
     return   phi_bkg,phi_testb, phi_evalb_train, phi_evalb_val, phi_sig
     """
+
+    if not(self.bool_shift): phi_bkg, phi_testb, phi_evalb, phi_sig = phi_bkg_pre, phi_testb_pre, phi_evalb_pre, phi_sig_pre
+    plot_phi(phi_sig,tag_file="PFN_phi_sig_input", tag_title="Signal Input", plot_dir=self.plot_dir)
+    plot_phi(phi_bkg,tag_file="PFN_phi_bkg_input", tag_title="QCD Input", plot_dir=self.plot_dir)
     return  phi_bkg, phi_testb, phi_evalb, phi_sig
  
 
@@ -370,13 +401,17 @@ class Param_ANTELOPE(Param):
       print(f'{loss_dict[method]["all"][:5]=}')
       print(f'{loss_dict[method]["threshold"]=}')
       print(f'{loss_dict[method]["pred"][:5]=}')
-      if len(y)==0: 
-        accuracy_score, precision_score, recall_score = np.nan, np.nan, np.nan
-      else: accuracy_score, precision_score, recall_score =accuracy_score(y, loss_dict[method]['pred']), precision_score(y, loss_dict[method]['pred']), recall_score(y, loss_dict[method]['pred'])
-
-      loss_dict[method]['accuracy']=accuracy_score
-      loss_dict[method]['precision']=precision_score
-      loss_dict[method]['recall']=recall_score
+      if len(y)==0:
+     
+        accuracy_score_ex, precision_score_ex, recall_score_ex = np.nan, np.nan, np.nan
+        print(f'debug 1 {method}')
+      else: 
+        accuracy_score_ex,precision_score_ex, recall_score_ex =accuracy_score(y, loss_dict[method]['pred']), precision_score(y, loss_dict[method]['pred']), recall_score(y, loss_dict[method]['pred'])
+      print(f'debug2 {accuracy_score} {method}')
+      loss_dict[method]['accuracy']=accuracy_score_ex
+      loss_dict[method]['precision']=precision_score_ex
+      loss_dict[method]['recall']=recall_score_ex
+      print(f'debug3 {accuracy_score} {method}')
     
     return loss_dict # loss_dict[method]={'bkg', 'sig', 'all', 'threshold', 'accuracy', 'precision'} 
 
@@ -387,14 +422,14 @@ class Param_ANTELOPE(Param):
         bkg_loss=loss_dict_all[key][method]['bkg'] 
         if key=='test':sig_loss=loss_dict_all[key][method]['sig']
         else: sig_loss=np.array([]) 
-        plot_score(bkg_loss, sig_loss, False, True, tag_file=self.vae_model+f'_{method}_{key}', tag_title=self.vae_model+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+#        plot_score(bkg_loss, sig_loss, False, xlog=True, tag_file=self.vae_model+f'_{method}_{key}', tag_title=self.vae_model+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
       # xlog=True plots
-        plot_score(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], False, True, tag_file=self.vae_model+'_pos_'+f'_{method}_{key}', tag_title=self.vae_model + ' (score > 0)'+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+        plot_score(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], False, xlog=True, tag_file=self.vae_model+'_pos'+f'_{method}_{key}', tag_title=self.vae_model + ' (score > 0)'+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
   
       # xlog=False plots
-        plot_score(bkg_loss, sig_loss, False, False, tag_file=self.vae_model+f'_{method}_{key}', tag_title=self.vae_model+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+        plot_score(bkg_loss, sig_loss, False, xlog=False, tag_file=self.vae_model+f'_{method}_{key}', tag_title=self.vae_model+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
       # xlog= False plots plot only points less than 0 
-        plot_score(bkg_loss[bkg_loss<=0], sig_loss[sig_loss<=0], False, False, tag_file=self.vae_model+f'_neg_{method}_{key}', tag_title=self.vae_model+f' (score <= 0) {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
+        plot_score(bkg_loss[bkg_loss<=0], sig_loss[sig_loss<=0], False, xlog=False, tag_file=self.vae_model+f'_neg_{method}_{key}', tag_title=self.vae_model+f' (score <= 0) {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
         if key=='test':
           self.metric_dict[method]={}
           for metric in {'accuracy', 'precision', 'recall'}:
@@ -405,9 +440,9 @@ class Param_ANTELOPE(Param):
         if key=='test':
           score = getSignalSensitivityScore(bkg_loss, sig_loss)
           print("95 percentile score = ",score)
-          # # 4. ROCs/AUCs using sklearn functions imported above  
-          sic_vals=do_roc(bkg_loss, sig_loss, tag_file=self.vae_model+f'_{method}', tag_title=self.vae_model+ f'(batch size={self.batchsize_vae} {method}',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
-          sic_vals=do_roc(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], tag_file=self.vae_model+f'_{method}_pos', tag_title=self.vae_model+ f'(batch size={self.batchsize_vae} {method} (score>0)',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
+          # # 4. ROCs/AUCs using sklearn functions imported above 
+          sic_vals=do_roc(bkg_loss, sig_loss, tag_file=self.vae_model+f'_{method}', tag_title=self.vae_model+ f' (step size={self.step_size} {method})',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
+          sic_vals=do_roc(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], tag_file=self.vae_model+f'_{method}_pos', tag_title=self.vae_model+ f' (step size={self.step_size} {method}, score>0)',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
           auc[method]=sic_vals
     return auc
 
@@ -488,7 +523,7 @@ class Param_ANTELOPE(Param):
     loss_dict_all['train'] = loss_dict_train # cannot calculate a metric b/c sig_train is empty
     loss_dict_test, methods,y  = self.calculate_loss(model = vae, bkg = bkg_test, sig = sig_test, y_bkg = y_bkg_test, y_sig = y_sig_test)
     loss_dict_all['test'] = self.calculate_metric(loss_dict_test, methods,y)
-    auc = plot_loss_dict(self, loss_dict_all)
+    auc = self.plot_loss_dict(loss_dict_all)
     #auc= {np.nan, np.nan, np.nan}
     bkg_events_num,sig_events_num=np.nan, np.nan 
     
@@ -507,7 +542,6 @@ class Param_ANTELOPE(Param):
 
     # if want to use validation_split instead of manual splitting
 
-   
     x_evalb_train = x_evalb
 
     bkg_latent_test=vae.get_layer('encoder').predict(x_testb)
@@ -520,7 +554,7 @@ class Param_ANTELOPE(Param):
     #latent_test is a list but latent_test[0] is a numpy array
 
 #    plot_pca(latent_test[0,:,:], latent_label=np.array(y_testb), nlabel=10,n_components=2, tag_file=self.vae_model+'_test', tag_title=self.vae_model+' Test', plot_dir=self.plot_dir)
-#    plot_pca(latent_train[0,:,:],latent_label=np.array(y_evalb_train), nlabel=10, n_components=2, tag_file=self.vae_model+'_train', tag_title=self.vae_model+' Train', plot_dir=self.plot_dir)
+#    plot_pca(bkg_latent_train[0,:,:],latent_label=np.array(y_evalb_train), nlabel=10, n_components=2, tag_file=self.vae_model+'_train', tag_title=self.vae_model+' Train', plot_dir=self.plot_dir)
 
     # specific to PFN input
     bkg_latent_test, bkg_latent_train, sig_latent=np.array(bkg_latent_test), np.array(bkg_latent_train), np.array(sig_latent)
@@ -552,51 +586,12 @@ class Param_ANTELOPE(Param):
     #plot_loss(h2, vae_model, "reco_loss")
     
 #    """
-    """
     loss_dict_all={}
-    auc={}
-    loss_dict_train, methods,y = self.calculate_loss(model = vae, bkg = x_evalb_train, sig = np.array([]), y_bkg = y_bkg_train, y_sig = y_sig_train)
-    #loss_dict_train, methods,y = self.calculate_loss(model = vae, bkg = bkg_train, sig = sig_train, y_bkg = y_bkg_train, y_sig = y_sig_train)
+    loss_dict_train, methods,y = self.calculate_loss(model = vae, bkg = x_evalb_train, sig =np.array([]) , y_bkg = y_bkg_train, y_sig = y_sig_train)
     loss_dict_all['train'] = loss_dict_train # cannot calculate a metric b/c sig_train is empty
     loss_dict_test, methods,y  = self.calculate_loss(model = vae, bkg = x_testb, sig = x_sig, y_bkg = y_bkg_test, y_sig = y_sig_test)
     loss_dict_all['test'] = self.calculate_metric(loss_dict_test, methods,y)
-    for key in loss_dict_all:    # train or test 
-      for method in loss_dict_all[key]: # mse, mae, etc
-        bkg_loss=loss_dict_all[key][method]['bkg'] 
-        if key=='test':sig_loss=loss_dict_all[key][method]['sig']
-        else: sig_loss=np.array([]) 
-        plot_score(bkg_loss, sig_loss, False, True, tag_file=self.vae_model+f'_{method}_{key}', tag_title=self.vae_model+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-      # xlog=True plots
-        plot_score(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], False, True, tag_file=self.vae_model+'_pos_'+f'_{method}_{key}', tag_title=self.vae_model + ' (score > 0)'+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-  
-      # xlog=False plots
-        plot_score(bkg_loss, sig_loss, False, False, tag_file=self.vae_model+f'_{method}_{key}', tag_title=self.vae_model+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-      # xlog= False plots plot only points less than 0 
-        plot_score(bkg_loss[bkg_loss<=0], sig_loss[sig_loss<=0], False, False, tag_file=self.vae_model+f'_neg_{method}_{key}', tag_title=self.vae_model+f' (score <= 0) {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-        if key=='test':
-          self.metric_dict[method]={}
-          for metric in {'accuracy', 'precision', 'recall'}:
-            self.metric_dict[method][metric]=loss_dict_all[key][method][metric]
-            print(f'{method}{metric},{loss_dict_all[key][method][metric]=}')
-    # # 3. Signal Sensitivity Score
-    # Choose a threshold value that is one standard deviations above the mean.
-        if key=='test':
-          score = getSignalSensitivityScore(bkg_loss, sig_loss)
-          print("95 percentile score = ",score)
-          # # 4. ROCs/AUCs using sklearn functions imported above  
-          sic_vals=do_roc(bkg_loss, sig_loss, tag_file=self.vae_model+f'_{method}', tag_title=self.vae_model+ f'(batch size={self.batchsize_vae} {method}',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
-          sic_vals=do_roc(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], tag_file=self.vae_model+f'_{method}_pos', tag_title=self.vae_model+ f'(batch size={self.batchsize_vae} {method} (score>0)',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
-          auc[method]=sic_vals
-    #auc= {np.nan, np.nan, np.nan}
-
-    """
-    loss_dict_all={}
-    print(bkg_train.shape) 
-    loss_dict_train, methods,y = self.calculate_loss(model = vae, bkg = bkg_train, sig = sig_train, y_bkg = y_bkg_train, y_sig = y_sig_train)
-    loss_dict_all['train'] = loss_dict_train # cannot calculate a metric b/c sig_train is empty
-    loss_dict_test, methods,y  = self.calculate_loss(model = vae, bkg = bkg_test, sig = sig_test, y_bkg = y_bkg_test, y_sig = y_sig_test)
-    loss_dict_all['test'] = self.calculate_metric(loss_dict_test, methods,y)
-    auc = plot_loss_dict(self, loss_dict_all)
+    auc = self.plot_loss_dict(loss_dict_all)
     bkg_events_num,sig_events_num=np.nan, np.nan 
     
     return self.all_dir, auc, bkg_events_num,sig_events_num
@@ -616,10 +611,12 @@ if __name__=="__main__":
   ls_bkg=[200000]
   for  kl_loss_scalar in [1]:
     param1=Param_ANTELOPE(pfn_model=pfn_model,  h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
-      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, arch_dir_vae='/data/users/kpark/svj-vae/results/test/09_11_23_11_38/architectures_saved/')
-      #extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8)
+#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, arch_dir_vae='/data/users/kpark/svj-vae/results/test/09_11_23_11_38/architectures_saved/', step_size=100)
+      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_no_scaling=True)
+#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim= 784, encoding_dim=196, latent_dim=49)# if flattening
     stdoutOrigin=param1.open_print()
+#    all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_test_ECG()
     all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae()
     #all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae(bool_pfn=False)
     setattr(param1, 'auc',auc )

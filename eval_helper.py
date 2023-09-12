@@ -420,3 +420,10 @@ def do_grid_plots(sic_vals, title, plot_dir=''):
             loc = tuple(dsid_coords[str(dsid)])
             values[loc] = sic_vals[dsid][val]
         make_grid_plot(values, val, title, plot_dir)
+
+def scale_phi(phis,max_phi):
+  phi_nonzero = phis!=0.0 #only shift non-zero phis
+  phi_shift = phis[phi_nonzero]/max_phi*1.1+0.1 #restrict range for non-zero phi to [0.1,1]
+  phis[phi_nonzero]=phi_shift #insert shifted values
+  return phis
+

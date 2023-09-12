@@ -43,9 +43,10 @@ plt.show()
 sys.exit()
 """
 def plot_pca(latent,latent_label, nlabel,  n_components=2, tag_file="", tag_title="", plot_dir=""): # if the number of features is very high
+  # principal components = linear combinations of initial variables -> variable number reduced to say 2 (n_components) for visualization
   # n_components is number of dimensions I want for the scatter plot -> usually 2 for x and y axes
   # nlabel is the number of classification label types
-  # latent_label is a list of labels so the length of this should be the same as the number of samples
+  # latent_label is a list of labels (truth values) so the length of this should be the same as the number of samples
   pca = PCA(n_components=n_components)
   x_transform = pca.fit_transform(latent)
   print(x_transform.shape)
