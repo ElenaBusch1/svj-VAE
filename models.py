@@ -311,6 +311,23 @@ def get_encoder(input_dim, encoding_dim, latent_dim):
   encoder = keras.Model(inputs, encoder_outputs, name="encoder")
   encoder.summary()
   return encoder
+## ------------------------------------------------------------------------------------
+def get_ECG_encoder(input_dim, encoding_dim, latent_dim):
+#  https://www.tensorflow.org/tutorials/generative/autoencoder
+  inputs = keras.Input(shape=(input_dim,))
+  x = Dropout(0.1, input_shape=(input_dim,))(inputs)
+  x = Dense(32)(x)
+  x = Dropout(0.1)(x)
+  x = LeakyReLU(alpha=0.3)(x)
+  x = Dense(encoding_dim)(x)
+  x = Dropout(0.1)(x)
+  x = LeakyReLU(alpha=0.3)(x)
+  x = Dense(encoding_dim/2.)(x)
+  x = Dropout(0.1)(x)
+  x = LeakyReLU(alpha=0.3)(x)
+  encoder = keras.Model(inputs,x, name="encoder")
+  encoder.summary()
+  return encoder
 
 ## ------------------------------------------------------------------------------------
 def get_variational_encoder(input_dim, encoding_dim, latent_dim):
@@ -498,6 +515,15 @@ def get_decoder_test_Dense(input_dim, encoding_dim, latent_dim):
 ## ------------------------------------------------------------------------------------
 def get_ae(input_dim, encoding_dim, latent_dim):
   encoder = get_encoder(input_dim, encoding_dim, latent_dim)
+  decoder = get_decoder(input_dim, encoding_dim, latent_dim)
+
+  ae = AE(encoder, decoder)
+  ae.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001))
+  return ae
+
+## ------------------------------------------------------------------------------------
+def get_ECG_ae(input_dim, encoding_dim, latent_dim):
+  encoder = get_ECG_encoder(input_dim, encoding_dim, latent_dim)
   decoder = get_decoder(input_dim, encoding_dim, latent_dim)
 
   ae = AE(encoder, decoder)

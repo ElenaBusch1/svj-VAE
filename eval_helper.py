@@ -421,9 +421,16 @@ def do_grid_plots(sic_vals, title, plot_dir=''):
             values[loc] = sic_vals[dsid][val]
         make_grid_plot(values, val, title, plot_dir)
 
-def scale_phi(phis,max_phi):
-  phi_nonzero = phis!=0.0 #only shift non-zero phis
-  phi_shift = phis[phi_nonzero]/max_phi*1.1+0.1 #restrict range for non-zero phi to [0.1,1]
-  phis[phi_nonzero]=phi_shift #insert shifted values
+def scale_phi(phis,max_phi, bool_nonzero=True):
+  if bool_nonzero:
+    phi_nonzero = phis!=0.0 #only shift non-zero phis
+    print('only shifting nonzero')
+    print(f'{phi_nonzero=}')
+    phi_shift = phis[phi_nonzero]/max_phi*0.9+0.1 #restrict range for non-zero phi to [0.1,1]
+    phis[phi_nonzero]=phi_shift #insert shifted values
+  else: 
+    print('shifting everything including zero')
+    phi_shift = phis/max_phi*0.9+0.1 #restrict range for non-zero phi to [0.1,1]
+    phis=phi_shift
   return phis
 

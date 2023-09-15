@@ -621,26 +621,29 @@ def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir=
 #  plt.savefig(plot_dir+'inputs_'+tag_file+'.png')
 
 
-def plot_1D_phi(bkg, sig, labels, plot_dir, tag_file, tag_title, bool_norm=False, ylog=False, bins=[]):
+def plot_1D_phi(bkg, sig, labels, plot_dir, tag_file, tag_title, bool_norm=False, ylog=True, bins=[]):
   
   per_plot=4 # 4 plots per figure
   length= int(bkg.shape[1]/per_plot)# 12
   for j in range(length):
     for i in range(per_plot):
       bkg_phi = bkg[:,i+j*4].flatten()
-      sig_phi = sig[:,i+j*4].flatten()
+      try: sig_phi = sig[:,i+j*4].flatten()
+      except:sig_phi=np.array([])
+      print(f'plot_1D_phi, {bkg_phi.shape=}')
       if bins ==[]: bins=np.histogram(np.hstack((bkg_phi,sig_phi)),bins=50)[1]
       else:bins=bins
+      #print(bins)
       plt.subplot(2,2,i+1)
 #      plt.tight_layout(h_pad=1, w_pad=1)
-      plt.hist(bkg_phi, alpha=0.7, label=labels[0]+f' ({len(bkg_phi)})', bins=bins, density=True, color = 'darkblue', histtype='step')
+      plt.hist(bkg_phi, alpha=0.7, label=labels[0]+f' ({len(bkg_phi)})', bins=bins, density=False, color = 'darkblue', histtype='step')
       if bool_norm:
         (bkg_mu, bkg_sigma) = norm.fit(bkg_phi)
         bkg_mu_rd, bkg_sigma_rd=str(round(bkg_mu,3)), str(round(bkg_sigma,3))
 #        print(r"$\mu$ = "+ str(round(bkg_mu,3)))
         y = norm.pdf( bins, bkg_mu, bkg_sigma)
         plt.plot(bins, y, 'b+', linewidth=1, label=r"$\mu$ = "+ bkg_mu_rd +", $\sigma$ = " + bkg_sigma_rd, alpha=0.5)
-      plt.hist(sig_phi, alpha=0.7, label=labels[1]+f' ({len(sig_phi)})', bins=bins, density=True, color = 'darkred',histtype='step')
+      plt.hist(sig_phi, alpha=0.7, label=labels[1]+f' ({len(sig_phi)})', bins=bins, density=False, color = 'darkred',histtype='step')
       if bool_norm:
         (sig_mu, sig_sigma) = norm.fit(sig_phi)
         sig_mu_rd, sig_sigma_rd=str(round(sig_mu,3)), str(round(sig_sigma,3))
