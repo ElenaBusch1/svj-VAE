@@ -48,7 +48,7 @@ class Param_ANTELOPE(Param):
       bool_pt=False,
       step_size=1,
       metric_dict={},
-      bool_shift=True,
+      bool_shift=False,
       bool_no_scaling=False,
       bool_nonzero=True,
       scalar_ecg=1,
@@ -172,6 +172,8 @@ class Param_ANTELOPE(Param):
     y=raw_data[:,-1] # label
     x=raw_data[:, 0:-1]
 
+    
+
     x_labels = y.astype(bool)
 
     # Raw data    
@@ -182,13 +184,15 @@ class Param_ANTELOPE(Param):
     plot_1D_phi(normal_x[:,:7],anomalous_x[:,:7],labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.pfn_model+f'_{var}', tag_title=self.pfn_model+f' {var.capitalize()}')
     plot_phi(normal_x,tag_file="ECG_normal_x"+f'_{var}', tag_title="Normal"+f' {var.capitalize()}', plot_dir=self.plot_dir)
     plot_phi(anomalous_x,tag_file="ECG_anomalous_x"+f'_{var}', tag_title="Anomalous"+f' {var.capitalize()}', plot_dir=self.plot_dir)
+    x = x * scalar_ecg
 
    # scale
     min_val = tf.reduce_min(x)
     max_val = tf.reduce_max(x)
     print('before',type(x), x.shape)  
     x = (x - min_val) / (max_val - min_val)
-    x = tf.cast(x, tf.float32)
+    # change the datatype for precision
+    x = tf.cast(x, tf.float64)
     x= x.numpy()
 
     # Scale data    
@@ -199,7 +203,6 @@ class Param_ANTELOPE(Param):
     plot_phi(normal_x,tag_file="ECG_normal_x"+f'_{var}', tag_title="Normal"+f' {var.capitalize()}', plot_dir=self.plot_dir)
     plot_phi(anomalous_x,tag_file="ECG_anomalous_x"+f'_{var}', tag_title="Anomalous"+f' {var.capitalize()}', plot_dir=self.plot_dir)
 
-    x = x * scalar_ecg
 
     # Multiplied by scalar_ecg data    
     normal_x = x[x_labels]
@@ -208,19 +211,21 @@ class Param_ANTELOPE(Param):
     plot_1D_phi(normal_x[:,:7],anomalous_x[:,:7],labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.pfn_model+'_input', tag_title=self.pfn_model+f' Input (x{self.scalar_ecg})')
     plot_phi(normal_x,tag_file="ECG_normal_x_scaled", tag_title=f"Normal (x{self.scalar_ecg})", plot_dir=self.plot_dir)
     plot_phi(anomalous_x,tag_file="ECG_anomalous_x_scaled", tag_title=f"Anomalous (x{self.scalar_ecg})", plot_dir=self.plot_dir)
+   # scale
+    print('after converting',type(x),f'{x.dtype=}', x.shape)  
 
-    print('after converting',type(x), x.shape)  
-
+#    x = x.astype('float64')
+    
     # split 
     x_evalb,  x_testb, y_evalb, y_testb = train_test_split(x, y, test_size=0.2)
     print(f'{x_evalb.shape=}, {x_testb.shape=}, {y_evalb.shape=}, {y_testb.shape=}, {np.unique(np.array(y_evalb))=}')
     # shuffle before flattening!
     x_evalb, y_evalb=self.shuffle_two(x_evalb, y_evalb)
     x_testb, y_testb=self.shuffle_two(x_testb, y_testb)
-    print(f'before{x_evalb.shape=}, before{type(x_evalb[0])}, before{type(y_evalb[0])}')
+    print(f'before{x_evalb.shape=}, before{x_evalb.dtype=}, before{y_evalb.dtype=}')
 
-    x_evalb, x_testb= x_evalb.astype('float32'), x_testb.astype('float32') 
-    y_evalb, y_testb= y_evalb.astype('float32'), y_testb.astype('float32') 
+#    x_evalb, x_testb= x_evalb.astype('float32'), x_testb.astype('float32') 
+#    y_evalb, y_testb= y_evalb.astype('float32'), y_testb.astype('float32') 
 
     # separate the normal rhythms from abnormal rhythms
     test_labels = y_testb.astype(bool)
@@ -295,6 +300,9 @@ class Param_ANTELOPE(Param):
     phi_bkg = graph.predict(bkg2)
     phi_sig = graph.predict(sig2)
  
+    phi_bkg = phi_bkg.astype('float64')
+    phi_sig = phi_sig.astype('float64')
+    print(f'{phi_bkg.dtype=}, {phi_sig.dtype=}')
     plot_1D_phi(phi_bkg, phi_sig,labels=['QCD', 'sig'], plot_dir=self.plot_dir, tag_file=self.pfn_model, tag_title=self.pfn_model)
     
     #phi_evalb, phi_testb, _, _ = train_test_split(phi_bkg, phi_bkg, test_size=sig2.shape[0], random_state=42) # no info on labels e.g. y_train or y_test
@@ -382,8 +390,8 @@ class Param_ANTELOPE(Param):
   def train_vae(self, phi_evalb, y_phi_evalb=[]):
   #def train_vae(self, phi_evalb_train, phi_evalb_val, y_phi_evalb_train=[], y_phi_evalb_val=[]):
 
-    vae = get_ECG_ae(self.phi_dim,self.encoding_dim,self.latent_dim)
-    #vae = get_vae(self.phi_dim,self.encoding_dim,self.latent_dim, self.learning_rate, self.kl_loss_scalar, bool_test=False)
+    #vae = get_ECG_ae(self.phi_dim,self.encoding_dim,self.latent_dim)
+    vae = get_vae(self.phi_dim,self.encoding_dim,self.latent_dim, self.learning_rate, self.kl_loss_scalar, bool_test=False)
       
 #    h2 = vae.fit(phi_evalb_train, 
     h2 = vae.fit(phi_evalb, 
@@ -401,13 +409,14 @@ class Param_ANTELOPE(Param):
 
     return vae, h2
 
-  def calculate_loss(self,model,bkg,sig, y_bkg, y_sig, bool_vae=False ): # move
+  def calculate_loss(self,model,bkg,sig, y_bkg, y_sig, bool_vae=True ): # move
     if y_sig.size>0:    assert len(sig)==len(y_sig)
     if y_bkg.size>0:    assert len(bkg)==len(y_bkg)
       
     pred_bkg = model.predict(bkg)['reconstruction']
     loss_dict={}
-    methods=['mse', 'mae', 'multi_mse', 'multi_kl', 'multi_reco'] 
+    methods=['mse', 'mae', 'multi_mse', 'multi_kl', 'multi_reco']
+    # methods=['mse', 'mae'] # for autoencoder 
     # using 'non' reduction type -> default is 'sum_over_batch_size'
     loss_dict['mse']={}
     mse = keras.losses.MeanSquaredError(reduction=tf.keras.losses.Reduction.NONE)
@@ -428,8 +437,27 @@ class Param_ANTELOPE(Param):
       loss_dict['mae']['sig'] = mae(sig, pred_sig).numpy()
       if bool_vae:
         loss_dict['multi_mse']['sig'], loss_dict['multi_kl']['sig'], loss_dict['multi_reco']['sig']= get_multi_loss_each(model, sig, step_size=self.step_size)
-    else: y=y_bkg 
+    else: y=y_bkg
+
     return loss_dict, methods, y
+
+  def freq_table(self,array, text=''):
+      """
+      (values, counts) = np.unique(array, return_counts=True)
+      freq_table = np.asarray((values, counts)).T
+      
+      print('-'*15+'frequency table' +'-'*15)
+      print(f'{array.dtype=}')
+      print(f'{np.array(["values", "counts"])=}')
+      print(freq_table)
+      print('-'*30)
+      """
+      print(text)
+      print(f'{array.dtype=}')
+      data=pd.Series(array)
+      freq_table=data.value_counts(sort=True)
+      print(freq_table)
+      return freq_table
 
   def calculate_metric(self, loss_dict, methods, y):
     y = y.astype(bool)
@@ -448,15 +476,15 @@ class Param_ANTELOPE(Param):
       if len(y)==0:
      
         accuracy_score_ex, precision_score_ex, recall_score_ex = np.nan, np.nan, np.nan
-        print(f'debug 1 {method}')
       else: 
         accuracy_score_ex,precision_score_ex, recall_score_ex =accuracy_score(y, loss_dict[method]['pred']), precision_score(y, loss_dict[method]['pred']), recall_score(y, loss_dict[method]['pred'])
-      print(f'debug2 {accuracy_score} {method}')
       loss_dict[method]['accuracy']=accuracy_score_ex
       loss_dict[method]['precision']=precision_score_ex
       loss_dict[method]['recall']=recall_score_ex
-      print(f'debug3 {accuracy_score} {method}')
     
+      # Create frequency table
+      self.freq_table(loss_dict[method]['all'], text=method)
+     
     return loss_dict # loss_dict[method]={'bkg', 'sig', 'all', 'threshold', 'accuracy', 'precision'} 
 
   def plot_loss_dict(self, loss_dict_all):
@@ -478,7 +506,6 @@ class Param_ANTELOPE(Param):
         if key=='test':
           self.metric_dict[method]={}
           for metric in {'accuracy', 'precision', 'recall'}:
-          
             self.metric_dict[method][metric]=loss_dict_all[key][method][metric]
             print(f'{method}{metric},{loss_dict_all[key][method][metric]=}')
     # # 3. Signal Sensitivity Score
@@ -586,10 +613,13 @@ class Param_ANTELOPE(Param):
     except: print('loading vae_model so cannot draw regular loss plot -> no h2')
     loss_dict_all={}
     print(bkg_train.shape) 
-    loss_dict_train, methods,y = self.calculate_loss(model = vae, bkg = bkg_train, sig = sig_train, y_bkg = y_bkg_train, y_sig = y_sig_train, bool_vae=False)
+    loss_dict_train, methods,y = self.calculate_loss(model = vae, bkg = bkg_train, sig = sig_train, y_bkg = y_bkg_train, y_sig = y_sig_train, bool_vae=True)
     loss_dict_all['train'] = loss_dict_train # cannot calculate a metric b/c sig_train is empty
-    loss_dict_test, methods,y  = self.calculate_loss(model = vae, bkg = bkg_test, sig = sig_test, y_bkg = y_bkg_test, y_sig = y_sig_test, bool_vae=False)
-    loss_dict_all['test'] = self.calculate_metric(loss_dict_test, methods=['mse', 'mae'],y=y)
+    loss_dict_test, methods,y  = self.calculate_loss(model = vae, bkg = bkg_test, sig = sig_test, y_bkg = y_bkg_test, y_sig = y_sig_test, bool_vae=True)
+    loss_dict_all['test'] = self.calculate_metric(loss_dict_test, methods=methods,y=y)
+    example=np.array([1.1, 2.2, 2.2, 2.2, 3.3, 3.3])
+    print(f'{example=}')
+    self.freq_table(example, text='example')
     auc = self.plot_loss_dict(loss_dict_all)
     #auc= {np.nan, np.nan, np.nan}
     bkg_events_num,sig_events_num=np.nan, np.nan 
@@ -696,13 +726,15 @@ if __name__=="__main__":
   for  kl_loss_scalar in [1]:
     param1=Param_ANTELOPE(pfn_model=pfn_model,  h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, arch_dir_vae='/data/users/kpark/svj-vae/results/test/09_11_23_11_38/architectures_saved/', step_size=100)
-#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=False)
-#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=True)
-      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8, scalar_ecg=10)
+#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=False, bool_shift=True)
+#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=True, bool_shift=True)
+      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1)
+#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8)
+      #extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8, scalar_ecg=10)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim= 784, encoding_dim=196, latent_dim=49)# if flattening
     stdoutOrigin=param1.open_print()
-    all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_test_ECG()
-#    all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae()
+#    all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_test_ECG()
+    all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae()
     #all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae(bool_pfn=False)
     setattr(param1, 'auc',auc )
     setattr(param1, 'sig_events_num',sig_events_num )
@@ -710,30 +742,6 @@ if __name__=="__main__":
     print(param1.close_print(stdoutOrigin))
     print(param1.save_info())
 """
-  ls_sig=[20000]
-  ls_bkg=[200000]
-  for  kl_loss_scalar in [1]:
-    param1=Param_ANTELOPE(pfn_model=pfn_model,  h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
-      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, batchsize_vae=64, nepochs=20)
-    stdoutOrigin=param1.open_print()
-    all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae(bool_pfn=True)
-    #all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae(bool_pfn=False)
-    setattr(param1, 'auc',auc )
-    setattr(param1, 'sig_events_num',sig_events_num )
-    setattr(param1, 'bkg_events_num',bkg_events_num )
-    print(param1.close_print(stdoutOrigin))
-    print(param1.save_info())
-  for sig_events, bkg_events in zip(ls_sig, ls_bkg):
-    param1=Param_ANTELOPE(pfn_model=pfn_model,bkg_events=bkg_events, sig_events=sig_events, h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
-  #    learning_rate=0.00001, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=100)
-      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], arch_dir_vae='/data/users/kpark/svj-vae/results/antelope/08_21_23_12_04/architectures_saved/')
-    stdoutOrigin=param1.open_print()
-    all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae()
-    setattr(param1, 'auc',auc )
-    setattr(param1, 'sig_events_num',sig_events_num )
-    setattr(param1, 'bkg_events_num',bkg_events_num )
-    print(param1.close_print(stdoutOrigin))
-    print(param1.save_info())
 encoding_dim = 32
 latent_dim = 12
 phi_dim = 64

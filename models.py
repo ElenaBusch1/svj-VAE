@@ -341,6 +341,7 @@ def get_variational_encoder(input_dim, encoding_dim, latent_dim):
   x = Dropout(0.1)(x)
   x = LeakyReLU(alpha=0.3)(x)
   """ 
+  print(f'{inputs.dtype=}')
   x = Dropout(0.1, input_shape=(input_dim,))(inputs)
   x = Dense(32)(x)
   x = Dropout(0.1)(x)
@@ -403,6 +404,7 @@ def get_variational_encoder_test_Dense(input_dim, encoding_dim, latent_dim):
   
   inputs = keras.Input(shape=(input_dim,))
   x = Dropout(0.1, input_shape=(input_dim,))(inputs)
+  
   x = Dense(600)(x)
   #x = Dense(32)(x)
   x = Dropout(0.1)(x)
@@ -456,6 +458,7 @@ def get_decoder(input_dim, encoding_dim, latent_dim):
   #decoder.add(Dense(input_dim, activation='sigmoid'))
 
   latent_inputs = keras.Input(shape=(latent_dim,))
+  print(f'{latent_inputs.dtype=}')
   
   """
   try:
@@ -475,6 +478,7 @@ def get_decoder(input_dim, encoding_dim, latent_dim):
   x = keras.layers.Dense(encoding_dim*2., activation="relu")(x)
   decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid")(x)
 
+  print(f'{decoder_outputs.dtype=}')
   decoder = keras.Model(latent_inputs, decoder_outputs, name="decoder")
   decoder.summary()
   return decoder
@@ -532,6 +536,8 @@ def get_ECG_ae(input_dim, encoding_dim, latent_dim):
 
 ## ------------------------------------------------------------------------------------
 def get_vae(input_dim, encoding_dim, latent_dim, learning_rate=0.00001, kl_loss_scalar=100, bool_test=False):
+  # change the default precision
+  tf.keras.backend.set_floatx('float64')
   #if bool_test: encoder = get_variational_encoder_test_Conv(input_dim, encoding_dim, latent_dim)
   if bool_test: encoder = get_variational_encoder_test_Dense(input_dim, encoding_dim, latent_dim)
   else: encoder = get_variational_encoder(input_dim, encoding_dim, latent_dim)
