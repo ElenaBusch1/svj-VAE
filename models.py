@@ -501,7 +501,7 @@ def get_decoder_test_Conv(input_dim, encoding_dim, latent_dim):
   decoder.summary()
   return decoder
 ## ------------------------------------------------------------------------------------
-def get_decoder_test_Dense(input_dim, encoding_dim, latent_dim):
+def get_decoder_test_Dense(input_dim, encoding_dim, latent_dim, scalar_ecg=1):
 
   latent_inputs = keras.Input(shape=(latent_dim,))
 
@@ -511,7 +511,10 @@ def get_decoder_test_Dense(input_dim, encoding_dim, latent_dim):
   x = keras.layers.Dense(encoding_dim, activation="relu")(x)
   x = keras.layers.Dense(392, activation="relu")(x)
   x = keras.layers.Dense(600, activation="relu")(x)
-  decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid")(x)
+  if scalar_ecg!=1:  x/=scalar_ecg
+
+  decoder_outputs = keras.layers.Dense(input_dim, activation="relu")(x)
+  #decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid")(x)
  
   decoder = keras.Model(latent_inputs, decoder_outputs, name="decoder")
   decoder.summary()
@@ -535,7 +538,7 @@ def get_ECG_ae(input_dim, encoding_dim, latent_dim):
   return ae
 
 ## ------------------------------------------------------------------------------------
-def get_vae(input_dim, encoding_dim, latent_dim, learning_rate=0.00001, kl_loss_scalar=100, bool_test=False):
+def get_vae(input_dim, encoding_dim, latent_dim, learning_rate=0.00001, kl_loss_scalar=100, bool_test=False,  scalar_ecg=1):
   # change the default precision
   tf.keras.backend.set_floatx('float64')
   #if bool_test: encoder = get_variational_encoder_test_Conv(input_dim, encoding_dim, latent_dim)
@@ -543,7 +546,7 @@ def get_vae(input_dim, encoding_dim, latent_dim, learning_rate=0.00001, kl_loss_
   else: encoder = get_variational_encoder(input_dim, encoding_dim, latent_dim)
   
   #if bool_test: decoder = get_decoder_test_Conv(input_dim, encoding_dim, latent_dim)
-  if bool_test: decoder = get_decoder_test_Dense(input_dim, encoding_dim, latent_dim)
+  if bool_test: decoder = get_decoder_test_Dense(input_dim, encoding_dim, latent_dim, scalar_ecg)
   else:decoder = get_decoder(input_dim, encoding_dim, latent_dim)
 
   vae = VAE(encoder, decoder, kl_loss_scalar)

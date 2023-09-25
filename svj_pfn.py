@@ -40,8 +40,11 @@ class Param:
     self.arch_dir=self.all_dir+arch_dir
     self.print_dir=self.all_dir+print_dir
     self.plot_dir=self.all_dir+plot_dir
+    """try:
+      self.h5_dir=self.parent_dir+h5_dir
+    except:(self.parent_dir, h5_dir, type(self.parent_dir), type(h5_dir))
+    """
     self.h5_dir=self.parent_dir+h5_dir
-
     dir_ls =[self.all_dir, self.print_dir, self.plot_dir,self.arch_dir]
        
   

@@ -127,17 +127,17 @@ class Param_ANTELOPE(Param):
       sys.exit()
     return arr.reshape(arr.shape[0], -1)
 
-
   def shuffle_two(self, arr1, arr2):
     shuffler = np.random.permutation(len(arr1))
     arr1_shuffled = arr1[shuffler]
     arr2_shuffled = arr2[shuffler]
     return arr1, arr2 
 
+
   def plot_compare_ECG(self, x, label, title1, title2, x_latent_recon=np.array([])):
-    # title1 = 'input' or 'output'
-    #title2 = 'normal' or 'anomalous'
-    # select 9 samples since there are 10000
+    # title1 = 'input' or 'output' 
+    #title2 = 'normal' or 'anomalous' 
+    # select 9 samples since there are 10000 
     nsample=9
     x= x[:nsample]
     if x_latent_recon.size !=0:    x_latent_recon= x_latent_recon[:nsample]
@@ -146,13 +146,13 @@ class Param_ANTELOPE(Param):
     for i in range(nsample):
       ax = fig.add_subplot(3, 3, i+1)
       ax.set(xlabel='Time', ylabel='Voltage')
-      if x_latent_recon.size ==0: 
+      if x_latent_recon.size ==0:
         ax.plot(np.arange(140),x[i], label=f'{label.capitalize()}')
       else:
         plt.plot(x[i], 'b', label=f'{label.capitalize()}')
         plt.plot(x_latent_recon[i], 'r', label='Reconstruction')
-        ax.fill_between(np.arange(140),x_latent_recon[i], x[i], color='lightcoral', label='Error') 
- 
+        ax.fill_between(np.arange(140),x_latent_recon[i], x[i], color='lightcoral', label='Error')
+
       ax.grid()
       handles, labels = ax.get_legend_handles_labels()
 
@@ -160,10 +160,121 @@ class Param_ANTELOPE(Param):
     fig.suptitle(f'{title1.capitalize()} {title2.capitalize()} ECG [Normalized]')
     plt.tight_layout()
     plt.savefig(self.plot_dir + f'{title1}_{title2}.png')
-#    plt.show()
+#    plt.show() 
     plt.clf()
 
-  def prepare_test_ECG(self, scalar_ecg):
+
+  def evaluate_test_ECG(self):
+    x_testb, x_evalb, y_testb, y_evalb= self.prepare_test_ECG()
+
+    #x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val= self.prepare_test_ECG()
+    print('prepare_test_ECG')
+#    try: vae = self.load_vae()
+#    except: 
+    print('loading vae not successful so will start the training process')
+    vae,h2 = self.train_vae( x_evalb, y_evalb)
+      #vae,h2 = self.train_vae( x_evalb_train, x_evalb_val, y_evalb_train, y_evalb_val)
+    print('training successful')
+
+    x_test_labels = y_testb.astype(bool)
+    normal_x_test = x_testb[x_test_labels]
+    anomalous_x_test = x_testb[~x_test_labels]
+
+    var='train'
+    plot_1D_phi(x_evalb[:,:7],np.array([]),labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.pfn_model+f'_{var}', tag_title=self.pfn_model+f' {var.capitalize()}')
+    plot_phi(x_evalb,tag_file=f"ECG_normal_x_{var}", tag_title=f"Normal {var.capitalize()}", plot_dir=self.plot_dir)
+
+    var='test'
+    plot_1D_phi(normal_x_test[:,:7],anomalous_x_test[:,:7],labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.pfn_model+f'_{var}', tag_title=self.pfn_model+f' {var.capitalize()}')
+    plot_phi(normal_x_test,tag_file=f"ECG_normal_x_{var}", tag_title=f"Normal {var.capitalize()}", plot_dir=self.plot_dir)
+    plot_phi(anomalous_x_test,tag_file=f"ECG_anomalous_x_{var}", tag_title=f"Anomalous {var.capitalize()}", plot_dir=self.plot_dir)
+
+    # if want to use validation_split instead of manual splitting
+    x_evalb_train, y_evalb_train = x_evalb, y_evalb
+
+    latent_test=vae.get_layer('encoder').predict(x_testb)
+    latent_train=vae.get_layer('encoder').predict(x_evalb_train)
+#    latent_val=vae.get_layer('encoder').predict(x_evalb_val)
+
+    #latent_test is a list but latent_test[0] is a numpy array
+    latent_test, latent_train =np.array(latent_test), np.array(latent_train)
+    #latent_test, latent_train, latent_val=np.array(latent_test), np.array(latent_train), np.array(latent_val)
+    print(f'{latent_test.shape=}')
+
+    try:plot_pca(latent_test[0,:,:], latent_label=np.array(y_testb), nlabel=10,n_components=2, tag_file=self.vae_model+'_test', tag_title=self.vae_model+' Test', plot_dir=self.plot_dir)
+    except:plot_pca(latent_test[:,:], latent_label=np.array(y_testb), nlabel=10,n_components=2, tag_file=self.vae_model+'_test', tag_title=self.vae_model+' Test', plot_dir=self.plot_dir)
+    try:plot_pca(latent_train[0,:,:],latent_label=np.array(y_evalb_train), nlabel=10, n_components=2, tag_file=self.vae_model+'_train', tag_title=self.vae_model+' Train', plot_dir=self.plot_dir)
+    except:plot_pca(latent_train[:,:],latent_label=np.array(y_evalb_train), nlabel=10, n_components=2, tag_file=self.vae_model+'_train', tag_title=self.vae_model+' Train', plot_dir=self.plot_dir)
+
+    # reconstruct output
+    test_labels = y_testb.astype(bool)
+    bkg_test = x_testb[test_labels]
+    y_bkg_test = y_testb[test_labels]
+    y_sig_test = y_testb[~test_labels]
+    sig_test = x_testb[~test_labels]
+    try:bkg_latent_test=latent_test[:,test_labels,:]
+    except:bkg_latent_test=latent_test[test_labels,:]
+    try:sig_latent_test=latent_test[:,~test_labels,:]
+    except:sig_latent_test=latent_test[~test_labels,:]
+
+    train_labels = y_evalb_train.astype(bool)
+    bkg_train = x_evalb_train[train_labels]
+    sig_train = x_evalb_train[~train_labels]
+    y_bkg_train = y_evalb_train[train_labels]
+    y_sig_train = y_evalb_train[~train_labels]
+    print(f'{bkg_latent_test.shape=}')
+    print(f'{sig_latent_test.shape=}')
+
+    try:bkg_latent_test_recon = vae.get_layer('decoder').predict(bkg_latent_test[2,:,:])
+    except:bkg_latent_test_recon = vae.get_layer('decoder').predict(bkg_latent_test)
+    try:sig_latent_test_recon = vae.get_layer('decoder').predict(sig_latent_test[2,:,:])
+    except: sig_latent_test_recon = vae.get_layer('decoder').predict(sig_latent_test)
+    print(f'{bkg_latent_test_recon.shape=}')
+    print(f'{sig_latent_test_recon.shape=}')
+
+    #REMOVE
+    bkg_latent_test_recon*=self.scalar_ecg
+    sig_latent_test_recon*=self.scalar_ecg
+
+    self.plot_compare_ECG(x =bkg_test,label='input', title1 = 'output' ,title2='normal', x_latent_recon=bkg_latent_test_recon)
+    self.plot_compare_ECG(x =sig_test,label='input', title1 = 'output',title2='anomalous', x_latent_recon=sig_latent_test_recon)
+
+    try:bkg_latent_test_sigma, sig_latent_test_sigma = self.transform_sigma(bkg_latent_test[1,:,:]), self.transform_sigma(sig_latent_test[1, :,:])
+    except: bkg_latent_test_sigma, sig_latent_test_sigma = self.transform_sigma(bkg_latent_test), self.transform_sigma(sig_latent_test)
+    labels=['normal', 'anomalous']
+
+    """
+    plot_1D_phi(bkg_latent_test[0,:,:],sig_latent_test[0,:,:] , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_mu', tag_title=self.vae_model +r" $\mu$", ylog=True)
+    plot_1D_phi(bkg_latent_test_sigma,sig_latent_test_sigma , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sigma', tag_title=self.vae_model +r" $\sigma$", ylog=True)
+
+    plot_1D_phi(bkg_latent_test[0,:,:],sig_latent_test[0,:,:] , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_mu_custom', tag_title=self.vae_model +r" $\mu$",  bins=np.linspace(-0.0001,0.0001, num=50))
+    plot_1D_phi(bkg_latent_test_sigma,sig_latent_test_sigma , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sigma_custom', tag_title=self.vae_model +r" $\sigma$", bins=np.linspace(0.9998,1.0002,num=50))
+
+    plot_1D_phi(bkg_latent_test[2,:,:],sig_latent_test[2,:,:] , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sampling', tag_title=self.vae_model +" Sampling", bool_norm=True)
+    """
+
+    ######## EVALUATE SUPERVISED ######
+    # # --- Eval plots 
+    # 1. Loss vs. epoch 
+    for loss in ['loss', 'reco_loss', 'kl_loss']:
+      try:plot_loss(h2, loss=loss, tag_file=self.vae_model, tag_title=self.vae_model, plot_dir=self.plot_dir)
+      except: print(f'loading vae_model so cannot draw regular {loss} plot -> no h2')
+    loss_dict_all={}
+    print(bkg_train.shape)
+    loss_dict_train, methods,y = self.calculate_loss(model = vae, bkg = bkg_train, sig = sig_train, y_bkg = y_bkg_train, y_sig = y_sig_train, bool_vae=True)
+    loss_dict_all['train'] = loss_dict_train # cannot calculate a metric b/c sig_train is empty
+    loss_dict_test, methods,y  = self.calculate_loss(model = vae, bkg = bkg_test, sig = sig_test, y_bkg = y_bkg_test, y_sig = y_sig_test, bool_vae=True)
+    loss_dict_all['test'] = self.calculate_metric(loss_dict_test, methods=methods,y=y)
+    example=np.array([1.1, 2.2, 2.2, 2.2, 3.3, 3.3])
+    print(f'{example=}')
+    self.freq_table(example, text='example')
+    sic_vals_dict = self.plot_loss_dict(loss_dict_all)
+    #sic_vals_dict= {np.nan, np.nan, np.nan}
+    bkg_events_num,sig_events_num=np.nan, np.nan
+
+    return self.all_dir, sic_vals_dict, bkg_events_num,sig_events_num
+
+  def prepare_test_ECG(self):
     #https://www.tensorflow.org/tutorials/generative/autoencoder
     # classify an ECG as anomalous if the total reconstruction error is greater than one standard deviation 
     dataframe = pd.read_csv('http://storage.googleapis.com/download.tensorflow.org/data/ecg.csv', header=None)
@@ -171,8 +282,6 @@ class Param_ANTELOPE(Param):
     dataframe.head()
     y=raw_data[:,-1] # label
     x=raw_data[:, 0:-1]
-
-    
 
     x_labels = y.astype(bool)
 
@@ -184,8 +293,7 @@ class Param_ANTELOPE(Param):
     plot_1D_phi(normal_x[:,:7],anomalous_x[:,:7],labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.pfn_model+f'_{var}', tag_title=self.pfn_model+f' {var.capitalize()}')
     plot_phi(normal_x,tag_file="ECG_normal_x"+f'_{var}', tag_title="Normal"+f' {var.capitalize()}', plot_dir=self.plot_dir)
     plot_phi(anomalous_x,tag_file="ECG_anomalous_x"+f'_{var}', tag_title="Anomalous"+f' {var.capitalize()}', plot_dir=self.plot_dir)
-    x = x * scalar_ecg
-
+    x = x * self.scalar_ecg
    # scale
     min_val = tf.reduce_min(x)
     max_val = tf.reduce_max(x)
@@ -212,10 +320,10 @@ class Param_ANTELOPE(Param):
     plot_phi(normal_x,tag_file="ECG_normal_x_scaled", tag_title=f"Normal (x{self.scalar_ecg})", plot_dir=self.plot_dir)
     plot_phi(anomalous_x,tag_file="ECG_anomalous_x_scaled", tag_title=f"Anomalous (x{self.scalar_ecg})", plot_dir=self.plot_dir)
    # scale
-    print('after converting',type(x),f'{x.dtype=}', x.shape)  
+    print('after converting',type(x),f'{x.dtype=}', x.shape)
 
 #    x = x.astype('float64')
-    
+
     # split 
     x_evalb,  x_testb, y_evalb, y_testb = train_test_split(x, y, test_size=0.2)
     print(f'{x_evalb.shape=}, {x_testb.shape=}, {y_evalb.shape=}, {y_testb.shape=}, {np.unique(np.array(y_evalb))=}')
@@ -242,7 +350,7 @@ class Param_ANTELOPE(Param):
 
     # Only train with normal train data -> remove all the
     x_evalb = normal_train
-    y_evalb = y_normal_train 
+    y_evalb = y_normal_train
     print(f'{normal_x.shape=},{anomalous_x.shape=}')
     print(f'{normal_train.shape=},{anomalous_train.shape=}')
     print(f'{normal_test.shape=},{anomalous_test.shape=}')
@@ -253,7 +361,7 @@ class Param_ANTELOPE(Param):
     print(anomalous_train.shape[0], anomalous_x.shape[0]-anomalous_test.shape[0])
     print(f'({x_evalb.shape[0]=}+{x_testb.shape[0]=}-{normal_test.shape[0]=}-{normal_train.shape[0]=}-{anomalous_test.shape[0]=})=0')
     print(x_evalb.shape[0]+x_testb.shape[0]-normal_test.shape[0]-normal_train.shape[0]-anomalous_test.shape[0])
-    
+
     # plot test input
     self.plot_compare_ECG(x =normal_test,label='input',title1 = 'input' ,title2='normal')
     self.plot_compare_ECG(x =anomalous_test,label='input',title1 = 'input' ,title2='anomalous')
@@ -274,6 +382,7 @@ class Param_ANTELOPE(Param):
     #return  x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val
     """
     return  x_testb, x_evalb, y_testb, y_evalb
+
 
   def prepare_pfn(self, graph,scaler):
     print('AE not VAE')
@@ -347,18 +456,11 @@ class Param_ANTELOPE(Param):
  
     plot_1D_phi(phi_bkg_pre, phi_sig_pre,labels=['QCD', 'sig'], plot_dir=self.plot_dir, tag_file=self.pfn_model+'_scaling', tag_title=self.pfn_model + ' (after scaling)')
     plot_1D_phi(phi_bkg, phi_sig,labels=['QCD', 'sig'], plot_dir=self.plot_dir, tag_file=self.pfn_model+'_shifting', tag_title=self.pfn_model + f'(after shifting)')
-    #phi_evalb, phi_scaler = apply_StandardScaling(phi_evalb)
-    #phi_testb, _ = apply_StandardScaling(phi_testb,phi_scaler,False)
-    #phi_sig, _ = apply_StandardScaling(phi_sig,phi_scaler,False)
     # set representation plot
-    #plot_phi(phi_evalb,tag_file="PFN_phi_train_shifted",tag_title="Train Shifted", plot_dir=self.plot_dir) # change
-    #plot_phi(phi_testb,tag_file="PFN_phi_test_shifted",tag_title="Test Shifted", plot_dir=self.plot_dir)
     plot_phi(phi_sig,tag_file="PFN_phi_sig_shifted", tag_title="Signal Shifted", plot_dir=self.plot_dir)
     plot_phi(phi_bkg,tag_file="PFN_phi_bkg_shifted",tag_title="QCD Shifted",plot_dir=self.plot_dir) # change
 
     
-#    plot_phi(phi_evalb_pre,tag_file="PFN_phi_train_scaled",tag_title="Train Scaled ", plot_dir=self.plot_dir) # change
-#    plot_phi(phi_testb_pre,tag_file="PFN_phi_test_scaled",tag_title="Test Scaled", plot_dir=self.plot_dir)
     plot_phi(phi_sig_pre,tag_file="PFN_phi_sig_scaled", tag_title="Signal Scaled", plot_dir=self.plot_dir)
     plot_phi(phi_bkg_pre,tag_file="PFN_phi_bkg_scaled", tag_title="QCD Scaled", plot_dir=self.plot_dir)
     # validation data set manually
@@ -391,7 +493,7 @@ class Param_ANTELOPE(Param):
   #def train_vae(self, phi_evalb_train, phi_evalb_val, y_phi_evalb_train=[], y_phi_evalb_val=[]):
 
     #vae = get_ECG_ae(self.phi_dim,self.encoding_dim,self.latent_dim)
-    vae = get_vae(self.phi_dim,self.encoding_dim,self.latent_dim, self.learning_rate, self.kl_loss_scalar, bool_test=False)
+    vae = get_vae(self.phi_dim,self.encoding_dim,self.latent_dim, self.learning_rate, self.kl_loss_scalar, bool_test=False, scalar_ecg=self.scalar_ecg)
       
 #    h2 = vae.fit(phi_evalb_train, 
     h2 = vae.fit(phi_evalb, 
@@ -409,7 +511,9 @@ class Param_ANTELOPE(Param):
 
     return vae, h2
 
-  def calculate_loss(self,model,bkg,sig, y_bkg, y_sig, bool_vae=True ): # move
+  def combine_dict_vals(self,dc):
+    dc
+  def calculate_loss(self,model,bkg,sig, y_bkg, y_sig, bool_vae=True, bool_transformed=True ): # move
     if y_sig.size>0:    assert len(sig)==len(y_sig)
     if y_bkg.size>0:    assert len(bkg)==len(y_bkg)
       
@@ -438,6 +542,27 @@ class Param_ANTELOPE(Param):
       if bool_vae:
         loss_dict['multi_mse']['sig'], loss_dict['multi_kl']['sig'], loss_dict['multi_reco']['sig']= get_multi_loss_each(model, sig, step_size=self.step_size)
     else: y=y_bkg
+
+    if bool_transformed:
+      old_methods=methods # essential that new_methods and methods are separate b/c otherwise, will loop through methods that are already transformed
+      for method in old_methods:
+        new_method=f'{method}_transformed'
+        loss_dict[new_method]={}
+        loss_bkg=np.log(loss_dict[method]['bkg'])
+        if len(sig)!=0:
+          loss_sig=np.log(loss_dict[method]['sig'])
+          loss_both= np.concatenate((loss_bkg, loss_sig))
+        else:loss_both=loss_bkg
+        max_loss=np.max(loss_both)
+        min_loss=np.min(loss_both)
+        
+        loss_transformed_bkg = (loss_bkg - min_loss)/max_loss 
+        loss_dict[new_method]['bkg'] =loss_transformed_bkg 
+        if len(sig)!=0:
+           loss_transformed_sig = (loss_sig - min_loss)/max_loss 
+           loss_dict[new_method]['sig'] =loss_transformed_sig 
+
+        methods.append(new_method)
 
     return loss_dict, methods, y
 
@@ -488,21 +613,13 @@ class Param_ANTELOPE(Param):
     return loss_dict # loss_dict[method]={'bkg', 'sig', 'all', 'threshold', 'accuracy', 'precision'} 
 
   def plot_loss_dict(self, loss_dict_all):
-    auc={} 
+    sic_vals_dict={} 
     for key in loss_dict_all:    # train or test 
       for method in loss_dict_all[key]: # mse, mae, etc
         print(f'{method=} hereee')
         bkg_loss=loss_dict_all[key][method]['bkg'] 
         if key=='test':sig_loss=loss_dict_all[key][method]['sig']
         else: sig_loss=np.array([]) 
-#        plot_score(bkg_loss, sig_loss, False, xlog=True, tag_file=self.vae_model+f'_{method}_{key}', tag_title=self.vae_model+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-      # xlog=True plots
-        plot_score(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], False, xlog=True, tag_file=self.vae_model+'_pos'+f'_{method}_{key}', tag_title=self.vae_model + ' (score > 0)'+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-  
-      # xlog=False plots
-        plot_score(bkg_loss, sig_loss, False, xlog=False, tag_file=self.vae_model+f'_{method}_{key}', tag_title=self.vae_model+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
-      # xlog= False plots plot only points less than 0 
-        plot_score(bkg_loss[bkg_loss<=0], sig_loss[sig_loss<=0], False, xlog=False, tag_file=self.vae_model+f'_neg_{method}_{key}', tag_title=self.vae_model+f' (score <= 0) {method} {key}', plot_dir=self.plot_dir, bool_pfn=False) # anomaly score
         if key=='test':
           self.metric_dict[method]={}
           for metric in {'accuracy', 'precision', 'recall'}:
@@ -516,115 +633,23 @@ class Param_ANTELOPE(Param):
           # # 4. ROCs/AUCs using sklearn functions imported above 
           sic_vals=do_roc(bkg_loss, sig_loss, tag_file=self.vae_model+f'_{method}', tag_title=self.vae_model+ f' (step size={self.step_size} {method})',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
           sic_vals=do_roc(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], tag_file=self.vae_model+f'_{method}_pos', tag_title=self.vae_model+ f' (step size={self.step_size} {method}, score>0)',make_transformed_plot= False, plot_dir=self.plot_dir, bool_pfn=False)
-          auc[method]=sic_vals
-    return auc
+          sic_vals_dict[method]=sic_vals
+          auc=sic_vals['auc']
+  
+        else:auc=np.nan 
 
+#        plot_score(bkg_loss, sig_loss, False, xlog=True, tag_file=self.vae_model+f'_{method}_{key}', tag_title=self.vae_model+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False, auc=auc) # anomaly score
+      # xlog=True plots
+        if '_trans' not in method:
+          plot_score(bkg_loss[bkg_loss>0], sig_loss[sig_loss>0], False, xlog=True, tag_file=self.vae_model+'_pos'+f'_{method}_{key}', tag_title=self.vae_model + ' (score > 0)'+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False, auc=auc) # anomaly score
+  
+      # xlog=False plots
+        plot_score(bkg_loss, sig_loss, False, xlog=False, tag_file=self.vae_model+f'_{method}_{key}', tag_title=self.vae_model+f' {method} {key}', plot_dir=self.plot_dir, bool_pfn=False, auc=auc) # anomaly score
+      # xlog= False plots plot only points less than 0 
+        plot_score(bkg_loss[bkg_loss<=0], sig_loss[sig_loss<=0], False, xlog=False, tag_file=self.vae_model+f'_neg_{method}_{key}', tag_title=self.vae_model+f' (score <= 0) {method} {key}', plot_dir=self.plot_dir, bool_pfn=False, auc=auc) # anomaly score
 
+    return sic_vals_dict
 
-  def evaluate_test_ECG(self):
-    x_testb, x_evalb, y_testb, y_evalb= self.prepare_test_ECG(scalar_ecg=self.scalar_ecg)
-
-    #x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val= self.prepare_test_ECG()
-    print('prepare_test_ECG')
-#    try: vae = self.load_vae()
-#    except: 
-    print('loading vae not successful so will start the training process')
-    vae,h2 = self.train_vae( x_evalb, y_evalb)
-      #vae,h2 = self.train_vae( x_evalb_train, x_evalb_val, y_evalb_train, y_evalb_val)
-    print('training successful')
-
-    x_test_labels = y_testb.astype(bool)
-    normal_x_test = x_testb[x_test_labels]
-    anomalous_x_test = x_testb[~x_test_labels]
-
-    var='train'
-    plot_1D_phi(x_evalb[:,:7],np.array([]),labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.pfn_model+f'_{var}', tag_title=self.pfn_model+f' {var.capitalize()}')
-    plot_phi(x_evalb,tag_file=f"ECG_normal_x_{var}", tag_title=f"Normal {var.capitalize()}", plot_dir=self.plot_dir)
-
-    var='test'
-    plot_1D_phi(normal_x_test[:,:7],anomalous_x_test[:,:7],labels=['normal', 'anomalous'], plot_dir=self.plot_dir, tag_file=self.pfn_model+f'_{var}', tag_title=self.pfn_model+f' {var.capitalize()}')
-    plot_phi(normal_x_test,tag_file=f"ECG_normal_x_{var}", tag_title=f"Normal {var.capitalize()}", plot_dir=self.plot_dir)
-    plot_phi(anomalous_x_test,tag_file=f"ECG_anomalous_x_{var}", tag_title=f"Anomalous {var.capitalize()}", plot_dir=self.plot_dir)
-
-    # if want to use validation_split instead of manual splitting
-    x_evalb_train, y_evalb_train = x_evalb, y_evalb
-
-    latent_test=vae.get_layer('encoder').predict(x_testb)
-    latent_train=vae.get_layer('encoder').predict(x_evalb_train)
-#    latent_val=vae.get_layer('encoder').predict(x_evalb_val)
-
-    #latent_test is a list but latent_test[0] is a numpy array
-    latent_test, latent_train =np.array(latent_test), np.array(latent_train)
-    #latent_test, latent_train, latent_val=np.array(latent_test), np.array(latent_train), np.array(latent_val)
-    print(f'{latent_test.shape=}')
-
-    try:plot_pca(latent_test[0,:,:], latent_label=np.array(y_testb), nlabel=10,n_components=2, tag_file=self.vae_model+'_test', tag_title=self.vae_model+' Test', plot_dir=self.plot_dir)
-    except:plot_pca(latent_test[:,:], latent_label=np.array(y_testb), nlabel=10,n_components=2, tag_file=self.vae_model+'_test', tag_title=self.vae_model+' Test', plot_dir=self.plot_dir)
-    try:plot_pca(latent_train[0,:,:],latent_label=np.array(y_evalb_train), nlabel=10, n_components=2, tag_file=self.vae_model+'_train', tag_title=self.vae_model+' Train', plot_dir=self.plot_dir)
-    except:plot_pca(latent_train[:,:],latent_label=np.array(y_evalb_train), nlabel=10, n_components=2, tag_file=self.vae_model+'_train', tag_title=self.vae_model+' Train', plot_dir=self.plot_dir)
-
-    # reconstruct output
-    test_labels = y_testb.astype(bool)
-    bkg_test = x_testb[test_labels]
-    y_bkg_test = y_testb[test_labels]
-    y_sig_test = y_testb[~test_labels]
-    sig_test = x_testb[~test_labels]
-    try:bkg_latent_test=latent_test[:,test_labels,:]
-    except:bkg_latent_test=latent_test[test_labels,:]
-    try:sig_latent_test=latent_test[:,~test_labels,:]
-    except:sig_latent_test=latent_test[~test_labels,:]
-
-    train_labels = y_evalb_train.astype(bool)
-    bkg_train = x_evalb_train[train_labels]
-    sig_train = x_evalb_train[~train_labels]
-    y_bkg_train = y_evalb_train[train_labels]
-    y_sig_train = y_evalb_train[~train_labels]
-    print(f'{bkg_latent_test.shape=}')
-    print(f'{sig_latent_test.shape=}')
-
-    try:bkg_latent_test_recon = vae.get_layer('decoder').predict(bkg_latent_test[2,:,:])
-    except:bkg_latent_test_recon = vae.get_layer('decoder').predict(bkg_latent_test)
-    try:sig_latent_test_recon = vae.get_layer('decoder').predict(sig_latent_test[2,:,:])
-    except: sig_latent_test_recon = vae.get_layer('decoder').predict(sig_latent_test)
-    print(f'{bkg_latent_test_recon.shape=}')
-    print(f'{sig_latent_test_recon.shape=}')
-    
-    self.plot_compare_ECG(x =bkg_test,label='input', title1 = 'output' ,title2='normal', x_latent_recon=bkg_latent_test_recon) 
-    self.plot_compare_ECG(x =sig_test,label='input', title1 = 'output',title2='anomalous', x_latent_recon=sig_latent_test_recon) 
-
-    try:bkg_latent_test_sigma, sig_latent_test_sigma = self.transform_sigma(bkg_latent_test[1,:,:]), self.transform_sigma(sig_latent_test[1, :,:])
-    except: bkg_latent_test_sigma, sig_latent_test_sigma = self.transform_sigma(bkg_latent_test), self.transform_sigma(sig_latent_test)
-    labels=['normal', 'anomalous']
-
-    """
-    plot_1D_phi(bkg_latent_test[0,:,:],sig_latent_test[0,:,:] , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_mu', tag_title=self.vae_model +r" $\mu$", ylog=True)
-    plot_1D_phi(bkg_latent_test_sigma,sig_latent_test_sigma , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sigma', tag_title=self.vae_model +r" $\sigma$", ylog=True)
-
-    plot_1D_phi(bkg_latent_test[0,:,:],sig_latent_test[0,:,:] , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_mu_custom', tag_title=self.vae_model +r" $\mu$",  bins=np.linspace(-0.0001,0.0001, num=50))
-    plot_1D_phi(bkg_latent_test_sigma,sig_latent_test_sigma , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sigma_custom', tag_title=self.vae_model +r" $\sigma$", bins=np.linspace(0.9998,1.0002,num=50))
-
-    plot_1D_phi(bkg_latent_test[2,:,:],sig_latent_test[2,:,:] , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sampling', tag_title=self.vae_model +" Sampling", bool_norm=True)
-    """
-
-    ######## EVALUATE SUPERVISED ######
-    # # --- Eval plots 
-    # 1. Loss vs. epoch 
-    try:plot_loss(h2, loss='loss', tag_file=self.vae_model, tag_title=self.vae_model, plot_dir=self.plot_dir)
-    except: print('loading vae_model so cannot draw regular loss plot -> no h2')
-    loss_dict_all={}
-    print(bkg_train.shape) 
-    loss_dict_train, methods,y = self.calculate_loss(model = vae, bkg = bkg_train, sig = sig_train, y_bkg = y_bkg_train, y_sig = y_sig_train, bool_vae=True)
-    loss_dict_all['train'] = loss_dict_train # cannot calculate a metric b/c sig_train is empty
-    loss_dict_test, methods,y  = self.calculate_loss(model = vae, bkg = bkg_test, sig = sig_test, y_bkg = y_bkg_test, y_sig = y_sig_test, bool_vae=True)
-    loss_dict_all['test'] = self.calculate_metric(loss_dict_test, methods=methods,y=y)
-    example=np.array([1.1, 2.2, 2.2, 2.2, 3.3, 3.3])
-    print(f'{example=}')
-    self.freq_table(example, text='example')
-    auc = self.plot_loss_dict(loss_dict_all)
-    #auc= {np.nan, np.nan, np.nan}
-    bkg_events_num,sig_events_num=np.nan, np.nan 
-    
-    return self.all_dir, auc, bkg_events_num,sig_events_num
 
   def evaluate_vae(self):
     graph, scaler = self.load_pfn()
@@ -693,9 +718,11 @@ class Param_ANTELOPE(Param):
 
     ######## EVALUATE SUPERVISED ######
     # # --- Eval plots 
-    # 1. Loss vs. epoch 
-    try:plot_loss(h2, loss='loss', tag_file=self.vae_model, tag_title=self.vae_model, plot_dir=self.plot_dir)
-    except: print('loading vae_model so cannot draw regular loss plot -> no h2')
+    # 1. Loss vs. epoch
+ 
+    for loss in ['loss', 'reco_loss', 'kl_loss']:
+      try:plot_loss(h2, loss=loss, tag_file=self.vae_model, tag_title=self.vae_model, plot_dir=self.plot_dir)
+      except: print(f'loading vae_model so cannot draw regular {loss} plot -> no h2')
     #plot_loss(h2, vae_model, "kl_loss")
     #plot_loss(h2, vae_model, "reco_loss")
     
@@ -705,10 +732,10 @@ class Param_ANTELOPE(Param):
     loss_dict_all['train'] = loss_dict_train # cannot calculate a metric b/c sig_train is empty
     loss_dict_test, methods,y  = self.calculate_loss(model = vae, bkg = x_testb, sig = x_sig, y_bkg = y_bkg_test, y_sig = y_sig_test)
     loss_dict_all['test'] = self.calculate_metric(loss_dict_test, methods,y)
-    auc = self.plot_loss_dict(loss_dict_all)
+    sic_vals_dict = self.plot_loss_dict(loss_dict_all)
     bkg_events_num,sig_events_num=np.nan, np.nan 
     
-    return self.all_dir, auc, bkg_events_num,sig_events_num
+    return self.all_dir, sic_vals_dict, bkg_events_num,sig_events_num
 
 ## AE events
 #sig_events = 20000
@@ -728,15 +755,18 @@ if __name__=="__main__":
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, arch_dir_vae='/data/users/kpark/svj-vae/results/test/09_11_23_11_38/architectures_saved/', step_size=100)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=False, bool_shift=True)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=True, bool_shift=True)
-      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1)
-#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8)
-      #extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8, scalar_ecg=10)
+#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=1000, step_size=1)
+      #extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],  step_size=1, bool_no_scaling=True, kl_loss_scalar=1000)
+      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8)
+#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8, scalar_ecg=10)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim= 784, encoding_dim=196, latent_dim=49)# if flattening
+    
     stdoutOrigin=param1.open_print()
-#    all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_test_ECG()
-    all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae()
-    #all_dir, auc,bkg_events_num,sig_events_num=param1.evaluate_vae(bool_pfn=False)
-    setattr(param1, 'auc',auc )
+    all_dir, sic_vals_dict,bkg_events_num,sig_events_num=param1.evaluate_test_ECG()
+    print('using relu as activation function in decoder instead of sigmoid')
+#    all_dir, sic_vals_dict,bkg_events_num,sig_events_num=param1.evaluate_vae()
+    #all_dir, sic_vals_dict,bkg_events_num,sig_events_num=param1.evaluate_vae(bool_pfn=False)
+    setattr(param1, 'sic_vals_dict',sic_vals_dict )
     setattr(param1, 'sig_events_num',sig_events_num )
     setattr(param1, 'bkg_events_num',bkg_events_num )
     print(param1.close_print(stdoutOrigin))

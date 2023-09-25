@@ -18,34 +18,45 @@ import h5py
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
 
-pfn_model = 'PFNv3p1'
+#pfn_model = 'PFNv3p1'
+pfn_model = 'PFNv6'
 #ae_model = 'ANTELOPEv1'
 vae_model = "vANTELOPE"
-arch_dir = "architectures_saved/"
-data_path = "/data/users/ebusch/SVJ/autoencoder/"
+arch_dir_pfn = "/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/"
+arch_dir_vae = "/data/users/kpark/svj-vae/results/test/{timestamp}/architectures_saved/"
+#arch_dir_pfn = "architectures_saved/"
+read_dir_bkg = "/data/users/ebusch/SVJ/autoencoder/v9.1/"
+read_dir_sig = "/data/users/ebusch/SVJ/autoencoder/v8.1/"
 
 ## ---------- Load graph model ----------
-graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
-graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
+graph = keras.models.load_model(arch_dir_pfn+pfn_model+'_graph_arch')
+graph.load_weights(arch_dir_pfn+pfn_model+'_graph_weights.h5')
 graph.compile()
 
 ## ---------- Load AE model ----------
-encoder = keras.models.load_model(arch_dir+vae_model+'_encoder_arch')
-decoder = keras.models.load_model(arch_dir+vae_model+'_decoder_arch')
+encoder = keras.models.load_model(arch_dir_vae+vae_model+'_encoder_arch')
+decoder = keras.models.load_model(arch_dir_vae+vae_model+'_decoder_arch')
 vae = VAE(encoder,decoder)
 
-vae.get_layer('encoder').load_weights(arch_dir+vae_model+'_encoder_weights.h5')
-vae.get_layer('decoder').load_weights(arch_dir+vae_model+'_decoder_weights.h5')
+vae.get_layer('encoder').load_weights(arch_dir_vae+vae_model+'_encoder_weights.h5')
+vae.get_layer('decoder').load_weights(arch_dir_vae+vae_model+'_decoder_weights.h5')
 
 vae.compile(optimizer=keras.optimizers.Adam())
 print ("Loaded model")
+track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e","jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
+track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e","jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
+jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"] # order is important in apply_JetScalingRotation
 
 
 x_events = 200000
 y_events = 20000
-bkg_file = data_path + "v8.1/skim3.user.ebusch.QCDskim.root"
-sig_file = data_path + "v8.1/skim3.user.ebusch.SIGskim.root"
-bkg2 = getTwoJetSystem(x_events,bkg_file,[],use_weight=True)
+bkg_file =  "skim0.user.ebusch.QCDskim.root"
+sig_file =  "skim3.user.ebusch.SIGskim.root"
+extraVars=
+plot_dir=f'/nevis/katya01/data/users/kpark/svj-vae/results/test/{time}/plots/'
+h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/antelope/aug17_jetpt/'
+bkg2 = getTwoJetSystem(x_events,bkg_file,track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
+      bool_weight=bool_weight_sig,  extraVars=extraVars, plot_dir=plot_dir,bool_pt=True, h5_dir=h5_dir,read_dir=read_dir_bkg)
 sig2 = getTwoJetSystem(y_events,sig_file,[],use_weight=False)
 #sig2 = getTwoJetSystem(y_events,bkg_file,[],use_weight=True)
 
@@ -97,7 +108,7 @@ x_events = -1
 my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
 
 ## evaluate bkg
-bkg2, mT_bkg = getTwoJetSystem(x_events, data_path + "v8.1/skim3.user.ebusch.QCDskim.root", my_variables, True)
+bkg2, mT_bkg = getTwoJetSystem(x_events, read_dir + "v8.1/skim3.user.ebusch.QCDskim.root", my_variables, True)
 scaler = load(arch_dir+pfn_model+'_scaler.bin')
 bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
 phi_bkg = graph.predict(bkg2)
@@ -128,7 +139,7 @@ print("Saved hdf5 for QCDskim")
 for dsid in range(515486,515527):
   my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
   try:
-    bkg2,mT_bkg = getTwoJetSystem(x_events,data_path + "v8.1/skim3.user.ebusch."+str(dsid)+".root", my_variables)
+    bkg2,mT_bkg = getTwoJetSystem(x_events,read_dir + "v8.1/skim3.user.ebusch."+str(dsid)+".root", my_variables)
   except: continue
 
   scaler = load(arch_dir+pfn_model+'_scaler.bin')
