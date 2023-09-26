@@ -519,17 +519,18 @@ class Param_ANTELOPE(Param):
       
     pred_bkg = model.predict(bkg)['reconstruction']
     loss_dict={}
-    methods=['mse', 'mae', 'multi_mse', 'multi_kl', 'multi_reco']
+    methods=['mse', 'multi_mse', 'multi_kl', 'multi_reco'] # if this is changed, the code below of defining also should be changed
+    #methods=['mse', 'mae', 'multi_mse', 'multi_kl', 'multi_reco']
     # methods=['mse', 'mae'] # for autoencoder 
     # using 'non' reduction type -> default is 'sum_over_batch_size'
     loss_dict['mse']={}
     mse = keras.losses.MeanSquaredError(reduction=tf.keras.losses.Reduction.NONE)
     loss_dict['mse']['bkg'] = mse(bkg, pred_bkg).numpy()
-  
+    """
     loss_dict['mae']={}
     mae = keras.losses.MeanAbsoluteError(reduction=tf.keras.losses.Reduction.NONE)
     loss_dict['mae']['bkg'] = mae(bkg, pred_bkg).numpy()
-  
+    """
     if bool_vae: 
       loss_dict['multi_mse'], loss_dict['multi_kl'], loss_dict['multi_reco']= {}, {}, {}
       loss_dict['multi_mse']['bkg'], loss_dict['multi_kl']['bkg'], loss_dict['multi_reco']['bkg']= get_multi_loss_each(model, bkg, step_size=self.step_size)
@@ -538,28 +539,32 @@ class Param_ANTELOPE(Param):
       else: y= np.concatenate((y_bkg,y_sig), axis=0) 
       pred_sig = model.predict(sig)['reconstruction']
       loss_dict['mse']['sig'] = mse(sig, pred_sig).numpy()
-      loss_dict['mae']['sig'] = mae(sig, pred_sig).numpy()
+#      loss_dict['mae']['sig'] = mae(sig, pred_sig).numpy()
       if bool_vae:
         loss_dict['multi_mse']['sig'], loss_dict['multi_kl']['sig'], loss_dict['multi_reco']['sig']= get_multi_loss_each(model, sig, step_size=self.step_size)
     else: y=y_bkg
 
+   
     if bool_transformed:
-      old_methods=methods # essential that new_methods and methods are separate b/c otherwise, will loop through methods that are already transformed
+      old_methods=methods.copy() # essential that new_methods and methods are separate b/c otherwise, will loop through methods that are already transformed
       for method in old_methods:
         new_method=f'{method}_transformed'
+        print(f'{method=}, {new_method=}')
         loss_dict[new_method]={}
         loss_bkg=np.log(loss_dict[method]['bkg'])
+      
         if len(sig)!=0:
           loss_sig=np.log(loss_dict[method]['sig'])
           loss_both= np.concatenate((loss_bkg, loss_sig))
         else:loss_both=loss_bkg
         max_loss=np.max(loss_both)
         min_loss=np.min(loss_both)
-        
-        loss_transformed_bkg = (loss_bkg - min_loss)/max_loss 
+        print(f'{max_loss=}, {min_loss=}, {loss_bkg[:5]}') 
+        loss_transformed_bkg = (loss_bkg - min_loss)/(max_loss -min_loss) 
         loss_dict[new_method]['bkg'] =loss_transformed_bkg 
         if len(sig)!=0:
-           loss_transformed_sig = (loss_sig - min_loss)/max_loss 
+           #loss_transformed_sig = (loss_sig - min_loss)/max_loss 
+           loss_transformed_sig = (loss_sig - min_loss)/(max_loss -min_loss) 
            loss_dict[new_method]['sig'] =loss_transformed_sig 
 
         methods.append(new_method)
@@ -755,16 +760,16 @@ if __name__=="__main__":
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, arch_dir_vae='/data/users/kpark/svj-vae/results/test/09_11_23_11_38/architectures_saved/', step_size=100)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=False, bool_shift=True)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=True, bool_shift=True)
-#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=1000, step_size=1)
+      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1)
       #extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],  step_size=1, bool_no_scaling=True, kl_loss_scalar=1000)
-      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8)
+#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8, scalar_ecg=10)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim= 784, encoding_dim=196, latent_dim=49)# if flattening
     
     stdoutOrigin=param1.open_print()
-    all_dir, sic_vals_dict,bkg_events_num,sig_events_num=param1.evaluate_test_ECG()
-    print('using relu as activation function in decoder instead of sigmoid')
-#    all_dir, sic_vals_dict,bkg_events_num,sig_events_num=param1.evaluate_vae()
+#    all_dir, sic_vals_dict,bkg_events_num,sig_events_num=param1.evaluate_test_ECG()
+#    print('using relu as activation function in decoder instead of sigmoid')
+    all_dir, sic_vals_dict,bkg_events_num,sig_events_num=param1.evaluate_vae()
     #all_dir, sic_vals_dict,bkg_events_num,sig_events_num=param1.evaluate_vae(bool_pfn=False)
     setattr(param1, 'sic_vals_dict',sic_vals_dict )
     setattr(param1, 'sig_events_num',sig_events_num )

@@ -355,7 +355,10 @@ def equal_length(bkg_loss, sig_loss):
 
 def transform_loss(bkg_loss, sig_loss, make_plot=False, tag_file="", tag_title="", plot_dir='', bool_pfn=True):
     bkg_loss,sig_loss=equal_length(bkg_loss,sig_loss)
-    nevents = len(sig_loss) 
+    sig_size= len(sig_loss)
+    bkg_size= len(bkg_loss)
+    assert sig_size == bkg_size, "signal and background size for calculating AUC have to be the same: transform_loss function" 
+    nevents = len(sig_loss)
     
     truth_sig = np.ones(nevents)
     truth_bkg = np.zeros(nevents)
@@ -368,7 +371,7 @@ def transform_loss(bkg_loss, sig_loss, make_plot=False, tag_file="", tag_title="
     sig_transformed = [(x - eval_min)/eval_max for x in sig_loss]
     if make_plot:
         plot_score(bkg_transformed, sig_transformed, False, False, tag_file=tag_file+'_Transformed', tag_title=tag_title+'_Transformed', plot_dir=plot_dir, bool_pfn=True)
-    return truth_labels, eval_vals 
+    return truth_labels, eval_vals, nevents 
 
 def transform_loss_ex(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
     nevents = len(sig_loss)
@@ -397,11 +400,11 @@ def applyScoreCut(loss,test_array,cut_val):
 
 def do_roc(bkg_loss, sig_loss, tag_file, tag_title, make_transformed_plot=False, plot_dir='', bool_pfn=True):
    
-    truth_labels, eval_vals = transform_loss(bkg_loss, sig_loss, make_plot=make_transformed_plot, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir, bool_pfn=True) 
+    truth_labels, eval_vals,nevents = transform_loss(bkg_loss, sig_loss, make_plot=make_transformed_plot, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir, bool_pfn=True) 
     fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
     auc = roc_auc_score(truth_labels, eval_vals)
     print("AUC - "+tag_file+": ", auc)
-    make_roc(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
+    make_roc(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir, nevents=nevents)
 
     sic_vals = make_sic(fpr,tpr,auc,bkg=bkg_loss,tag_file=tag_file, tag_title=tag_title,plot_dir=plot_dir)
     sic_vals['auc'] = auc

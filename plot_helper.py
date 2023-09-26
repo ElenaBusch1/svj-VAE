@@ -207,8 +207,9 @@ def plot_var(x_dict, x_cut1, x_cut2, key , tag_file="", tag_title="", plot_dir="
   plt.clf()
   print("Saved cut distribution for", key)
 
-def make_roc(fpr,tpr,auc, tag_file="", tag_title="", plot_dir=""):
+def make_roc(fpr,tpr,auc, tag_file="", tag_title="", plot_dir="", nevents=np.nan):
   plt.plot(fpr,tpr,label="AUC = %0.3f" % auc) # used to be 0.2f
+  if nevents !=np.nan:  plt.plot([],[], label=f'bkg ({nevents}), sig ({nevents})')
   plt.xlabel("False Positive Rate")
   plt.ylabel("True Positive Rate")
   plt.title("SVJ "+" ROC" +f' {tag_title}')
@@ -221,6 +222,7 @@ def make_roc(fpr,tpr,auc, tag_file="", tag_title="", plot_dir=""):
 def make_sic(fpr,tpr,auc, bkg, tag_file="", tag_title="",  plot_dir=""):
   print('make_sic')
   y = tpr[1:]/np.sqrt(fpr[1:])
+  print(f'{len(fpr[fpr==0])=}')
   good = (y != np.inf) & (tpr[1:] > 0.08)
   ymax = max(y[good])
   ymax_i = np.argmax(y[good])
@@ -334,17 +336,16 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
     plt.hist([],[], label="sig ({len(sig_score)})")
     print('sig_score not plotted: check if it is an empty array')
   if auc!=np.nan: 
-    print(f'auc is not numpy {auc}') 
     plt.hist([], [], label="AUC = %0.3f" % auc) # only when provided
-  else: print(f'auc is not numpy')
+  else: print(f'auc is not given')
   if xlog : plt.xscale('log')
   plt.yscale('log')
   plt.legend(loc='upper right')
   if bool_pfn:
-    plt.title(f'PFN Score {tag_title}')
+    plt.title(f'PFN Score {tag_title} (normalized)')
     plt.xlabel('PFN Score')
   else:
-    plt.title(f'Anomaly Score {tag_title}')
+    plt.title(f'Anomaly Score {tag_title} (normalized)')
     plt.xlabel('Anomaly Score')
   #plt.xlabel('Loss')
   plt.tight_layout()
