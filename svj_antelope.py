@@ -393,10 +393,12 @@ class Param_ANTELOPE(Param):
     jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"] # order is important in apply_JetScalingRotation
 
     bool_weight_sig=False
-    sig, mT_sig, sig_sel, jet_sig, sig_in0, sig_in1 = getTwoJetSystem(nevents=self.sig_events,input_file=self.sig_file,
+    #sig, mT_sig, sig_sel, jet_sig, sig_in0, sig_in1 = getTwoJetSystem(nevents=self.sig_events,input_file=self.sig_file,
+    sig, mT_sig, _, _, _, _ = getTwoJetSystem(nevents=self.sig_events,input_file=self.sig_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
       bool_weight=bool_weight_sig,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed,max_track=self.max_track, bool_pt=self.bool_pt,h5_dir=self.h5_dir,       read_dir='/data/users/ebusch/SVJ/autoencoder/v8.1/')    
-    bkg, mT_bkg, bkg_sel, jet_bkg,bkg_in0, bkg_in1 = getTwoJetSystem(nevents=self.bkg_events,input_file=self.bkg_file,
+    #bkg, mT_bkg, bkg_sel, jet_bkg,bkg_in0, bkg_in1 = getTwoJetSystem(nevents=self.bkg_events,input_file=self.bkg_file,
+    bkg, mT_bkg, _, _, _, _ = getTwoJetSystem(nevents=self.bkg_events,input_file=self.bkg_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
       bool_weight=self.bool_weight,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed, max_track=self.max_track,bool_pt=self.bool_pt,h5_dir=self.h5_dir,
       read_dir='/data/users/ebusch/SVJ/autoencoder/v9.1/') 

@@ -291,7 +291,7 @@ def make_single_roc(rocs,aucs,ylabel, tag_file="", tag_title="",  plot_dir=""):
   plt.savefig(saveTag+'_roc_aucs_'+Ylabel.replace("/","")+tag_file+'.pdf')
   plt.clf()
 
-def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="", tag_title="",  plot_dir="", bool_pfn=True, auc=np.nan):
+def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="", tag_title="",  plot_dir="", bool_pfn=True, auc=np.nan, labels=[]):
   if remove_outliers:
     bkg_score,nb = detect_outliers(bkg_score)
     sig_score,ns = detect_outliers(sig_score)
@@ -320,16 +320,19 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
     except: 
       try: bins=np.histogram(bkg_score,bins=80)[1]
       except: bins=np.histogram(sig_score,bins=80)[1]
+  if labels==[]: labels=[f"bkg ({len(bkg_score)})", f"sig ({len(sig_score)})"]
+  else: labels=[f"{x} ({len(bkg_score)})" for x in labels]
+
   try: 
     #plt.hist(bkg_score, bins=bins, alpha=0.5, label=f"normal ({len(bkg_score)})", density=True, color='blue')
-    plt.hist(bkg_score, bins=bins, alpha=0.5, label=f"bkg ({len(bkg_score)})", density=True, color='blue')
+    plt.hist(bkg_score, bins=bins, alpha=0.5, label=labels[0], density=True, color='blue')
   except: 
     #plt.hist([],[], label="normal ({len(bkg_score)})")
     plt.hist([],[], label="bkg ({len(bkg_score)})")
     print('bkg_score not plotted: check if it is an empty array')
   try: 
     #plt.hist(sig_score, bins=bins, alpha=0.5, label=f"anomalous ({len(sig_score)})", density=True, color='red')
-    plt.hist(sig_score, bins=bins, alpha=0.5, label=f"sig ({len(sig_score)})", density=True, color='red')
+    plt.hist(sig_score, bins=bins, alpha=0.5, label=labels[1], density=True, color='red')
 
   except: 
     #plt.hist([],[], label="anomalous ({len(sig_score)})")
@@ -583,7 +586,7 @@ def plot_nTracks_2d_hist(leadingJetTracks, subleadingJetTracks):
   plt.clf()
   print("Saved plot of nTracks 2D")
 
-def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir="", bool_sig_on=True):
+def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir="", bool_sig_on=True, labels=[]):
   #variable_array = ["pT", "eta", "phi", "E"]
   variable_array = ["pT", "eta", "phi", "E", "z0", "d0", "qOverP"]
   print('before reshaping, train and sig', train.shape, sig.shape)
@@ -604,9 +607,11 @@ def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir=
     if(bins[-1] > 3000): bins = np.arange(0,3000,50)
     #plt.subplot(4,1,i+1)
     if bool_one:    plt.subplot(4,2,i+1)
-    plt.hist(train_v, alpha=0.5, label=f"bkg ({len(train_v)})", bins=bins, density=False)
+    if labels==[]: labels=[f"bkg ({len(train_v)})", f"sig ({len(sig_v)})"]
+    else: labels=[f"{x} ({len(train_v)})" for x in labels]     
+    plt.hist(train_v, alpha=0.5, label=labels[0], bins=bins, density=False)
     if bool_sig_on:
-      plt.hist(sig_v, alpha=0.5, label=f"sig ({len(sig_v)})", bins=bins, density=False)
+      plt.hist(sig_v, alpha=0.5, label=labels[1], bins=bins, density=False)
     plt.title(f'{variable_array[i]} {tag_title}')
     if i == 0: plt.legend(loc='upper right')
     plt.tight_layout(h_pad=1, w_pad=1)

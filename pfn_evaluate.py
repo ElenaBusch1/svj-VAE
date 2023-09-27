@@ -29,16 +29,16 @@ def extract_tag(filename):
   return tag
 #h5_dir, max_track
 # ---------- Load graph model ----------
-def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, applydir,h5path, bool_pt, max_track, h5_dir,read_dir,pfn_model,vae_model='', bool_no_scaling=False):
+def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, applydir,h5path, bool_pt, max_track, h5_dir,read_dir,pfn_model,vae_model='', bool_no_scaling=False, bool_transformed=True, arch_dir_pfn=''):
   cprint(f'{extraVars=}, {pfn_model=}, {vae_model=}', 'red')
-  print(arch_dir+pfn_model+'_graph_arch')
-  graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
-  graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
+  print(arch_dir_pfn+pfn_model+'_graph_arch')
+  graph = keras.models.load_model(arch_dir_pfn+pfn_model+'_graph_arch')
+  graph.load_weights(arch_dir_pfn+pfn_model+'_graph_weights.h5')
   graph.compile()
 
 ## Load classifier model
-  classifier = keras.models.load_model(arch_dir+pfn_model+'_classifier_arch')
-  classifier.load_weights(arch_dir+pfn_model+'_classifier_weights.h5')
+  classifier = keras.models.load_model(arch_dir_pfn+pfn_model+'_classifier_arch')
+  classifier.load_weights(arch_dir_pfn+pfn_model+'_classifier_weights.h5')
   classifier.compile()
 
   if vae_model !='':
@@ -79,16 +79,33 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
       bool_weight=bool_weight,  extraVars=extraVars, plot_dir=plot_dir,seed=seed,max_track=max_track, bool_pt=bool_pt, h5_dir=h5_dir, bool_select_all=True, read_dir=read_dir)
 
-
-  scaler = load(arch_dir+pfn_model+'_scaler.bin')
+  print(mT_bkg.shape)
+  scaler = load(arch_dir_pfn+pfn_model+'_scaler.bin')
   bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
 
-  plot_vectors(bkg2,bkg2,tag_file="ANTELOPE", tag_title=" (ANTELOPE)", plot_dir=plot_dir, bool_sig_on=False)# change
-  plot_single_variable([mT_bkg[:,2]],h_names= [bkg_file],weights_ls=[mT_bkg[:,1]], tag_title= 'leading jet pT (QCD)', plot_dir=plot_dir,logy=True, tag_file='jet1_pt')
+  plot_vectors(bkg2,bkg2,tag_file="ANTELOPE_"+str(dsid), tag_title=f" (ANTELOPE) {str(dsid)}", plot_dir=plot_dir, bool_sig_on=False, labels=[str(dsid)])# change
+  plot_single_variable([mT_bkg[:,2]],h_names= [bkg_file],weights_ls=[mT_bkg[:,1]], tag_title= f'leading jet pT  {str(dsid)}', plot_dir=plot_dir,logy=True, tag_file='jet1_pt_'+str(dsid))
+  plot_single_variable([mT_bkg[:,0]],h_names= [bkg_file],weights_ls=[mT_bkg[:,1]], tag_title= f'{extraVars[0]} {str(dsid)} (weighted)', plot_dir=plot_dir,logy=True, tag_file='mT_jj_'+str(dsid))
 
 # plot_vectors(bkg2,sig2,"PFN")
   phi_bkg = graph.predict(bkg2)
+  vae_min_dict, vae_max_dict, pfn_min_dict,pfn_max_dict={},{},{},{}
+  # technically these are loss transformed!
+  vae_min_dict['09_26_23_10_38']= {'mse': -12.634254306189314, 'multi_reco':-12.545995242335483, 'multi_kl': -20.211301490367624 , 'multi_mse': -12.542977457162644}
+  vae_max_dict['09_26_23_10_38']= {'mse': -3.456886217152505, 'multi_reco':-3.4590470421545785, 'multi_kl':-9.330598758710815, 'multi_mse': -3.458533554054478}
+  vae_max_dict['09_27_23_01_32']= {'mse': 4.051665855814887 ,'multi_reco': 4.14657246457546, 'multi_kl':6.57444001122076, 'multi_mse':6.6017456361377675 }
+  vae_min_dict['09_27_23_01_32']= {'mse': -3.2118662852702515,'multi_reco':-3.166914871440587, 'multi_kl':0.9695256492112576, 'multi_mse':-3.166914871440587 }
+  """
+  vae_min_dict['09_26_23_01_32']= {'mse': ,'multi_reco':, 'multi_kl':, 'multi_mse': }
+  vae_min_dict['09_26_23_10_38']= {'mse': -12.740280963806276, 'multi_reco':12.681404701687859, 'multi_kl': -20.29521939559835 , 'multi_mse': -12.67853443999128}
+  vae_max_dict['09_26_23_10_38']= {'mse': -3.483815150531365, 'multi_reco': -3.48506892905624, 'multi_kl':-10.672584950009908, 'multi_mse': -3.48466478371146}
+ 
+  vae_min_dict['09_26_23_01_32']= {'mse': -3.4774327321494654,'multi_reco':-3.411389944447053, 'multi_kl':0.7924726076345564, 'multi_mse':0.9376798510229637 }
+  vae_max_dict['09_26_23_01_32']= {'mse':2.992416483473239 ,'multi_reco':2.989450855262472, 'multi_kl':6.328397109439065, 'multi_mse': 6.3575135820668995 }
 
+  """
+  pfn_min_dict['09_26_23_10_38']= 0
+  pfn_max_dict['09_26_23_10_38']= 204.44198608398438
 # each event has a pfn score
 ## Classifier loss
   if vae_model =='': # if PFN 
@@ -96,33 +113,66 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
     bkg_loss = pred_phi_bkg[:,1]
   else: # if PFN + AE
     ## Scale phis - values from v1 training
+    phi_bkg = phi_bkg.astype('float64')
     eval_min = 0.0
     eval_max = 109.87523
     #eval_max = np.amax(phi_bkg)
     #eval_min = np.amin(phi_bkg)
 
-
-    if not bool_no_scaling: 
+    if not bool_no_scaling :# scaling 
+      eval_min = pfn_min_dict['09_26_23_10_38']
+      eval_max = pfn_max_dict['09_26_23_10_38']
       phi_bkg = (phi_bkg - eval_min)/(eval_max-eval_min)
     
-    plot_phi(phi_sig,tag_file="PFN_phi_input_"+str(dsid), tag_title="str(dsid) Input", plot_dir=plot_dir)
+    plot_phi(phi_bkg,tag_file="PFN_phi_input_"+str(dsid), tag_title=f"{str(dsid)} Input", plot_dir=plot_dir)
     pred_phi_bkg = vae.predict(phi_bkg)['reconstruction']
     bkg_loss={}
     # ## AE loss
-    bkg_loss['bkg_loss'] = np.array(keras.losses.mse(phi_bkg, pred_phi_bkg))
-    bkg_loss['bkg_total_loss'], bkg_loss['bkg_kl_loss'],  bkg_loss['bkg_reco_loss']=get_multi_loss_each(vae, phi_bkg)
+    bkg_loss['mse'] = np.array(keras.losses.mse(phi_bkg, pred_phi_bkg))
+    bkg_loss['multi_reco'], bkg_loss['multi_kl'],  bkg_loss['multi_mse']=get_multi_loss_each(vae, phi_bkg)
+    
+    methods=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
+    new_methods=[]
+    if bool_transformed:
+      old_methods=methods.copy() # essential that new_methods and methods are separate b/c otherwise, will loop through methods that are already transformed
+      for method in old_methods:
+        new_method=f'{method}_transformed'
+        print(f'{method=}, {new_method=}')
+        loss=np.log(bkg_loss[method])
+#        max_loss=np.max(loss)
+#        min_loss=np.min(loss)
+        min_loss = vae_min_dict['09_26_23_10_38'][method]
+        max_loss = vae_max_dict['09_26_23_10_38'][method]
+        print(f'{max_loss=}, {min_loss=}, {loss[:5]}')
+        loss_transformed_bkg = (loss - min_loss)/(max_loss -min_loss)
+        bkg_loss[new_method] =loss_transformed_bkg
+        new_methods.append(new_method)
+        # xlog=False plots
+  for method in new_methods: # transformed
+    plot_score(bkg_loss[method], np.array([]), False, xlog=False, tag_file=vae_model+f'_{method}_{str(dsid)}', tag_title=vae_model+f' {method} {str(dsid)}', plot_dir=plot_dir, bool_pfn=False, labels=[str(dsid)]) # anomaly score 
 
-
-  newVars=['score', 'score_total', 'score_kl', 'score_reco']
+  for method in old_methods:
+    
+    plot_score(bkg_loss[method][bkg_loss[method]>0], np.array([]),False, xlog=True, tag_file=vae_model+'_pos'+f'_{method}_{str(dsid)}', tag_title=vae_model + ' (score > 0)'+f' {method} {str(dsid)}', plot_dir=plot_dir, bool_pfn=False, labels=[str(dsid)]) # anomaly score
+#    except: print('skip b/c it failed for some reason')
+  newVars=['mse', 'multi_reco', 'multi_kl', 'multi_mse',
+    'mse_transformed', 'multi_reco_transformed', 'multi_kl_transformed', 'multi_mse_transformed']
+#  newVars=['score', 'score_total', 'score_kl', 'score_reco', ]
   newVars+=extraVars
 
-    
 #  newVars=extraVars.insert(0,"score")
-  save_bkg = np.concatenate((bkg_loss['bkg_loss'][:,None], 
-   bkg_loss['bkg_total_loss'][:,None],
-   bkg_loss['bkg_kl_loss'][:,None],
-   bkg_loss['bkg_reco_loss'][:,None],
-    mT_bkg),axis=1)
+  save_bkg = np.concatenate((bkg_loss['mse'][:,None], 
+   bkg_loss['multi_reco'][:,None],
+   bkg_loss['multi_kl'][:,None],
+   bkg_loss['multi_mse'][:,None],
+
+
+   bkg_loss['mse_transformed'][:,None],
+   bkg_loss['multi_reco_transformed'][:,None],
+   bkg_loss['multi_kl_transformed'][:,None],
+   bkg_loss['multi_mse_transformed'][:,None],
+
+   mT_bkg),axis=1)
 
   ds_dt = np.dtype({'names':newVars,'formats':[(float)]*len(newVars)})
   rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
@@ -130,14 +180,14 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
 
   with h5py.File(h5path,"w") as f:
     dset = f.create_dataset("data",data=rec_bkg)
-
   return rec_bkg
   #return rec_bkg, rec_sig
 
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-myVars= ["mT_jj", "weight"]# if this is empty
+myVars= ["mT_jj", "weight", "jet1_pt"]# if this is empty
+#myVars= ["mT_jj", "weight"]# if this is empty
 pfn_model = 'PFNv6'
 #vae_model = 'ANTELOPE'
 vae_model = 'vANTELOPE'
@@ -160,7 +210,10 @@ max_track=80# CHECK THIS
 h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/antelope/aug17_jetpt'
 #all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/paramscan_new/07_24_23_07_11/' # change
 bool_no_scaling=False
-all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/antelope/' # change
+bool_transformed=True
+all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/grid_sept26/09_26_23_10_38/' # change
+arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/'
+#all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/antelope/' # change
 applydir=all_dir+'applydir/'
 if not os.path.exists(applydir):
   os.mkdir(applydir)
@@ -178,7 +231,9 @@ filetag_ls=[extract_tag(filename=fl) for fl in file_ls]
 if vae_model=='': # if evaluating PFN
   sig_file_prefix='v8p1_'
 else:sig_file_prefix=f'v8p1_{vae_model}_' # if evaluating ANTELOPE
-"""
+if vae_model=='': # if evaluating PFN
+  bkg_file_prefix='v9p1_'
+else:bkg_file_prefix=f'v8p1_{vae_model}_' # if evaluating ANTELOPE
 for fl in file_ls:
   dsid=fl.split('.')[-2]
   print('*'*30)
@@ -193,9 +248,8 @@ for fl in file_ls:
   if  os.path.exists(h5path): # and (dsid !=515429):
     with h5py.File(h5path,"r") as f:
       dset = f.get('data')[:]
-  else:    rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v8.1/', pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling)
+  else:    rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v8.1/', pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
 
-"""
 bkg_file="skim0.user.ebusch.QCDskim.root"
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 dsid=bkg_file.split('.')[-2]
@@ -206,8 +260,11 @@ if  os.path.exists(h5path):
   with h5py.File(h5path,"r") as f:
     dset = f.get('data')[:]
 
-else: rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v9.1/',pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling)
+else: rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v9.1/',pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
+
+"""
+"""
 title=f'track={max_track}'
 grid_s_sqrt_b(score_cut=0.97, bkg_scale=5, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix, title=title, all_dir=all_dir,cms=False)
-grid_scan(title, all_dir=all_dir, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix)
+grid_scan(title, all_dir=all_dir, sig_file_prefix=sig_file_prefix,bkg_file_prefix=sie_file_prefix)
 #sys.stdout =stdoutOrigin

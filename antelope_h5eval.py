@@ -213,6 +213,7 @@ def grid_scan(title, all_dir, sig_file_prefix, bkg_file_prefix):
     #print(dsid, f'{cut:.0%}') 
   
   print("bkg events: ", len(bkg_loss))
+  print(f'grid_scan in {plot_dir}')
   do_grid_plots(sic_values, title,plot_dir=plot_dir)
 
 def grid_s_sqrt_b(score_cut, bkg_scale, sig_file_prefix, bkg_file_prefix,title, all_dir,cms=False): #all_dir # bkg_scale = 5
@@ -290,6 +291,7 @@ def grid_s_sqrt_b(score_cut, bkg_scale, sig_file_prefix, bkg_file_prefix,title, 
       cprint(e, 'red')
       sb_values[dsid] = {"sensitivity_Inclusive": 0, "sensitivity_mT": 0}
 
+  print(f'grid_s_sqrt_b in {plot_dir}')
   do_grid_plots(sb_values, title+f'_score_cut={score_cut}',plot_dir=plot_dir)
   return sb_values
 

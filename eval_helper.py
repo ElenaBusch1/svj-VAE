@@ -14,11 +14,26 @@ import json
 import h5py 
 from numba import jit
 #def getTwoJetSystem(x_events,y_events, tag_file, tag_title, bool_weight, sig_file,bkg_file="user.ebusch.QCDskim.mc20e.root",extraVars=[], plot_dir=''):
+
+
+def sizeof_fmt(num, suffix='B'):
+    ''' by Fred Cirera,  https://stackoverflow.com/a/1094933/1870254, modified'''
+    # print out memory
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f %s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f %s%s" % (num, 'Yi', suffix)
+
+
+
+
 def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,seed,max_track, plot_dir,extraVars=[], bool_weight=True, bool_pt=False, h5_dir='', bool_select_all=False, read_dir=''):
     
     getExtraVars = len(extraVars) > 0
     h5path=f'{h5_dir}/twojet/{input_file}_s={seed}_ne={nevents}_mt={max_track}.hdf5'
-    str_ls=['bkg', 'vars_bkg', 'bkg_sel', 'jet_bkg', 'bkg_in0', 'bkg_in1']
+#    str_ls=['bkg', 'vars_bkg', 'bkg_sel', 'jet_bkg', 'bkg_in0', 'bkg_in1']
+    str_ls=['bkg', 'vars_bkg']
     
     bkg, vars_bkg, bkg_sel, jet_bkg, bkg_in0, bkg_in1=np.array([]), np.array([]), np.array([]), np.array([]), np.array([]), np.array([])
     data_ls=[bkg,vars_bkg, bkg_sel, jet_bkg, bkg_in0,bkg_in1]
@@ -84,6 +99,7 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
       
     
       bkg_nz = bkg_nz0 & bkg_nz1
+
       cprint(f' {x_pt_0.shape=}, {x_pt_1.shape=},{bkg_nz.shape=}, {bkg_nz0.shape=}, {bkg_nz1.shape=}')
       bkg_pt0 = x_pt_0[bkg_nz]  # with pt and track requirement
       #bkg_pt0 = bkg_in0[bkg_nz]  # with pt and track requirement
@@ -103,26 +119,41 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
   
       #bkg_pt1 = bkg_in1[bkg_nz]
       bkg_pt1 = x_pt_1[bkg_nz]
+
+
       cprint(f' {bkg_pt0.shape=}, {bkg_pt1.shape=}')
       bjet_sel = jet_bkg[bkg_nz]
-      print('1')
       if getExtraVars:
         vars_bkg = vars_bkg[bkg_nz]   # vars_bkg -> be careful if there's pt for track selection 
-      print('2')
+
+
       bkg_sel = np.concatenate((bkg_pt0,bkg_pt1),axis=1)
       
-      print('3')
+      del bkg_nz0, bkg_nz1, x_pt_0, x_pt_1, bkg_nz, bkg_pt0,bkg_pt1
+
   #    plot_vectors(bkg_sel,sig_sel,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
       bkg = apply_JetScalingRotation(bkg_sel, bjet_sel,0)
-  
-      data_ls=[bkg,vars_bkg, bkg_sel, jet_bkg, bkg_in0,bkg_in1] # reset here
+
+      print('-'*20)
+      for name, size in sorted(((name, sys.getsizeof(value)) for name, value in list(locals().items())), key= lambda x: -x[1])[:10]:
+        print("{:>30}: {:>8}".format(name, sizeof_fmt(size)))
+
+      del bjet_sel, bkg_sel, jet_bkg, bkg_in0,bkg_in1 
+
+      #data_ls=[bkg,vars_bkg, bkg_sel, jet_bkg, bkg_in0,bkg_in1] # reset here
+      # if changing data_ls, also change str_ls so that the lengths are the same
+      data_ls=[bkg,vars_bkg] # reset here
       with h5py.File(h5path,"w") as f:
         dset = f.create_group('default')
         for i in range(len(str_ls)):  
           data= dset.create_dataset(str_ls[i],data=data_ls[i])
-  
+    """
     if getExtraVars: return bkg, vars_bkg, bkg_sel, jet_bkg, bkg_in0, bkg_in1
     else: return bkg, np.array([]), bkg_sel, jet_bkg, bkg_in0, bkg_in1
+    """
+    if getExtraVars: return bkg, vars_bkg, np.array([]), np.array([]), np.array([]), np.array([])
+    else: return bkg, np.array([]), np.array([]), np.array([]), np.array([]), np.array([])
+
 def check_weights(x_events):
     #bkg_nw1 = read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 10000, ["jet1_pt"], use_weight=False)
     bkg_nw = read_flat_vars(data_path + "v8.1/user.ebusch.QCDskim.mc20e.root", 500000, ["mT_jj"], use_weight=True)
@@ -243,9 +274,7 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
         print("Exiting...")
         return
     
-    print('4')
     x = np.copy(x_raw) #copy
-    print('5')
     x_totals = x_raw.sum(axis=1) #get sum total pt, eta, phi, E for each event
     """
     cprint(f'{x_raw}=','yellow')
@@ -254,15 +283,16 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
 
     x[:,:,0] = (x_raw[:,:,0].T/x_totals[:,0]).T  #divide each pT entry by event pT total
     x[:,:,3] = (x_raw[:,:,3].T/x_totals[:,3]).T  #divide each E entry by event E total
-    print('6')
-    
+    #print('6')
+
+    del x_totals
+ 
     #jet_phi_avs = np.zeros(x.shape[0])
     for e in range(x.shape[0]):
    
         jet_eta_av = (jet[e,0] + jet[e,2])/2.0 
         jet_phi_av = (jet[e,1] + jet[e,3])/2.0 
 
-        print('7')
         for t in range(x.shape[1]):
             if not x[e,t,:].any():
                 #cprint(f'{x[e,t,:]=}', 'magenta')
