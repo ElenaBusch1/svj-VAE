@@ -476,7 +476,8 @@ def get_decoder(input_dim, encoding_dim, latent_dim):
  
   x = keras.layers.Dense(encoding_dim, activation="relu")(latent_inputs)
   x = keras.layers.Dense(encoding_dim*2., activation="relu")(x)
-  decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid")(x)
+  decoder_outputs = keras.layers.Dense(input_dim, activation="relu")(x)
+  #decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid")(x)
 
   print(f'{decoder_outputs.dtype=}')
   decoder = keras.Model(latent_inputs, decoder_outputs, name="decoder")

@@ -57,30 +57,34 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
       #bkg_in0, x0, bkg_in1, x1
       #plot_vectors_jet(jet_bkg,jet_sig,jet_array, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
        
-#      """
+      """
+      #x_0_0, _, bkg_nz0_0,x_pt_0_0 = apply_TrackSelection(bkg_in0, jet_bkg, ntrack=0, bool_pt=bool_pt)
       
-      x_0_0, _, bkg_nz0_0,x_pt_0_0 = apply_TrackSelection(bkg_in0, jet_bkg, ntrack=0, bool_pt=bool_pt)
-      x_1_0, _, bkg_nz1_0,x_pt_1_0 = apply_TrackSelection(bkg_in1, jet_bkg, ntrack=0, bool_pt=bool_pt)
+      # only need for the leading jet ntrack comparison
+      x_0_0, _, bkg_nz0_0,x_pt_0_0 = apply_TrackSelection(bkg_in0,  ntrack=0, bool_pt=bool_pt)
+      x_1_0, _, bkg_nz1_0,x_pt_1_0 = apply_TrackSelection(bkg_in1,  ntrack=0, bool_pt=bool_pt)
       bkg_nz_0 = bkg_nz0_0 & bkg_nz1_0 
       
       
-      x_0_1, _, bkg_nz0_1,x_pt_0_1  = apply_TrackSelection(bkg_in0, jet_bkg, ntrack=1, bool_pt=bool_pt)
-      x_1_1, _, bkg_nz1_1,x_pt_1_1 = apply_TrackSelection(bkg_in1, jet_bkg, ntrack=1, bool_pt=bool_pt)
+      x_0_1, _, bkg_nz0_1,x_pt_0_1  = apply_TrackSelection(bkg_in0,  ntrack=1, bool_pt=bool_pt)
+      x_1_1, _, bkg_nz1_1,x_pt_1_1 = apply_TrackSelection(bkg_in1,  ntrack=1, bool_pt=bool_pt)
       bkg_nz_1 = bkg_nz0_1 & bkg_nz1_1 
   
-      x_0_2, _, bkg_nz0_2,x_pt_0_2 = apply_TrackSelection(bkg_in0, jet_bkg, ntrack=2, bool_pt=bool_pt)
-      x_1_2, _, bkg_nz1_2,x_pt_1_2  = apply_TrackSelection(bkg_in1, jet_bkg, ntrack=2, bool_pt=bool_pt)
+      x_0_2, _, bkg_nz0_2,x_pt_0_2 = apply_TrackSelection(bkg_in0,  ntrack=2, bool_pt=bool_pt)
+      x_1_2, _, bkg_nz1_2,x_pt_1_2  = apply_TrackSelection(bkg_in1,  ntrack=2, bool_pt=bool_pt)
       bkg_nz_2 = bkg_nz0_2 & bkg_nz1_2 
-#      """
+      """
   
       # select events which have both valid leading and subleading jet tracks
       #with pt requirement and track selection
-      x_0, _, bkg_nz0,x_pt_0 = apply_TrackSelection(bkg_in0, jet_bkg, bool_pt=bool_pt) #x_0 is leading jet 1 indices applied, x_pt_0 only pt selection applied -> so should use x_pt_0 for the compatibility of dimension with bkg_nz
-      x_1, _, bkg_nz1, x_pt_1 = apply_TrackSelection(bkg_in1, jet_bkg, bool_pt=bool_pt)
+      #x_0, _, bkg_nz0,x_pt_0 = apply_TrackSelection(bkg_in0,  bool_pt=bool_pt) #x_0 is leading jet 1 indices applied, x_pt_0 only pt selection applied -> so should use x_pt_0 for the compatibility of dimension with bkg_nz
+      _, _, bkg_nz0,x_pt_0 = apply_TrackSelection(bkg_in0,  bool_pt=bool_pt) #x_0 is leading jet 1 indices applied, x_pt_0 only pt selection applied -> so should use x_pt_0 for the compatibility of dimension with bkg_nz
+      #x_1, _, bkg_nz1, x_pt_1 = apply_TrackSelection(bkg_in1,  bool_pt=bool_pt)
+      _, _, bkg_nz1, x_pt_1 = apply_TrackSelection(bkg_in1,  bool_pt=bool_pt)
       
     
       bkg_nz = bkg_nz0 & bkg_nz1
-      cprint(f'{x_0.shape=}, {x_1.shape=}, {x_pt_0.shape=}, {x_pt_1.shape=},{bkg_nz.shape=}, {bkg_nz0.shape=}, {bkg_nz1.shape=}')
+      cprint(f' {x_pt_0.shape=}, {x_pt_1.shape=},{bkg_nz.shape=}, {bkg_nz0.shape=}, {bkg_nz1.shape=}')
       bkg_pt0 = x_pt_0[bkg_nz]  # with pt and track requirement
       #bkg_pt0 = bkg_in0[bkg_nz]  # with pt and track requirement
   
@@ -88,7 +92,7 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
 #      # WHAT ABOUT JETS? PT SELECTION? 
       """
       hist0=[x_pt_0_0, x_pt_0_0[bkg_nz0_0], x_pt_0_0[bkg_nz0_1],x_pt_0_0[bkg_nz0_2], x_pt_0_0[bkg_nz0]] # leading jet ntrack comparison
-      hist1=[x_pt_1_0, x_pt_1_0[bkg_nz1_0], x_pt_1_0[bkg_nz1_1],x_pt_1_0[bkg_nz1_2], x_pt_1_0[bkg_nz1]] # leading jet ntrack comparison
+      hist1=[x_pt_1_0, x_pt_1_0[bkg_nz1_0], x_pt_1_0[bkg_nz1_1],x_pt_1_0[bkg_nz1_2], x_pt_1_0[bkg_nz1]] # subleading jet ntrack comparison
       hist2=[x_pt_0_0, x_pt_0_0[bkg_nz_0], x_pt_0_0[bkg_nz_1],x_pt_0_0[bkg_nz_2], bkg_pt0] # leading jet ntrack comparison
   
       plot_ntrack(hist1,  tag_file=tag1+tag2, tag_title=tag1+tag2, plot_dir=plot_dir)
@@ -99,12 +103,15 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
   
       #bkg_pt1 = bkg_in1[bkg_nz]
       bkg_pt1 = x_pt_1[bkg_nz]
-  
+      cprint(f' {bkg_pt0.shape=}, {bkg_pt1.shape=}')
       bjet_sel = jet_bkg[bkg_nz]
+      print('1')
       if getExtraVars:
         vars_bkg = vars_bkg[bkg_nz]   # vars_bkg -> be careful if there's pt for track selection 
+      print('2')
       bkg_sel = np.concatenate((bkg_pt0,bkg_pt1),axis=1)
       
+      print('3')
   #    plot_vectors(bkg_sel,sig_sel,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
       bkg = apply_JetScalingRotation(bkg_sel, bjet_sel,0)
   
@@ -178,13 +185,13 @@ def pt_sort(x):
         x[i] = ev[ev[:,0].argsort()]
     return x
 
-def apply_TrackSelection(x_raw, jets, bool_pt=True, bool_track=True, pt=10, ntrack=3):
+def apply_TrackSelection(x_raw,  bool_pt=False, bool_track=True, pt=10, ntrack=3):
+#def apply_TrackSelection(x_raw, jets, bool_pt=True, bool_track=True, pt=10, ntrack=3):
     x = np.copy(x_raw)
  
     if bool_pt:
       x[x[:,:,0] < pt] = 0
       # should this be enforced in jets as well? and return the new jets
-    
     
     x_pt=x.copy() # KEEP THIS -> IMPT
     """
@@ -192,18 +199,19 @@ def apply_TrackSelection(x_raw, jets, bool_pt=True, bool_track=True, pt=10, ntra
     #print("Input track shape: ", x.shape)
     """
     # require at least 3 tracks
-    x_test=x.copy()
+    #x_test=x.copy()
     if bool_track:
 #      for ntrack in ntracks:
-
       x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= ntrack for jet in x])
-      x = x[x_nz]
+#      x = x[x_nz]
+      
     else: 
       x_nz = np.array([len(jet.any(axis=1)[jet.any(axis=1)==True]) >= 0 for jet in x])
     
-    jets = jets[x_nz]
+#    jets = jets[x_nz]
     
-    return x, jets, x_nz,x_pt
+    return np.array([]), np.array([]), x_nz,x_pt
+    #return x, jets, x_nz,x_pt
 
 def apply_StandardScaling(x_raw, scaler=MinMaxScaler(), doFit=True):
     x= np.zeros(x_raw.shape)
@@ -235,7 +243,9 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
         print("Exiting...")
         return
     
+    print('4')
     x = np.copy(x_raw) #copy
+    print('5')
     x_totals = x_raw.sum(axis=1) #get sum total pt, eta, phi, E for each event
     """
     cprint(f'{x_raw}=','yellow')
@@ -244,6 +254,7 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
 
     x[:,:,0] = (x_raw[:,:,0].T/x_totals[:,0]).T  #divide each pT entry by event pT total
     x[:,:,3] = (x_raw[:,:,3].T/x_totals[:,3]).T  #divide each E entry by event E total
+    print('6')
     
     #jet_phi_avs = np.zeros(x.shape[0])
     for e in range(x.shape[0]):
@@ -251,6 +262,7 @@ def apply_JetScalingRotation(x_raw, jet, jet_idx):
         jet_eta_av = (jet[e,0] + jet[e,2])/2.0 
         jet_phi_av = (jet[e,1] + jet[e,3])/2.0 
 
+        print('7')
         for t in range(x.shape[1]):
             if not x[e,t,:].any():
                 #cprint(f'{x[e,t,:]=}', 'magenta')

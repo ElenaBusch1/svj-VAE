@@ -583,7 +583,7 @@ def plot_nTracks_2d_hist(leadingJetTracks, subleadingJetTracks):
   plt.clf()
   print("Saved plot of nTracks 2D")
 
-def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir=""):
+def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir="", bool_sig_on=True):
   #variable_array = ["pT", "eta", "phi", "E"]
   variable_array = ["pT", "eta", "phi", "E", "z0", "d0", "qOverP"]
   print('before reshaping, train and sig', train.shape, sig.shape)
@@ -605,7 +605,8 @@ def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir=
     #plt.subplot(4,1,i+1)
     if bool_one:    plt.subplot(4,2,i+1)
     plt.hist(train_v, alpha=0.5, label=f"bkg ({len(train_v)})", bins=bins, density=False)
-    plt.hist(sig_v, alpha=0.5, label=f"sig ({len(sig_v)})", bins=bins, density=False)
+    if bool_sig_on:
+      plt.hist(sig_v, alpha=0.5, label=f"sig ({len(sig_v)})", bins=bins, density=False)
     plt.title(f'{variable_array[i]} {tag_title}')
     if i == 0: plt.legend(loc='upper right')
     plt.tight_layout(h_pad=1, w_pad=1)

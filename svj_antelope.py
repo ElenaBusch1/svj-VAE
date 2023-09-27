@@ -511,8 +511,6 @@ class Param_ANTELOPE(Param):
 
     return vae, h2
 
-  def combine_dict_vals(self,dc):
-    dc
   def calculate_loss(self,model,bkg,sig, y_bkg, y_sig, bool_vae=True, bool_transformed=True ): # move
     if y_sig.size>0:    assert len(sig)==len(y_sig)
     if y_bkg.size>0:    assert len(bkg)==len(y_bkg)
@@ -760,7 +758,8 @@ if __name__=="__main__":
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, arch_dir_vae='/data/users/kpark/svj-vae/results/test/09_11_23_11_38/architectures_saved/', step_size=100)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=False, bool_shift=True)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=True, bool_shift=True)
-      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1)
+      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1, bool_no_scaling=True)
+#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1)
       #extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],  step_size=1, bool_no_scaling=True, kl_loss_scalar=1000)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8, scalar_ecg=10)
@@ -768,7 +767,7 @@ if __name__=="__main__":
     
     stdoutOrigin=param1.open_print()
 #    all_dir, sic_vals_dict,bkg_events_num,sig_events_num=param1.evaluate_test_ECG()
-#    print('using relu as activation function in decoder instead of sigmoid')
+    print('using relu as activation function in decoder instead of sigmoid')
     all_dir, sic_vals_dict,bkg_events_num,sig_events_num=param1.evaluate_vae()
     #all_dir, sic_vals_dict,bkg_events_num,sig_events_num=param1.evaluate_vae(bool_pfn=False)
     setattr(param1, 'sic_vals_dict',sic_vals_dict )

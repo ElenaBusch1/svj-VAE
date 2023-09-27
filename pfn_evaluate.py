@@ -29,7 +29,7 @@ def extract_tag(filename):
   return tag
 #h5_dir, max_track
 # ---------- Load graph model ----------
-def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, applydir,h5path, bool_pt, max_track, h5_dir,read_dir,pfn_model,vae_model=''):
+def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, applydir,h5path, bool_pt, max_track, h5_dir,read_dir,pfn_model,vae_model='', bool_no_scaling=False):
   cprint(f'{extraVars=}, {pfn_model=}, {vae_model=}', 'red')
   print(arch_dir+pfn_model+'_graph_arch')
   graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
@@ -44,7 +44,7 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
   if vae_model !='':
     encoder = keras.models.load_model(arch_dir+vae_model+'_encoder_arch')
     decoder = keras.models.load_model(arch_dir+vae_model+'_decoder_arch')
-    vae = VAE(encoder,decoder)
+    vae = VAE(encoder,decoder, kl_loss_scalar=1)
     
     vae.get_layer('encoder').load_weights(arch_dir+vae_model+'_encoder_weights.h5')
     vae.get_layer('decoder').load_weights(arch_dir+vae_model+'_decoder_weights.h5')
@@ -74,13 +74,17 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
     os.mkdir(plot_dir)
 
   cprint(f'{extraVars=}', 'magenta')
-  bkg2, mT_bkg, bkg_sel, jet_bkg, _, _ = getTwoJetSystem(nevents=bkg_events,input_file=bkg_file,
+  bkg2, mT_bkg, _, _, _, _ = getTwoJetSystem(nevents=bkg_events,input_file=bkg_file,
+  #bkg2, mT_bkg, bkg_sel, jet_bkg, _, _ = getTwoJetSystem(nevents=bkg_events,input_file=bkg_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
       bool_weight=bool_weight,  extraVars=extraVars, plot_dir=plot_dir,seed=seed,max_track=max_track, bool_pt=bool_pt, h5_dir=h5_dir, bool_select_all=True, read_dir=read_dir)
 
 
   scaler = load(arch_dir+pfn_model+'_scaler.bin')
   bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
+
+  plot_vectors(bkg2,bkg2,tag_file="ANTELOPE", tag_title=" (ANTELOPE)", plot_dir=plot_dir, bool_sig_on=False)# change
+  plot_single_variable([mT_bkg[:,2]],h_names= [bkg_file],weights_ls=[mT_bkg[:,1]], tag_title= 'leading jet pT (QCD)', plot_dir=plot_dir,logy=True, tag_file='jet1_pt')
 
 # plot_vectors(bkg2,sig2,"PFN")
   phi_bkg = graph.predict(bkg2)
@@ -98,13 +102,14 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
     #eval_min = np.amin(phi_bkg)
 
 
-
-    phi_bkg = (phi_bkg - eval_min)/(eval_max-eval_min)
+    if not bool_no_scaling: 
+      phi_bkg = (phi_bkg - eval_min)/(eval_max-eval_min)
     
+    plot_phi(phi_sig,tag_file="PFN_phi_input_"+str(dsid), tag_title="str(dsid) Input", plot_dir=plot_dir)
     pred_phi_bkg = vae.predict(phi_bkg)['reconstruction']
     bkg_loss={}
     # ## AE loss
-    bkg_loss['bkg_loss'] = np.array(keras.losses.mse(phi_bkg, pred_phi_bkg)
+    bkg_loss['bkg_loss'] = np.array(keras.losses.mse(phi_bkg, pred_phi_bkg))
     bkg_loss['bkg_total_loss'], bkg_loss['bkg_kl_loss'],  bkg_loss['bkg_reco_loss']=get_multi_loss_each(vae, phi_bkg)
 
 
@@ -151,10 +156,10 @@ bool_rewrite=True
 bool_pt=False
 #max_track=15# CHECK THIS
 max_track=80# CHECK THIS
-h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/jul28/'
-
+#h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/jul28/'
+h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/antelope/aug17_jetpt'
 #all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/paramscan_new/07_24_23_07_11/' # change
-
+bool_no_scaling=False
 all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/antelope/' # change
 applydir=all_dir+'applydir/'
 if not os.path.exists(applydir):
@@ -167,27 +172,31 @@ file_ls=[]
 for dsid in dsids:
   file_ls.append("skim3.user.ebusch."+str(dsid)+".root")
 
+#stdoutOrigin=sys.stdout
+#sys.stdout = open(applydir+f'stdout.txt', 'w')
 filetag_ls=[extract_tag(filename=fl) for fl in file_ls]
+if vae_model=='': # if evaluating PFN
+  sig_file_prefix='v8p1_'
+else:sig_file_prefix=f'v8p1_{vae_model}_' # if evaluating ANTELOPE
+"""
 for fl in file_ls:
   dsid=fl.split('.')[-2]
   print('*'*30)
   print(fl) 
-  if vae_model=='': # if evaluating PFN
-    sig_file_prefix='v8p1_'
-  else:sig_file_prefix=f'v8p1_{vae_model}_' # if evaluating ANTELOPE
   h5path=applydir+'/'+f'{sig_file_prefix}{dsid}'+".hdf5" 
   #h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_{bkg_loss_type}'+".hdf5" 
   cprint(f'{dsid=}, {h5path=}', 'green')
  # my_variables= ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
   tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
   cprint(fl,'blue')
-   
+  cprint(f'{h5path}', 'blue') 
   if  os.path.exists(h5path): # and (dsid !=515429):
     with h5py.File(h5path,"r") as f:
       dset = f.get('data')[:]
-  else:    rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v8.1/', pfn_model=pfn_model, vae_model=vae_model)
+  else:    rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v8.1/', pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling)
 
-bkg_file="skim3.user.ebusch.QCDskim.root"
+"""
+bkg_file="skim0.user.ebusch.QCDskim.root"
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 dsid=bkg_file.split('.')[-2]
 h5path=applydir+'/'+f'{sig_file_prefix}{dsid}'+".hdf5" 
@@ -197,7 +206,8 @@ if  os.path.exists(h5path):
   with h5py.File(h5path,"r") as f:
     dset = f.get('data')[:]
 
-else: rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v9.1/',pfn_model=pfn_model, vae_model=vae_model)
+else: rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v9.1/',pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling)
 title=f'track={max_track}'
 grid_s_sqrt_b(score_cut=0.97, bkg_scale=5, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix, title=title, all_dir=all_dir,cms=False)
 grid_scan(title, all_dir=all_dir, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix)
+#sys.stdout =stdoutOrigin
