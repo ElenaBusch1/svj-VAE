@@ -245,24 +245,25 @@ def make_sic(fpr,tpr,auc, bkg, tag_file="", tag_title="",  plot_dir=""):
   print("Saved SIC ")
   return {'sicMax':ymax, 'sigEff': sigEff, 'qcdEff': qcdEff, 'score_cut': score_cut}
 
-def make_grid_plot(values,title,method,plot_dir,tag=''):
+def make_grid_plot(values,val,tag_file,tag_title,plot_dir,tag=''):
+#def make_grid_plot(values,title,tag_file,plot_dir,tag=''):
   #values must be 4 X 10
 
   fig,ax = plt.subplots(1,1)
-  if (method.find("compare") != -1): img = ax.imshow(values, cmap='PiYG',norm=colors.LogNorm(vmin=0.1,vmax=10))
+  if (tag_file.find("compare") != -1): img = ax.imshow(values, cmap='PiYG',norm=colors.LogNorm(vmin=0.1,vmax=10))
   else:
-    if (title == "qcdEff"): img = ax.imshow(values,norm=colors.LogNorm(vmin=1e-7,vmax=1e-1))
-    elif (title == "sigEff"): img = ax.imshow(values,vmin=-0.1,vmax=0.7)
-    elif (title == "sensitivity_Inclusive" or title == "sensitivity_mT"): img = ax.imshow(values, norm=colors.LogNorm(vmin=1e-5,vmax=1.5))
-    elif (title == "auc"): img = ax.imshow(values, vmin=0.7, vmax=1)
-    elif (title == "sicMax"): img = ax.imshow(values, vmin=-2, vmax=20)
+    if (val == "qcdEff"): img = ax.imshow(values,norm=colors.LogNorm(vmin=1e-7,vmax=1e-1))
+    elif (val == "sigEff"): img = ax.imshow(values,vmin=-0.1,vmax=0.7)
+    elif (val == "sensitivity_Inclusive" or val == "sensitivity_mT"): img = ax.imshow(values, norm=colors.LogNorm(vmin=1e-5,vmax=1.5))
+    elif (val == "auc"): img = ax.imshow(values, vmin=0.7, vmax=1)
+    elif (val == "sicMax"): img = ax.imshow(values, vmin=-2, vmax=20)
     else: img = ax.imshow(values)
 
   # add text to table
   for (j,i),label in np.ndenumerate(values):
     if label == 0.0: continue
-    if title == "qcdEff" or title == "sensitivity_Inclusive" or title == "sensitivity_mT": ax.text(i,j,'{0:.1e}'.format(label),ha='center', va='center', fontsize = 'x-small')
-    elif title == "score_cut": ax.text(i,j,'{0:.3f}'.format(label),ha='center', va='center', fontsize = 'x-small')
+    if val == "qcdEff" or val == "sensitivity_Inclusive" or val == "sensitivity_mT": ax.text(i,j,'{0:.1e}'.format(label),ha='center', va='center', fontsize = 'x-small')
+    elif val == "score_cut": ax.text(i,j,'{0:.3f}'.format(label),ha='center', va='center', fontsize = 'x-small')
     else: ax.text(i,j,'{0:.2f}'.format(label),ha='center', va='center', fontsize = 'x-small')
 
   # x-y labels for grid 
@@ -275,10 +276,11 @@ def make_grid_plot(values,title,method,plot_dir,tag=''):
   ax.set_yticklabels(y_label_list)
   ax.set_ylabel('$R_{inv}$')
   
-  ax.set_title(method+"; "+title)
+  ax.set_title(tag_title+"; "+val)
   plt.tight_layout()
-  plt.savefig(plot_dir+'table_'+method+'_'+title+'_'+tag+'.png')
-  print("Saved grid plot for", title)
+  plt.savefig(plot_dir+'table_'+tag_file+'_'+val+'_'+tag+'.png')
+  plt.clf()
+  print("Saved grid plot for", val)
 
 def make_single_roc(rocs,aucs,ylabel, tag_file="", tag_title="",  plot_dir=""):
   plt.plot(rocs[0],rocs[1],label=str(np.round(r,4))+r", $\sigma$="+str(sigs)+": AUC="+str(np.round(aucs,3)))
@@ -446,8 +448,11 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
   bin_min=np.min(hists_flat)
   bin_max=np.max(hists_flat)
   gap=(bin_max-bin_min)*0.05
+  gap=0
   bins=np.linspace(bin_min-gap,bin_max+gap,nbins)
+  print('bins',bins)
   x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
+  print('x_bins',x_bins)
   hists=list(hists)
 
   cut0_idx=0
@@ -455,7 +460,8 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
  
   ratio_all=np.array([]) 
   for data,name,weights,i in zip(hists,h_names,weights_ls, range(len(hists))):
-    y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i],1)*100}% left, cut={name}')
+    #y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i],1)*100}% left, cut={name}')
+    y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'{name} (NE={len(data)})')
     #y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len0*100,1)}% left, cut={name}')
 #    y_unnorm,_, _=axs[0].hist(data, bins=bins, density=False,histtype='step', alpha=0)
 #    print(i, len(bins), len(y), bins, y) 
@@ -475,13 +481,13 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
 
   axs[0].set_ylabel('Event Number')
   if (logy): axs[0].set_yscale("log")
-  axs[0].legend(loc='upper right')
+  axs[0].legend(loc='lower left')
   axs[1].legend(loc='upper right')
   axs[0].set_title(title)
 
-  plt.savefig(plot_dir+'histlin_'+title.replace(" ","")+'_'+tag+'.png')
+  plt.savefig(plot_dir+'hist_ratio_'+title.replace(" ","")+'.png')
   plt.clf()
-  print("Saved plot",title)
+  print("Saved plot",title, plot_dir)
 
 def plot_ratio(hists, weights, h_names, title, logy=False):
   colors = ['black', 'darkblue', 'deepskyblue', 'firebrick', 'orange']
@@ -521,7 +527,7 @@ def plot_ratio(hists, weights, h_names, title, logy=False):
 
   lt.savefig(plot_dir+'ratio_'+title.replace(" ","").replace('(','')+'_weighted'+'.png')
   plt.clf()
-  print("Saved plot",title)
+  print("Saved plot",title, plot_dir)
 
 def get_nTracks(x):
   n_tracks = []

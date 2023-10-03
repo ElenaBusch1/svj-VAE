@@ -29,7 +29,7 @@ def extract_tag(filename):
   return tag
 #h5_dir, max_track
 # ---------- Load graph model ----------
-def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, applydir,h5path, bool_pt, max_track, h5_dir,read_dir,pfn_model,vae_model='', bool_no_scaling=False, bool_transformed=True, arch_dir_pfn=''):
+def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, applydir,h5path, bool_pt, max_track, h5_dir,read_dir,pfn_model,file_dir,vae_model='', bool_no_scaling=False, bool_transformed=True, arch_dir_pfn=''):
   cprint(f'{extraVars=}, {pfn_model=}, {vae_model=}', 'red')
   print(arch_dir_pfn+pfn_model+'_graph_arch')
   graph = keras.models.load_model(arch_dir_pfn+pfn_model+'_graph_arch')
@@ -83,7 +83,7 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
   scaler = load(arch_dir_pfn+pfn_model+'_scaler.bin')
   bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
 
-  plot_vectors(bkg2,bkg2,tag_file="ANTELOPE_"+str(dsid), tag_title=f" (ANTELOPE) {str(dsid)}", plot_dir=plot_dir, bool_sig_on=False, labels=[str(dsid)])# change
+  plot_vectors(bkg2,bkg2,tag_file="ANTELOPE_"+str(dsid)+'_', tag_title=f" (ANTELOPE) {str(dsid)}", plot_dir=plot_dir, bool_sig_on=False, labels=[str(dsid)])# change
   plot_single_variable([mT_bkg[:,2]],h_names= [bkg_file],weights_ls=[mT_bkg[:,1]], tag_title= f'leading jet pT  {str(dsid)}', plot_dir=plot_dir,logy=True, tag_file='jet1_pt_'+str(dsid))
   plot_single_variable([mT_bkg[:,0]],h_names= [bkg_file],weights_ls=[mT_bkg[:,1]], tag_title= f'{extraVars[0]} {str(dsid)} (weighted)', plot_dir=plot_dir,logy=True, tag_file='mT_jj_'+str(dsid))
 
@@ -94,7 +94,11 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
   vae_min_dict['09_26_23_10_38']= {'mse': -12.634254306189314, 'multi_reco':-12.545995242335483, 'multi_kl': -20.211301490367624 , 'multi_mse': -12.542977457162644}
   vae_max_dict['09_26_23_10_38']= {'mse': -3.456886217152505, 'multi_reco':-3.4590470421545785, 'multi_kl':-9.330598758710815, 'multi_mse': -3.458533554054478}
   vae_max_dict['09_27_23_01_32']= {'mse': 4.051665855814887 ,'multi_reco': 4.14657246457546, 'multi_kl':6.57444001122076, 'multi_mse':6.6017456361377675 }
-  vae_min_dict['09_27_23_01_32']= {'mse': -3.2118662852702515,'multi_reco':-3.166914871440587, 'multi_kl':0.9695256492112576, 'multi_mse':-3.166914871440587 }
+  vae_max_dict['09_27_23_01_32']= {'mse': 4.051665855814887 ,'multi_reco': 2.986, 'multi_kl':6.57444001122076, 'multi_mse':6.35 }
+  #wrong
+  vae_min_dict['09_27_23_01_32']= {'mse': -3.2118662852702515,'multi_reco':-3.166914871440587, 'multi_kl':0.9695256492112576, 'multi_mse':1.0634667425682687 }
+  vae_min_dict['09_27_23_01_32']= {'mse': -3.2118662852702515,'multi_reco':-3.41, 'multi_kl':0.9695256492112576, 'multi_mse':0.9376 }
+#  vae_min_dict['09_27_23_01_32']= {'mse': -3.2118662852702515,'multi_reco':-3.166914871440587, 'multi_kl':0.9695256492112576, 'multi_mse':-3.166914871440587 }
   """
   vae_min_dict['09_26_23_01_32']= {'mse': ,'multi_reco':, 'multi_kl':, 'multi_mse': }
   vae_min_dict['09_26_23_10_38']= {'mse': -12.740280963806276, 'multi_reco':12.681404701687859, 'multi_kl': -20.29521939559835 , 'multi_mse': -12.67853443999128}
@@ -120,8 +124,8 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
     #eval_min = np.amin(phi_bkg)
 
     if not bool_no_scaling :# scaling 
-      eval_min = pfn_min_dict['09_26_23_10_38']
-      eval_max = pfn_max_dict['09_26_23_10_38']
+      eval_min = pfn_min_dict[file_dir]
+      eval_max = pfn_max_dict[file_dir]
       phi_bkg = (phi_bkg - eval_min)/(eval_max-eval_min)
     
     plot_phi(phi_bkg,tag_file="PFN_phi_input_"+str(dsid), tag_title=f"{str(dsid)} Input", plot_dir=plot_dir)
@@ -141,8 +145,8 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
         loss=np.log(bkg_loss[method])
 #        max_loss=np.max(loss)
 #        min_loss=np.min(loss)
-        min_loss = vae_min_dict['09_26_23_10_38'][method]
-        max_loss = vae_max_dict['09_26_23_10_38'][method]
+        min_loss = vae_min_dict[file_dir][method]
+        max_loss = vae_max_dict[file_dir][method]
         print(f'{max_loss=}, {min_loss=}, {loss[:5]}')
         loss_transformed_bkg = (loss - min_loss)/(max_loss -min_loss)
         bkg_loss[new_method] =loss_transformed_bkg
@@ -209,9 +213,18 @@ max_track=80# CHECK THIS
 #h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/jul28/'
 h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/antelope/aug17_jetpt'
 #all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/paramscan_new/07_24_23_07_11/' # change
-bool_no_scaling=False
 bool_transformed=True
-all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/grid_sept26/09_26_23_10_38/' # change
+
+
+# change
+#file_dir='09_26_23_10_38'
+file_dir='09_27_23_01_32'
+all_dir=f'/nevis/katya01/data/users/kpark/svj-vae/results/grid_sept26/{file_dir}/' # change
+#all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/grid_sept26/09_27_23_01_32/'
+bool_no_scaling=True
+#sigmoid function -> get_decoder in models.py or actually this might be remembered from the architecture 
+#scaling
+
 arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/'
 #all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/antelope/' # change
 applydir=all_dir+'applydir/'
@@ -219,6 +232,8 @@ if not os.path.exists(applydir):
   os.mkdir(applydir)
 arch_dir=all_dir+'architectures_saved/'
 dsids=list(range(515487,515527))
+#dsids=list(range(515487,515527))
+dsids=[515526]
 corrupt_files=[515508, 515511,515493]
 dsids=[x for x in dsids if x not in corrupt_files ]
 file_ls=[]
@@ -234,6 +249,7 @@ else:sig_file_prefix=f'v8p1_{vae_model}_' # if evaluating ANTELOPE
 if vae_model=='': # if evaluating PFN
   bkg_file_prefix='v9p1_'
 else:bkg_file_prefix=f'v8p1_{vae_model}_' # if evaluating ANTELOPE
+"""
 for fl in file_ls:
   dsid=fl.split('.')[-2]
   print('*'*30)
@@ -248,7 +264,7 @@ for fl in file_ls:
   if  os.path.exists(h5path): # and (dsid !=515429):
     with h5py.File(h5path,"r") as f:
       dset = f.get('data')[:]
-  else:    rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v8.1/', pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
+  else:    rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v8.1/', file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
 
 bkg_file="skim0.user.ebusch.QCDskim.root"
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
@@ -260,11 +276,85 @@ if  os.path.exists(h5path):
   with h5py.File(h5path,"r") as f:
     dset = f.get('data')[:]
 
-else: rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v9.1/',pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
+else: rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v9.1/',file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
+#comment here
+title=f'track={max_track}'
+key='multi_kl_transformed'
+#score=getSignalSensitivityScore(bkg_loss, sig_loss)
+#print("95 percentile score = ",score)
+#grid_s_sqrt_b( bkg_scale=5, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix, title=title, all_dir=all_dir,cms=False, key=key)
+grid_s_sqrt_b(score_cut=0.97, bkg_scale=5, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix, title=title, all_dir=all_dir,cms=False, key=key)
+grid_scan(title, all_dir=all_dir, sig_file_prefix=sig_file_prefix,bkg_file_prefix=sig_file_prefix, key=key)
+#sys.stdout =stdoutOrigin
 
 """
-"""
-title=f'track={max_track}'
-grid_s_sqrt_b(score_cut=0.97, bkg_scale=5, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix, title=title, all_dir=all_dir,cms=False)
-grid_scan(title, all_dir=all_dir, sig_file_prefix=sig_file_prefix,bkg_file_prefix=sie_file_prefix)
-#sys.stdout =stdoutOrigin
+vae_min_dict, vae_max_dict, pfn_min_dict,pfn_max_dict={},{},{},{}
+
+vae_min_dict['09_26_23_10_38']= {'mse': -12.634254306189314, 'multi_reco':-12.545995242335483, 'multi_kl': -20.211301490367624 , 'multi_mse': -12.542977457162644}
+vae_max_dict['09_26_23_10_38']= {'mse': -3.456886217152505, 'multi_reco':-3.4590470421545785, 'multi_kl':-9.330598758710815, 'multi_mse': -3.458533554054478}
+vae_max_dict['09_27_23_01_32']= {'mse': 4.051665855814887 ,'multi_reco': 4.14657246457546, 'multi_kl':6.57444001122076, 'multi_mse':6.6017456361377675 }
+  #wrong
+vae_min_dict['09_27_23_01_32']= {'mse': -3.2118662852702515,'multi_reco':-3.166914871440587, 'multi_kl':0.9695256492112576, 'multi_mse':1.0634667425682687 }
+dsids= ['515502']
+#dsids= ['515502', '515499']
+hists=[]
+weight_ls=[]
+h_names=[]
+from helper import Label
+keys=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
+method_scale=keys[3]
+method=f'{method_scale}_transformed'
+#method='multi_reco_transformed'
+h5dir=all_dir+'applydir/'
+plot_dir=applydir+'/plots/'
+bkgpath=h5dir+f"{bkg_file_prefix}QCDskim.hdf5"
+with h5py.File(bkgpath,"r") as f:
+  bkg_data = f.get('data')[:]
+
+
+loss= np.log(bkg_data[method_scale])
+min_loss = vae_min_dict[file_dir][method_scale]
+max_loss = vae_max_dict[file_dir][method_scale]
+loss_fixed = (loss - min_loss)/(max_loss -min_loss)
+print(f'{file_dir=}, {min_loss=}, {max_loss=} {np.max(loss_fixed)=}, {np.min(loss_fixed)=}')
+hists.append(loss_fixed)
+weight_ls.append(bkg_data['weight'])
+h_names.append(f'QCD (s.w. test: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}]) ')
+
+for dsid in dsids:
+  sigpath=h5dir+f"{sig_file_prefix}{dsid}"+".hdf5"
+    # sigpath="../v8.1/"+sig_file_prefix+str(dsid)+".hdf5"
+  with h5py.File(sigpath,"r") as f:
+    sig1_data = f.get('data')[:]
+  mass=Label(dsid).get_m(bool_num=True)
+  print(mass)
+  rinv=Label(dsid).get_rinv(bool_num=True)
+  loss= np.log(sig1_data[method_scale])
+  min_loss = vae_min_dict[file_dir][method_scale]
+  max_loss = vae_max_dict[file_dir][method_scale]
+  loss_fixed = (loss - min_loss)/(max_loss -min_loss)
+  print(f'{file_dir=}, {min_loss=}, {max_loss=}, {np.max(loss_fixed)=}, {np.min(loss_fixed)=}')
+  hists.append(loss_fixed)
+  weight_ls.append(sig1_data['weight'])
+  #mass = dsid_mass[dsid]
+  h_names.append(f'{mass} GeV {rinv} (s.w. test: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}])')
+
+loss_all=np.concatenate((np.log(bkg_data[method_scale]), np.log(sig1_data[method_scale])))
+max_loss=np.max(loss_all)
+min_loss=np.min(loss_all)
+loss=bkg_data[method_scale]
+loss_log=np.log(loss)
+loss_fixed = (loss_log - min_loss)/(max_loss -min_loss)
+print(f'all {min_loss=}, {max_loss=} {np.max(loss_fixed)=}, {np.min(loss_fixed)=}')
+hists.append(loss_fixed)
+weight_ls.append(bkg_data['weight'])
+h_names.append(f'QCD (s.w. evaluation: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}])')
+
+loss=sig1_data[method_scale]
+loss_log=np.log(loss)
+loss_fixed = (loss_log - min_loss)/(max_loss -min_loss)
+print(f'all {min_loss=}, {max_loss=} {np.max(loss_fixed)=}, {np.min(loss_fixed)=}')
+hists.append(loss_fixed)
+weight_ls.append(sig1_data['weight'])
+h_names.append(f'{mass} GeV {rinv} (s.w. evaluation: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}])')
+plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison')

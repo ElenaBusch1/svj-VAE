@@ -453,7 +453,7 @@ def do_roc(bkg_loss, sig_loss, tag_file, tag_title, make_transformed_plot=False,
     cprint(f'{sic_vals}', 'magenta')
 #    return auc
     return sic_vals
-def do_grid_plots(sic_vals, title, plot_dir=''):
+def do_grid_plots(sic_vals, tag_title,tag_file, plot_dir=''):
     with open("dsids_grid_locations.json", "r") as f:
       dsid_coords = json.load(f)
     dsids = list(sic_vals.keys())
@@ -464,7 +464,7 @@ def do_grid_plots(sic_vals, title, plot_dir=''):
         for dsid in dsids:
             loc = tuple(dsid_coords[str(dsid)])
             values[loc] = sic_vals[dsid][val]
-        make_grid_plot(values, val, title, plot_dir)
+        make_grid_plot(values, val=val, tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir)
 
 def scale_phi(phis,max_phi, bool_nonzero=True):
   if bool_nonzero:

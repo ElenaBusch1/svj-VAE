@@ -1,7 +1,26 @@
 import numpy as np
-from eval_helper import scale_phi
+from eval_helper import scale_phi, do_roc
 from numpy.random import default_rng
 
+
+loss_bkg=np.array([1e-4, 1e-5, 1e-3])
+loss_sig=np.array([2*1e-4, 3*1e-5, 4*1e-3])
+loss_both= np.concatenate((loss_bkg, loss_sig))
+max_loss=np.max(loss_both)
+min_loss=np.min(loss_both)
+print(f'{max_loss=}, {min_loss=}, {loss_bkg[:5]}')
+loss_transformed_bkg = (loss_bkg - min_loss)/(max_loss -min_loss)
+loss_transformed_sig = (loss_sig - min_loss)/(max_loss -min_loss)
+vae_model='test'
+method='before'
+method='transformed'
+plot_dir='/nevis/katya01/data/users/kpark/svj-vae/test/'
+step_size=1
+auc=do_roc(loss_bkg, loss_sig, tag_file=vae_model+f'_{method}', tag_title=vae_model+ f' (step size={step_size} {method})',make_transformed_plot= False, plot_dir=plot_dir, bool_pfn=False)
+auc_tran=do_roc(loss_transformed_bkg, loss_transformed_sig, tag_file=vae_model+f'_{method}', tag_title=vae_model+ f' (step size={step_size} {method})',make_transformed_plot= False, plot_dir=plot_dir, bool_pfn=False)
+print(f'auc not transformed: {auc=}, auc transformed: {auc_tran=}')
+
+"""
 bkg_phi=[0,1,3,6, -5]
 sig_phi=[-0.3,1,3,10, 0.5]
 print(np.histogram(np.hstack((bkg_phi,sig_phi)),bins=10)[1])
@@ -31,7 +50,6 @@ for bool_nonzero in [True, False]:
   print(f'{max_phi=}')
   print(f'{scale_phi(phis, max_phi, bool_nonzero=bool_nonzero)=}')
   print('-'*20)
-"""
 import matplotlib.pyplot as plt
 x=[1,2,3,3.5,2]
 bins=[0.5,1.5, 2.5]

@@ -33,7 +33,7 @@ def get_weighted_elements_h5(my_weight_array, nEvents):
     idx = np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
     return idx
 
-def mT_shape_compare():
+def mT_shape_compare(key):
   with h5py.File("../v8.1/v8p1_PFNv1_QCDskim.hdf5","r") as f:
     bkg_datav1 = f.get('data')[:]
   with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_1.hdf5","r") as f:
@@ -47,8 +47,8 @@ def mT_shape_compare():
   bkg_datav2 = np.concatenate((bkg_data1,bkg_data2, bkg_data3))
 
   #variables = [f_name for (f_name,f_type) in bkg_data.dtype.descr]
-  bkg_lossv1 = bkg_datav1["score"]
-  bkg_lossv2 = bkg_datav2["score"]
+  bkg_lossv1 = bkg_datav1[key]
+  bkg_lossv2 = bkg_datav2[key]
   bkg1_weights = np.reshape(bkg_datav1["weight"],len(bkg_datav1["weight"]))
   bkg2_weights = np.reshape(bkg_datav2["weight"],len(bkg_datav2["weight"]))
   dsids = [515518,515522,515523,515515]
@@ -57,8 +57,8 @@ def mT_shape_compare():
       sigv1_data = f.get('data')[:]
     with h5py.File("../v8.1/v8p1_PFNv2_"+str(dsid)+".hdf5","r") as f:
       sigv2_data = f.get('data')[:]
-    sigv1_loss = sigv1_data["score"]
-    sigv2_loss = sigv2_data["score"]
+    sigv1_loss = sigv1_data[key]
+    sigv2_loss = sigv2_data[key]
     #bkgv1_idx = get_weighted_elements_h5(bkg1_weights,len(sigv1_loss))
     #bkgv2_idx = get_weighted_elements_h5(bkg2_weights,len(sigv2_loss))
     bkgv1_loss = bkg_lossv1[:len(sigv1_loss)] 
@@ -67,7 +67,7 @@ def mT_shape_compare():
     w = [np.ones(len(x)) for x in d]
     lab = ["v1 BKG (bad sel)", "v2 BKG (bad sel)", "v1 Signal", "v2 Signal"]
     labels = [l+str(len(ds)) for l,ds in zip(lab,d)]
-    plot_single_variable(d,w,labels, "score"+str(dsid), logy=False) 
+    plot_single_variable(d,w,labels, key+str(dsid), logy=False) 
     
 
 def cms_mT_plots():
@@ -114,12 +114,12 @@ def cms_mT_plots():
     #plot_single_variable(d,w,labels, var, logy=True) 
     plot_ratio(d,w,labels, var, logy=True) 
 
-def score_cut_mT_plot():
+def score_cut_mT_plot(key):
   with h5py.File("../v8.1/v8p1_PFNv3_QCDskim3.hdf5","r") as f:
     bkg_data = f.get('data')[:]
 
   bkg20 = 0.92
-  bkg_loss = bkg_data["score"]
+  bkg_loss = bkg_data[key]
   
   with h5py.File("../v8.1/v8p1_PFNv3_515503.hdf5","r") as f:
     sig1_data = f.get('data')[:]
@@ -130,10 +130,10 @@ def score_cut_mT_plot():
   with h5py.File("../v8.1/v8p1_PFNv3_515518.hdf5","r") as f:
     sig4_data = f.get('data')[:]
   
-  sig1_loss = sig1_data["score"]
-  sig2_loss = sig2_data["score"]
-  sig3_loss = sig3_data["score"]
-  sig4_loss = sig4_data["score"]
+  sig1_loss = sig1_data[key]
+  sig2_loss = sig2_data[key]
+  sig3_loss = sig3_data[key]
+  sig4_loss = sig4_data[key]
    
   w0 = 5*bkg_data["weight"][bkg_loss>bkg20] 
   w1 = sig1_data["weight"][sig1_loss>bkg20] 
@@ -161,7 +161,7 @@ def score_cut_mT_plot():
     plot_ratio(d,w,labels, var, logy=True) 
 
 
-def grid_scan(title, all_dir, sig_file_prefix, bkg_file_prefix):
+def grid_scan(title, all_dir, sig_file_prefix, bkg_file_prefix, key='multi_reco'): # or 'score'
   # if this doesn't work try changing bkgpath
   #with h5py.File("../v8.1/v8p1_PFNv1_QCDskim.hdf5","r") as f:
   #  bkg_data = f.get('data')[:]
@@ -183,7 +183,7 @@ def grid_scan(title, all_dir, sig_file_prefix, bkg_file_prefix):
   #bkg_data = np.concatenate((bkg_data1,bkg_data2, bkg_data3))
 
   variables = [f_name for (f_name,f_type) in bkg_data.dtype.descr]
-  bkg_loss = bkg_data["score"]
+  bkg_loss = bkg_data[key]
   bkg_weights = np.reshape(bkg_data["weight"],len(bkg_data["weight"]))
   print("bkg events", len(bkg_loss))
   print(bkg_data1['mT_jj'],bkg_data1['weight']) 
@@ -198,12 +198,12 @@ def grid_scan(title, all_dir, sig_file_prefix, bkg_file_prefix):
       with h5py.File(sigpath,"r") as f:
       #with h5py.File("../v8.1/v8p1_PFNv3_"+str(dsid)+".hdf5","r") as f:
         sig1_data = f.get('data')[:]
-      sig1_loss = sig1_data["score"]
+      sig1_loss = sig1_data[key]
       bkg_idx = get_weighted_elements_h5(bkg_weights,len(sig1_loss))
       #bkg1_loss = bkg_loss[:len(sig1_loss)]
       bkg1_loss = bkg_loss[bkg_idx]
-      #plot_single_variable([bkg1_loss,sig1_loss],[np.ones(len(bkg1_loss)),np.ones(len(sig1_loss))],["bkg","sig"], "score"+str(dsid), logy=True) 
-      sic_vals = do_roc(bkg1_loss, sig1_loss, tag_file=str(dsid), tag_title=str(dsid), make_transformed_plot=False,plot_dir=plot_dir )
+      #plot_single_variable([bkg1_loss,sig1_loss],[np.ones(len(bkg1_loss)),np.ones(len(sig1_loss))],["bkg","sig"], key+str(dsid), logy=True) 
+      sic_vals = do_roc(bkg1_loss, sig1_loss, tag_file=f'{key}_'+str(dsid), tag_title=f'{key} '+str(dsid), make_transformed_plot=False,plot_dir=plot_dir )
       sic_values[dsid] = sic_vals
       cprint(f"{dsid}, sig events, {len(sig1_loss)}", )
     except Exception as e:
@@ -214,9 +214,9 @@ def grid_scan(title, all_dir, sig_file_prefix, bkg_file_prefix):
   
   print("bkg events: ", len(bkg_loss))
   print(f'grid_scan in {plot_dir}')
-  do_grid_plots(sic_values, title,plot_dir=plot_dir)
+  do_grid_plots(sic_values, tag_title=f'{key} '+title, tag_file=f'{key}_'+title,plot_dir=plot_dir)
 
-def grid_s_sqrt_b(score_cut, bkg_scale, sig_file_prefix, bkg_file_prefix,title, all_dir,cms=False): #all_dir # bkg_scale = 5
+def grid_s_sqrt_b(score_cut, bkg_scale, sig_file_prefix, bkg_file_prefix,title, all_dir,cms=False, key="multi_reco"): #all_dir # bkg_scale = 5
   # if can't read the file try changing sigpath or h5dir
   h5dir=all_dir+'applydir/'
   plot_dir=h5dir+'/plots/'
@@ -234,7 +234,7 @@ def grid_s_sqrt_b(score_cut, bkg_scale, sig_file_prefix, bkg_file_prefix,title, 
 
   ## ML selection
   else:
-    bkg_loss = bkg_data["score"]
+    bkg_loss = bkg_data[key]
     bkg_mT = bkg_data["mT_jj"][bkg_loss>score_cut]
     bkg_weight = bkg_data["weight"][bkg_loss>score_cut]
     bkg_weight = bkg_scale*bkg_weight
@@ -260,7 +260,7 @@ def grid_s_sqrt_b(score_cut, bkg_scale, sig_file_prefix, bkg_file_prefix,title, 
 
       ## ML selection
       else:
-        sig1_loss = sig1_data["score"]
+        sig1_loss = sig1_data[key]
         sig1_weight = sig1_data["weight"][sig1_loss>score_cut]
         sig1_mT = sig1_data["mT_jj"][sig1_loss>score_cut]
 
@@ -292,7 +292,8 @@ def grid_s_sqrt_b(score_cut, bkg_scale, sig_file_prefix, bkg_file_prefix,title, 
       sb_values[dsid] = {"sensitivity_Inclusive": 0, "sensitivity_mT": 0}
 
   print(f'grid_s_sqrt_b in {plot_dir}')
-  do_grid_plots(sb_values, title+f'_score_cut={score_cut}',plot_dir=plot_dir)
+#  do_grid_plots(sb_values, title+f'_score_cut={score_cut}',plot_dir=plot_dir)
+  do_grid_plots(sb_values, tag_title=f'{key} score cut = {score_cut} '+title, tag_file=f'{key}_score_cut={score_cut}'+title,plot_dir=plot_dir)
   return sb_values
 
 def compare_s_sqrt_b():
