@@ -263,7 +263,8 @@ def make_grid_plot(values,val,tag_file,tag_title,plot_dir,tag=''):
   for (j,i),label in np.ndenumerate(values):
     if label == 0.0: continue
     if val == "qcdEff" or val == "sensitivity_Inclusive" or val == "sensitivity_mT": ax.text(i,j,'{0:.1e}'.format(label),ha='center', va='center', fontsize = 'x-small')
-    elif val == "score_cut": ax.text(i,j,'{0:.3f}'.format(label),ha='center', va='center', fontsize = 'x-small')
+    elif val == "score_cut": ax.text(i,j,'{0:.3e}'.format(label),ha='center', va='center', fontsize = 'x-small')
+    #elif val == "score_cut": ax.text(i,j,'{0:.3f}'.format(label),ha='center', va='center', fontsize = 'x-small')
     else: ax.text(i,j,'{0:.2f}'.format(label),ha='center', va='center', fontsize = 'x-small')
 
   # x-y labels for grid 
@@ -441,8 +442,12 @@ def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, 
 
 
 
-def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir=""):
-  f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
+def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir="", bool_ratio=True):
+  if bool_ratio:
+    f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
+  else:
+    f, axs = plt.subplots(1, 1, sharex=True)
+    
   nbins=50
   hists_flat=np.concatenate(hists)
   bin_min=np.min(hists_flat)
@@ -461,7 +466,8 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
   ratio_all=np.array([]) 
   for data,name,weights,i in zip(hists,h_names,weights_ls, range(len(hists))):
     #y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i],1)*100}% left, cut={name}')
-    y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'{name} (NE={len(data)})')
+    if bool_ratio:y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'{name} (NE={len(data)})')
+    else: y,_, _=axs.hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'{name} (NE={len(data)})')
     #y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len0*100,1)}% left, cut={name}')
 #    y_unnorm,_, _=axs[0].hist(data, bins=bins, density=False,histtype='step', alpha=0)
 #    print(i, len(bins), len(y), bins, y) 
@@ -470,22 +476,30 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
       y0=y
       #y0=y_unnorm
 #      axs[0].set_ylim([min(y)/1e2, max(y)*1e2])
-    axs[1].scatter(x_bins,y/y0)
+    if bool_ratio:
+      axs[1].scatter(x_bins,y/y0)
 #    axs[1].set_ylim([])
     #axs[1].scatter(x_bins,zero_div(y,y0))
-  axs[1].set_ylim(0,3)  
-  axs[1].set_ylabel('Ratio')
-  axs[1].legend(loc='upper right')
+  if bool_ratio:
+    axs[1].set_ylim(0,3)  
+    axs[1].set_ylabel('Ratio')
+    axs[1].legend(loc='upper right')
+    axs[1].legend(loc='upper right')
+  
+    axs[0].set_ylabel('Event Number')
+    if (logy): axs[0].set_yscale("log")
+    axs[0].legend(loc='lower left')
+    axs[0].set_title(title)
+  else:
+
+    axs.set_ylabel('Event Number')
+    if (logy): axs.set_yscale("log")
+    axs.legend(loc='lower left')
+    axs.set_title(title)
   plt.tick_params(axis='y', which='minor') 
   plt.grid()
-
-  axs[0].set_ylabel('Event Number')
-  if (logy): axs[0].set_yscale("log")
-  axs[0].legend(loc='lower left')
-  axs[1].legend(loc='upper right')
-  axs[0].set_title(title)
-#  plt.show()
-  plt.savefig(plot_dir+'hist_ratio_'+title.replace(" ","")+'.png')
+  if bool_ratio:  plt.savefig(plot_dir+'hist_ratio_'+title.replace(" ","")+'.png')
+  else:  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
   plt.clf()
   print("Saved plot",title, plot_dir)
 
@@ -525,7 +539,7 @@ def plot_ratio(hists, weights, h_names, title, logy=False):
   axs[0].set_title(title)
   axs[1].legend(loc='upper right')
 
-  lt.savefig(plot_dir+'ratio_'+title.replace(" ","").replace('(','')+'_weighted'+'.png')
+  plt.savefig(plot_dir+'ratio_'+title.replace(" ","").replace('(','')+'_weighted'+'.png')
   plt.clf()
   print("Saved plot",title, plot_dir)
 
