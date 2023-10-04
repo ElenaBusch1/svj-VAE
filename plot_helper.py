@@ -484,7 +484,7 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
   axs[0].legend(loc='lower left')
   axs[1].legend(loc='upper right')
   axs[0].set_title(title)
-
+#  plt.show()
   plt.savefig(plot_dir+'hist_ratio_'+title.replace(" ","")+'.png')
   plt.clf()
   print("Saved plot",title, plot_dir)

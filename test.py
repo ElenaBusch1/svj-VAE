@@ -1,8 +1,16 @@
 import numpy as np
 from eval_helper import scale_phi, do_roc
 from numpy.random import default_rng
+import tensorflow as tf
+y_true = tf.constant([[0., 2.], [0., 0.]])
+y_pred = tf.constant([[3., 1.], [2., 5.]])
 
-
+tf_mse = tf.keras.losses.MeanSquaredError(reduction='none')
+print(tf_mse(y_true, y_pred).numpy())
+print(tf.square(y_true-y_pred))
+my_mse = tf.reduce_mean(tf.square(y_true-y_pred))
+print(my_mse)
+"""
 loss_bkg=np.array([1e-4, 1e-5, 1e-3])
 loss_sig=np.array([2*1e-4, 3*1e-5, 4*1e-3])
 loss_both= np.concatenate((loss_bkg, loss_sig))
@@ -20,7 +28,6 @@ auc=do_roc(loss_bkg, loss_sig, tag_file=vae_model+f'_{method}', tag_title=vae_mo
 auc_tran=do_roc(loss_transformed_bkg, loss_transformed_sig, tag_file=vae_model+f'_{method}', tag_title=vae_model+ f' (step size={step_size} {method})',make_transformed_plot= False, plot_dir=plot_dir, bool_pfn=False)
 print(f'auc not transformed: {auc=}, auc transformed: {auc_tran=}')
 
-"""
 bkg_phi=[0,1,3,6, -5]
 sig_phi=[-0.3,1,3,10, 0.5]
 print(np.histogram(np.hstack((bkg_phi,sig_phi)),bins=10)[1])

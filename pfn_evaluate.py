@@ -140,15 +140,19 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
     if bool_transformed:
       old_methods=methods.copy() # essential that new_methods and methods are separate b/c otherwise, will loop through methods that are already transformed
       for method in old_methods:
-        new_method=f'{method}_transformed'
+        new_method=f'{method}_transformed_log_sig'
+        #new_method=f'{method}_transformed'
         print(f'{method=}, {new_method=}')
         loss=np.log(bkg_loss[method])
 #        max_loss=np.max(loss)
 #        min_loss=np.min(loss)
+        """
         min_loss = vae_min_dict[file_dir][method]
         max_loss = vae_max_dict[file_dir][method]
         print(f'{max_loss=}, {min_loss=}, {loss[:5]}')
         loss_transformed_bkg = (loss - min_loss)/(max_loss -min_loss)
+        """
+        loss_transformed_bkg = 1/(1 + np.exp(-loss))
         bkg_loss[new_method] =loss_transformed_bkg
         new_methods.append(new_method)
         # xlog=False plots
@@ -165,7 +169,8 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
   newVars+=extraVars
 
 #  newVars=extraVars.insert(0,"score")
-  save_bkg = np.concatenate((bkg_loss['mse'][:,None], 
+  save_bkg = np.concatenate((
+   bkg_loss['mse'][:,None], 
    bkg_loss['multi_reco'][:,None],
    bkg_loss['multi_kl'][:,None],
    bkg_loss['multi_mse'][:,None],
@@ -186,6 +191,67 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
     dset = f.create_dataset("data",data=rec_bkg)
   return rec_bkg
   #return rec_bkg, rec_sig
+def add_column(input_h5path, output_h5path):
+  
+  # read hdf5 
+  with h5py.File(input_h5path,"r") as f:
+    bkg_loss = f.get('data')[:]
+  # transform
+  print(bkg_loss.dtype.names)
+  print(bkg_loss['mse'])
+  methods=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
+
+  bkg_loss_new={} 
+  for method in methods:
+    new_method=f'{method}_transformed_log_sig'
+    print(f'{method=}, {new_method=}')
+    loss=np.log(bkg_loss[method]).flatten()
+#    print(loss.shape)
+    loss_transformed_bkg = 1/(1 + np.exp(-loss))
+    bkg_loss_new[new_method] =loss_transformed_bkg
+#    new_methods.append(new_method)
+  # reevaluate from the columns from old methods
+
+  print(bkg_loss['mse'].shape,bkg_loss_new['mse_transformed_log_sig'].shape) 
+  print(bkg_loss['mse'][:,None].shape,bkg_loss_new['mse_transformed_log_sig'][:,None].shape) 
+  print(bkg_loss_new[new_method].shape)
+  save_bkg = np.concatenate(( # it is important that the data from the hdf5 file doesn't get expanded to a new shape ( no calling with [:, None] to be compatible with the new column datashapes)
+   bkg_loss['mse'], 
+   bkg_loss['multi_reco'],
+   bkg_loss['multi_kl'],
+   bkg_loss['multi_mse'],
+
+   bkg_loss['mse_transformed'],
+   bkg_loss['multi_reco_transformed'],
+   bkg_loss['multi_kl_transformed'],
+   bkg_loss['multi_mse_transformed'],
+
+   bkg_loss['mT_jj'], 
+   bkg_loss['weight'],
+   bkg_loss['jet1_pt'],
+
+   bkg_loss_new['mse_transformed_log_sig'][:,None],
+   bkg_loss_new['multi_reco_transformed_log_sig'][:,None],
+   bkg_loss_new['multi_kl_transformed_log_sig'][:,None],
+   bkg_loss_new['multi_mse_transformed_log_sig'][:,None]
+   ),axis=1)
+
+  print(f"{bkg_loss.shape=} , {bkg_loss_new['mse_transformed_log_sig'].shape=}, {bkg_loss_new['multi_kl_transformed_log_sig'].shape=}, { bkg_loss_new['multi_kl_transformed_log_sig'].shape=},{bkg_loss_new['multi_mse_transformed_log_sig'].shape=}") 
+  print(f"{save_bkg.shape}")
+  keys =list(bkg_loss.dtype.names)
+  keys+=list(bkg_loss_new.keys())
+  print(len(keys))
+  print(save_bkg.dtype.itemsize)
+  #keys =list(bkg_loss_new.keys())
+  print(keys)
+  ds_dt = np.dtype({'names':keys,'formats':[(float)]*len(keys)})
+ # print(ds_dt)
+  rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
+  with h5py.File(output_h5path,"w") as f:
+    dset = f.create_dataset("data",data=rec_bkg)
+  print(output_h5path)
+  # write to the file
+  return rec_bkg
 
 ## ---------- USER PARAMETERS ----------
 ## Model options:
@@ -217,8 +283,8 @@ bool_transformed=True
 
 
 # change
-#file_dir='09_26_23_10_38'
-file_dir='09_27_23_01_32'
+file_dir='09_26_23_10_38'
+#file_dir='09_27_23_01_32'
 all_dir=f'/nevis/katya01/data/users/kpark/svj-vae/results/grid_sept26/{file_dir}/' # change
 #all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/grid_sept26/09_27_23_01_32/'
 bool_no_scaling=True
@@ -230,16 +296,15 @@ arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/'
 applydir=all_dir+'applydir/'
 if not os.path.exists(applydir):
   os.mkdir(applydir)
+  print('made ', applydir)
 arch_dir=all_dir+'architectures_saved/'
 dsids=list(range(515487,515527))
 #dsids=list(range(515487,515527))
-dsids=[515526]
 corrupt_files=[515508, 515511,515493]
 dsids=[x for x in dsids if x not in corrupt_files ]
 file_ls=[]
 for dsid in dsids:
   file_ls.append("skim3.user.ebusch."+str(dsid)+".root")
-
 #stdoutOrigin=sys.stdout
 #sys.stdout = open(applydir+f'stdout.txt', 'w')
 filetag_ls=[extract_tag(filename=fl) for fl in file_ls]
@@ -249,37 +314,47 @@ else:sig_file_prefix=f'v8p1_{vae_model}_' # if evaluating ANTELOPE
 if vae_model=='': # if evaluating PFN
   bkg_file_prefix='v9p1_'
 else:bkg_file_prefix=f'v8p1_{vae_model}_' # if evaluating ANTELOPE
-"""
+# HERE
+
+
 for fl in file_ls:
   dsid=fl.split('.')[-2]
   print('*'*30)
   print(fl) 
   h5path=applydir+'/'+f'{sig_file_prefix}{dsid}'+".hdf5" 
+  output_h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_new'+".hdf5" 
   #h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_{bkg_loss_type}'+".hdf5" 
   cprint(f'{dsid=}, {h5path=}', 'green')
  # my_variables= ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
   tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
   cprint(fl,'blue')
-  cprint(f'{h5path}', 'blue') 
+  cprint(f'{h5path}', 'blue')
+  """ 
   if  os.path.exists(h5path): # and (dsid !=515429):
     with h5py.File(h5path,"r") as f:
       dset = f.get('data')[:]
   else:    rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v8.1/', file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
+  """
+  add_column(input_h5path=h5path, output_h5path=output_h5path) 
 
 bkg_file="skim0.user.ebusch.QCDskim.root"
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 dsid=bkg_file.split('.')[-2]
-h5path=applydir+'/'+f'{sig_file_prefix}{dsid}'+".hdf5" 
+h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_new'+".hdf5" 
 #h5path=applydir+'/'+"v8p1_"+str(dsid)+".hdf5"
 cprint(h5path, 'magenta')
 if  os.path.exists(h5path):
+  """ 
   with h5py.File(h5path,"r") as f:
     dset = f.get('data')[:]
 
 else: rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v9.1/',file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
+  """ 
+  add_column(input_h5path=h5path, output_h5path=output_h5path) 
 #comment here
 title=f'track={max_track}'
-key='multi_kl_transformed'
+key='multi_kl_transformed_log_sig'
+#key='multi_kl_transformed'
 #score=getSignalSensitivityScore(bkg_loss, sig_loss)
 #print("95 percentile score = ",score)
 #grid_s_sqrt_b( bkg_scale=5, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix, title=title, all_dir=all_dir,cms=False, key=key)
@@ -296,49 +371,56 @@ vae_max_dict['09_27_23_01_32']= {'mse': 4.051665855814887 ,'multi_reco': 4.14657
   #wrong
 vae_min_dict['09_27_23_01_32']= {'mse': -3.2118662852702515,'multi_reco':-3.166914871440587, 'multi_kl':0.9695256492112576, 'multi_mse':1.0634667425682687 }
 dsids= ['515502']
-#dsids= ['515502', '515499']
+"""
+dsids= ['515502', '515499']
 hists=[]
 weight_ls=[]
 h_names=[]
 from helper import Label
 keys=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
 method_scale=keys[3]
-method=f'{method_scale}_transformed'
+method=f'{method_scale}_transformed_log_sig'
 #method='multi_reco_transformed'
-h5dir=all_dir+'applydir/'
 plot_dir=applydir+'/plots/'
-bkgpath=h5dir+f"{bkg_file_prefix}QCDskim.hdf5"
+bkgpath=applydir+f"{bkg_file_prefix}QCDskim_new.hdf5"
 with h5py.File(bkgpath,"r") as f:
   bkg_data = f.get('data')[:]
 
-
+"""
 loss= np.log(bkg_data[method_scale])
 min_loss = vae_min_dict[file_dir][method_scale]
 max_loss = vae_max_dict[file_dir][method_scale]
 loss_fixed = (loss - min_loss)/(max_loss -min_loss)
 print(f'{file_dir=}, {min_loss=}, {max_loss=} {np.max(loss_fixed)=}, {np.min(loss_fixed)=}')
+"""
+loss_fixed=bkg_data[method]
 hists.append(loss_fixed)
 weight_ls.append(bkg_data['weight'])
-h_names.append(f'QCD (s.w. test: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}]) ')
+h_names.append(f'QCD ( log + sigmoid: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}]) ')
+#h_names.append(f'QCD (s.w. test: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}]) ')
 
 for dsid in dsids:
-  sigpath=h5dir+f"{sig_file_prefix}{dsid}"+".hdf5"
+  sigpath=applydir+f"{sig_file_prefix}{dsid}_new"+".hdf5"
     # sigpath="../v8.1/"+sig_file_prefix+str(dsid)+".hdf5"
   with h5py.File(sigpath,"r") as f:
     sig1_data = f.get('data')[:]
   mass=Label(dsid).get_m(bool_num=True)
   print(mass)
   rinv=Label(dsid).get_rinv(bool_num=True)
-  loss= np.log(sig1_data[method_scale])
+#  loss= np.log(sig1_data[method_scale])
+  """
   min_loss = vae_min_dict[file_dir][method_scale]
   max_loss = vae_max_dict[file_dir][method_scale]
   loss_fixed = (loss - min_loss)/(max_loss -min_loss)
   print(f'{file_dir=}, {min_loss=}, {max_loss=}, {np.max(loss_fixed)=}, {np.min(loss_fixed)=}')
+  """
+  loss_fixed=sig1_data[method]
   hists.append(loss_fixed)
   weight_ls.append(sig1_data['weight'])
   #mass = dsid_mass[dsid]
-  h_names.append(f'{mass} GeV {rinv} (s.w. test: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}])')
-
+  h_names.append(f'{mass} GeV {rinv} ( log + sigmoid: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}])')
+  #h_names.append(f'{mass} GeV {rinv} (s.w. test: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}])')
+"""
 loss_all=np.concatenate((np.log(bkg_data[method_scale]), np.log(sig1_data[method_scale])))
 max_loss=np.max(loss_all)
 min_loss=np.min(loss_all)
@@ -357,4 +439,5 @@ print(f'all {min_loss=}, {max_loss=} {np.max(loss_fixed)=}, {np.min(loss_fixed)=
 hists.append(loss_fixed)
 weight_ls.append(sig1_data['weight'])
 h_names.append(f'{mass} GeV {rinv} (s.w. evaluation: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}])')
+"""
 plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison')
