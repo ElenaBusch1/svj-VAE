@@ -170,7 +170,7 @@ def grid_scan(title, all_dir, sig_file_prefix, bkg_file_prefix, key='multi_reco'
   plot_dir=h5dir+'/plots/'
   if not os.path.exists(plot_dir):os.mkdir(plot_dir)
   #bkgpath=h5dir+"v8p1_QCDskim.hdf5"
-  bkgpath=h5dir+f"{bkg_file_prefix}QCDskim_new.hdf5"
+  bkgpath=h5dir+f"{bkg_file_prefix}QCDskim_log10.hdf5"
   #bkgpath="v8p1_PFNv3_QCDskim.hdf5"
   with h5py.File(bkgpath,"r") as f:
     bkg_data1 = f.get('data')[:]
@@ -193,7 +193,7 @@ def grid_scan(title, all_dir, sig_file_prefix, bkg_file_prefix, key='multi_reco'
   dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
     #sigpath=h5dir+"v8p1_"+str(dsid)+".hdf5"
-    sigpath=h5dir+f"{sig_file_prefix}{dsid}_new"+".hdf5"
+    sigpath=h5dir+f"{sig_file_prefix}{dsid}_log10"+".hdf5"
     try:
       with h5py.File(sigpath,"r") as f:
       #with h5py.File("../v8.1/v8p1_PFNv3_"+str(dsid)+".hdf5","r") as f:
@@ -221,7 +221,7 @@ def grid_s_sqrt_b(score_cut, bkg_scale, sig_file_prefix, bkg_file_prefix,title, 
   h5dir=all_dir+'applydir/'
   plot_dir=h5dir+'/plots/'
   if not os.path.exists(plot_dir):os.mkdir(plot_dir)
-  bkgpath=h5dir+f"{bkg_file_prefix}QCDskim_new.hdf5"
+  bkgpath=h5dir+f"{bkg_file_prefix}QCDskim_log10.hdf5"
   with h5py.File(bkgpath,"r") as f:
     bkg_data = f.get('data')[:]
   
@@ -246,7 +246,7 @@ def grid_s_sqrt_b(score_cut, bkg_scale, sig_file_prefix, bkg_file_prefix,title, 
     dsid_mass = json.load(f)
   dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
-    sigpath=h5dir+f"{sig_file_prefix}{dsid}_new"+".hdf5"
+    sigpath=h5dir+f"{sig_file_prefix}{dsid}_log10"+".hdf5"
     # sigpath="../v8.1/"+sig_file_prefix+str(dsid)+".hdf5"
     try:
       with h5py.File(sigpath,"r") as f:

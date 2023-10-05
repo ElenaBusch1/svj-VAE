@@ -448,7 +448,8 @@ def do_roc(bkg_loss, sig_loss, tag_file, tag_title, make_transformed_plot=False,
     print("AUC - "+tag_file+": ", auc)
     make_roc(fpr,tpr,auc,tag_file=tag_file, tag_title=tag_title, plot_dir=plot_dir, nevents=nevents)
 
-    sic_vals = make_sic(fpr,tpr,auc,bkg=bkg_loss,tag_file=tag_file, tag_title=tag_title,plot_dir=plot_dir)
+    sic_vals = make_sic(fpr,tpr,trh,auc,bkg=bkg_loss,tag_file=tag_file, tag_title=tag_title,plot_dir=plot_dir)
+    #sic_vals = make_sic(fpr,tpr,auc,bkg=bkg_loss,tag_file=tag_file, tag_title=tag_title,plot_dir=plot_dir)
     sic_vals['auc'] = auc
     cprint(f'{sic_vals}', 'magenta')
 #    return auc

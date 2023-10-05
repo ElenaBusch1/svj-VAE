@@ -10,6 +10,7 @@ from scipy.stats import norm
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 import pandas as pd
+import sys
 # tag = "pfnEvalTest"      
 #tag = "PFN_2jAvg_MM"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
@@ -219,16 +220,24 @@ def make_roc(fpr,tpr,auc, tag_file="", tag_title="", plot_dir="", nevents=np.nan
   plt.clf()
   print("Saved ROC curve for ", tag_file)
 
-def make_sic(fpr,tpr,auc, bkg, tag_file="", tag_title="",  plot_dir=""):
+#def make_sic(fpr,tpr,auc, bkg, tag_file="", tag_title="",  plot_dir=""):
+def make_sic(fpr,tpr,trh,auc, bkg, tag_file="", tag_title="",  plot_dir=""):
+  # fpr and tpr are an array of numbers with different threshold e.g. for threshold = 0.5, one value for fpr and tpr each; the length of array are length of thresholds
+  # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_curve.html
+  # find where tpr/ sqrt(fpr) -> true signals / sqrt(false signals) is maximum -> use that threshold's corresponding fpr (how often false signals)
   print('make_sic')
-  y = tpr[1:]/np.sqrt(fpr[1:])
-  print(f'{len(fpr[fpr==0])=}')
+  y = tpr[1:]/np.sqrt(fpr[1:]) # only pick from the second element b/c the first element's tpr is 0
+  #print(f'{len(fpr[fpr==0])=}')
   good = (y != np.inf) & (tpr[1:] > 0.08)
-  ymax = max(y[good])
+  ymax = max(y[good])  
   ymax_i = np.argmax(y[good])
   sigEff = tpr[1:][good][ymax_i]
+  print('hala')
   qcdEff = fpr[1:][good][ymax_i]
-  score_cut = np.percentile(bkg,100-(qcdEff*100))
+  score_cut = np.percentile(bkg,100-(qcdEff*100)) # find 100-(qcdEff*100), say, 90% percentile from bkg array, if qcdEff = .09
+  trhmax_i = trh[1:][good][ymax_i]
+  score_cut2 = trhmax_i
+  #print(f'{score_cut}, {score_cut2}', 'red')
   print("Max improvement: ", ymax)
   print("Sig eff: ", sigEff)
   print("Bkg eff: ", qcdEff)
@@ -243,7 +252,8 @@ def make_sic(fpr,tpr,auc, bkg, tag_file="", tag_title="",  plot_dir=""):
   plt.savefig(plot_dir+'sic_'+tag_file+'.png')
   plt.clf()
   print("Saved SIC ")
-  return {'sicMax':ymax, 'sigEff': sigEff, 'qcdEff': qcdEff, 'score_cut': score_cut}
+  cprint(f'{tpr.shape=}, {y.shape=}, {ymax=}, {ymax_i=}, {sigEff=}, {qcdEff=}, {score_cut}', 'red')
+  return {'sicMax':ymax, 'sigEff': sigEff, 'qcdEff': qcdEff, 'score_cut': score_cut, 'score_cut2':score_cut2}
 
 def make_grid_plot(values,val,tag_file,tag_title,plot_dir,tag=''):
 #def make_grid_plot(values,title,tag_file,plot_dir,tag=''):
@@ -256,16 +266,18 @@ def make_grid_plot(values,val,tag_file,tag_title,plot_dir,tag=''):
     elif (val == "sigEff"): img = ax.imshow(values,vmin=-0.1,vmax=0.7)
     elif (val == "sensitivity_Inclusive" or val == "sensitivity_mT"): img = ax.imshow(values, norm=colors.LogNorm(vmin=1e-5,vmax=1.5))
     elif (val == "auc"): img = ax.imshow(values, vmin=0.7, vmax=1)
-    elif (val == "sicMax"): img = ax.imshow(values, vmin=-2, vmax=20)
+    elif (val == "sicMax"): img = ax.imshow(values, vmin=-2, vmax=5)
+    #elif (val == "sicMax"): img = ax.imshow(values, vmin=-2, vmax=20)
     else: img = ax.imshow(values)
 
   # add text to table
   for (j,i),label in np.ndenumerate(values):
     if label == 0.0: continue
-    if val == "qcdEff" or val == "sensitivity_Inclusive" or val == "sensitivity_mT": ax.text(i,j,'{0:.1e}'.format(label),ha='center', va='center', fontsize = 'x-small')
-    elif val == "score_cut": ax.text(i,j,'{0:.3e}'.format(label),ha='center', va='center', fontsize = 'x-small')
-    #elif val == "score_cut": ax.text(i,j,'{0:.3f}'.format(label),ha='center', va='center', fontsize = 'x-small')
-    else: ax.text(i,j,'{0:.2f}'.format(label),ha='center', va='center', fontsize = 'x-small')
+    if val == "qcdEff" or val == "sensitivity_Inclusive" or val == "sensitivity_mT": ax.text(i,j,'{0:.1e}'.format(label),ha='center', va='center', fontsize = 'large', color='white', fontweight='bold')
+    elif val == "score_cut": ax.text(i,j,'{0:.2e}'.format(label),ha='center', va='center', fontsize = 'large', color='white', fontweight='bold')
+    elif val == "score_cut2": ax.text(i,j,'{0:.2e}'.format(label),ha='center', va='center', fontsize = 'large', color='white',fontweight='bold')
+    #elif val == "score_cut": ax.text(i,j,'{0:.3f}'.format(label),ha='center', va='center', fontsize = 'large')
+    else: ax.text(i,j,'{0:.2f}'.format(label),ha='center', va='center', fontsize = 'large', color='white',fontweight='bold')
 
   # x-y labels for grid 
   x_label_list = ['1.0', '1.25', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '5.0', '6.0']
