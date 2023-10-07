@@ -447,7 +447,7 @@ def get_variational_encoder_test_Dense(input_dim, encoding_dim, latent_dim):
   except: print('cannot get layer sampling')
   return encoder
 ## ------------------------------------------------------------------------------------
-def get_decoder(input_dim, encoding_dim, latent_dim):
+def get_decoder(input_dim, encoding_dim, latent_dim, decoder_activation="relu"):
   #decoder = tf.keras.models.Sequential(name="decoder")
   #decoder.add(Dense(encoding_dim, input_dim=latent_dim))
   #decoder.add(Dropout(0.1))
@@ -476,7 +476,8 @@ def get_decoder(input_dim, encoding_dim, latent_dim):
  
   x = keras.layers.Dense(encoding_dim, activation="relu")(latent_inputs)
   x = keras.layers.Dense(encoding_dim*2., activation="relu")(x)
-  decoder_outputs = keras.layers.Dense(input_dim, activation="relu")(x)
+  decoder_o)utputs = keras.layers.Dense(input_dim, activation=decoder_activation)(x)
+  #decoder_o)utputs = keras.layers.Dense(input_dim, activation="relu")(x)
   #decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid")(x)
 
   print(f'{decoder_outputs.dtype=}')
@@ -539,16 +540,20 @@ def get_ECG_ae(input_dim, encoding_dim, latent_dim):
   return ae
 
 ## ------------------------------------------------------------------------------------
-def get_vae(input_dim, encoding_dim, latent_dim, learning_rate=0.00001, kl_loss_scalar=100, bool_test=False,  scalar_ecg=1):
+def get_vae(input_dim, encoding_dim, latent_dim, activation,bool_float64,learning_rate=0.00001, kl_loss_scalar=100, bool_test=False,  scalar_ecg=1):
   # change the default precision
-  tf.keras.backend.set_floatx('float64')
+  if bool_float64:
+    tf.keras.backend.set_floatx('float64')
+    print('using float64 for get_vae')
+  else:
+    print('NOT using float64 for get_vae')
   #if bool_test: encoder = get_variational_encoder_test_Conv(input_dim, encoding_dim, latent_dim)
   if bool_test: encoder = get_variational_encoder_test_Dense(input_dim, encoding_dim, latent_dim)
   else: encoder = get_variational_encoder(input_dim, encoding_dim, latent_dim)
   
   #if bool_test: decoder = get_decoder_test_Conv(input_dim, encoding_dim, latent_dim)
   if bool_test: decoder = get_decoder_test_Dense(input_dim, encoding_dim, latent_dim, scalar_ecg)
-  else:decoder = get_decoder(input_dim, encoding_dim, latent_dim)
+  else:decoder = get_decoder(input_dim, encoding_dim, latent_dim, activation=decoder_activation)
 
   vae = VAE(encoder, decoder, kl_loss_scalar)
   vae.compile(optimizer=keras.optimizers.Adam(learning_rate=learning_rate))

@@ -52,6 +52,8 @@ class Param_ANTELOPE(Param):
       bool_no_scaling=False,
       bool_nonzero=True,
       scalar_ecg=1,
+      decoder_activation='relu'
+      bool_float64=False
       sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim0.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],seed=0 ):
       #changeable: encoding_dim,latent_dim, nepochs, learning_rate, bkg_events, sig_events
 
@@ -74,6 +76,9 @@ class Param_ANTELOPE(Param):
     self.bool_no_scaling=bool_no_scaling # this overrides bool_shift
     self.bool_nonzero=bool_nonzero
     self.scalar_ecg=scalar_ecg
+    self.decoder_activation=decoder_activation
+    self.bool_float64=bool_float64
+  # check for non scaled data -> bool_no_scaling=True, bool_decoder activation = 'relu', bool_float64 -> False
 
   def save_info(self, bool_csv=True): # always saves info.txt -> info.csv is optional
     if bool_csv: # save in csv
@@ -165,7 +170,7 @@ class Param_ANTELOPE(Param):
 
 
   def evaluate_test_ECG(self):
-    x_testb, x_evalb, y_testb, y_evalb= self.prepare_test_ECG()
+    x_testb, x_evalb, y_testb, y_evalb= self.prepare_test_ECG( bool_float64=self.bool_float64)
 
     #x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val= self.prepare_test_ECG()
     print('prepare_test_ECG')
@@ -274,7 +279,8 @@ class Param_ANTELOPE(Param):
 
     return self.all_dir, sic_vals_dict, bkg_events_num,sig_events_num
 
-  def prepare_test_ECG(self):
+  def prepare_test_ECG(self, bool_float64):
+#  def prepare_test_ECG(self):
     #https://www.tensorflow.org/tutorials/generative/autoencoder
     # classify an ECG as anomalous if the total reconstruction error is greater than one standard deviation 
     dataframe = pd.read_csv('http://storage.googleapis.com/download.tensorflow.org/data/ecg.csv', header=None)
@@ -300,7 +306,8 @@ class Param_ANTELOPE(Param):
     print('before',type(x), x.shape)  
     x = (x - min_val) / (max_val - min_val)
     # change the datatype for precision
-    x = tf.cast(x, tf.float64)
+    if bool_float64:
+      x = tf.cast(x, tf.float64)
     x= x.numpy()
 
     # Scale data    
@@ -384,7 +391,7 @@ class Param_ANTELOPE(Param):
     return  x_testb, x_evalb, y_testb, y_evalb
 
 
-  def prepare_pfn(self, graph,scaler):
+  def prepare_pfn(self, graph,scaler,  bool_float64):
     print('AE not VAE')
     # phi_bkg -> (phi_evalb and phi_testb) ; phi_sig 
     # scale values
@@ -411,10 +418,13 @@ class Param_ANTELOPE(Param):
     phi_bkg = graph.predict(bkg2)
     phi_sig = graph.predict(sig2)
 
-#    """ 
-    phi_bkg = phi_bkg.astype('float64')
-    phi_sig = phi_sig.astype('float64')
-    
+#    """
+    if bool_float64: 
+      phi_bkg = phi_bkg.astype('float64')
+      phi_sig = phi_sig.astype('float64')
+      print('using float64 for phi in prepare_pfn')
+    else:
+      print('NOT using float64 for phi in prepare_pfn') 
  #   """ 
     print(f'{phi_bkg.dtype=}, {phi_sig.dtype=}')
     """
@@ -506,7 +516,7 @@ class Param_ANTELOPE(Param):
   #def train_vae(self, phi_evalb_train, phi_evalb_val, y_phi_evalb_train=[], y_phi_evalb_val=[]):
 
     #vae = get_ECG_ae(self.phi_dim,self.encoding_dim,self.latent_dim)
-    vae = get_vae(self.phi_dim,self.encoding_dim,self.latent_dim, self.learning_rate, self.kl_loss_scalar, bool_test=False, scalar_ecg=self.scalar_ecg)
+    vae = get_vae(self.phi_dim,self.encoding_dim,self.latent_dim, self.learning_rate, self.kl_loss_scalar, bool_test=False, scalar_ecg=self.scalar_ecg, decoder_activation=self.decoder_activation,  bool_float64=self.bool_float64)
       
 #    h2 = vae.fit(phi_evalb_train, 
     h2 = vae.fit(phi_evalb, 
@@ -691,7 +701,7 @@ class Param_ANTELOPE(Param):
 
   def evaluate_vae(self):
     graph, scaler = self.load_pfn()
-    x_bkg,x_testb, x_evalb, x_sig=  self.prepare_pfn(graph,scaler)
+    x_bkg,x_testb, x_evalb, x_sig=  self.prepare_pfn(graph,scaler,  bool_float64=self.bool_float64)
     print('prepare_pfn')
     try: vae = self.load_vae()
     except: 
@@ -796,10 +806,10 @@ if __name__=="__main__":
   for  kl_loss_scalar in [1]:
     param1=Param_ANTELOPE(pfn_model=pfn_model,  h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, arch_dir_vae='/data/users/kpark/svj-vae/results/grid_sept26/09_26_23_10_38/architectures_saved/', step_size=1)
-      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, arch_dir_vae='/data/users/kpark/svj-vae/results/grid_sept26/09_27_23_01_32/architectures_saved/', step_size=1, bool_no_scaling=True)
+#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, arch_dir_vae='/data/users/kpark/svj-vae/results/grid_sept26/09_27_23_01_32/architectures_saved/', step_size=1, bool_no_scaling=True)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=False, bool_shift=True)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=True, bool_shift=True)
-#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1, bool_no_scaling=True)
+      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1, bool_no_scaling=True, decoder_activation='relu', bool_float64=False)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1) # MAKE SURE TO CHECK RELU VS SIGMOID 
       #extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],  step_size=1, bool_no_scaling=True, kl_loss_scalar=1000)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8)
