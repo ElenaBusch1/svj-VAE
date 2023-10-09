@@ -90,26 +90,21 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
 # plot_vectors(bkg2,sig2,"PFN")
   phi_bkg = graph.predict(bkg2)
   vae_min_dict, vae_max_dict, pfn_min_dict,pfn_max_dict={},{},{},{}
+  """
   # technically these are loss transformed!
   vae_min_dict['09_26_23_10_38']= {'mse': -12.634254306189314, 'multi_reco':-12.545995242335483, 'multi_kl': -20.211301490367624 , 'multi_mse': -12.542977457162644}
   vae_max_dict['09_26_23_10_38']= {'mse': -3.456886217152505, 'multi_reco':-3.4590470421545785, 'multi_kl':-9.330598758710815, 'multi_mse': -3.458533554054478}
   vae_max_dict['09_27_23_01_32']= {'mse': 4.051665855814887 ,'multi_reco': 4.14657246457546, 'multi_kl':6.57444001122076, 'multi_mse':6.6017456361377675 }
   vae_max_dict['09_27_23_01_32']= {'mse': 4.051665855814887 ,'multi_reco': 2.986, 'multi_kl':6.57444001122076, 'multi_mse':6.35 }
-  #wrong
   vae_min_dict['09_27_23_01_32']= {'mse': -3.2118662852702515,'multi_reco':-3.166914871440587, 'multi_kl':0.9695256492112576, 'multi_mse':1.0634667425682687 }
   vae_min_dict['09_27_23_01_32']= {'mse': -3.2118662852702515,'multi_reco':-3.41, 'multi_kl':0.9695256492112576, 'multi_mse':0.9376 }
+  #wrong
 #  vae_min_dict['09_27_23_01_32']= {'mse': -3.2118662852702515,'multi_reco':-3.166914871440587, 'multi_kl':0.9695256492112576, 'multi_mse':-3.166914871440587 }
   """
-  vae_min_dict['09_26_23_01_32']= {'mse': ,'multi_reco':, 'multi_kl':, 'multi_mse': }
-  vae_min_dict['09_26_23_10_38']= {'mse': -12.740280963806276, 'multi_reco':12.681404701687859, 'multi_kl': -20.29521939559835 , 'multi_mse': -12.67853443999128}
-  vae_max_dict['09_26_23_10_38']= {'mse': -3.483815150531365, 'multi_reco': -3.48506892905624, 'multi_kl':-10.672584950009908, 'multi_mse': -3.48466478371146}
- 
-  vae_min_dict['09_26_23_01_32']= {'mse': -3.4774327321494654,'multi_reco':-3.411389944447053, 'multi_kl':0.7924726076345564, 'multi_mse':0.9376798510229637 }
-  vae_max_dict['09_26_23_01_32']= {'mse':2.992416483473239 ,'multi_reco':2.989450855262472, 'multi_kl':6.328397109439065, 'multi_mse': 6.3575135820668995 }
 
-  """
+  # manual 
   pfn_min_dict['09_26_23_10_38']= 0
-  pfn_max_dict['09_26_23_10_38']= 204.44198608398438
+  pfn_max_dict['09_26_23_10_38']= 204.44198608398438  # got from Final Max in /nevis/katya01/data/users/kpark/svj-vae/results/grid_sept26/09_26_23_10_38/stdout.txt
 # each event has a pfn score
 ## Classifier loss
   if vae_model =='': # if PFN 
@@ -258,6 +253,11 @@ def add_column(input_h5path, output_h5path, plot_dir, vae_model, dsid):
   # write to the file
   return rec_bkg
 
+def transform_dir_txt(file_dir):
+  # e.g. v9p1 -> v9.1
+ # print(file_dir.replace('p', '.'))
+  return file_dir.replace('p', '.')
+
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
@@ -288,7 +288,11 @@ bool_transformed=True
 
 
 # change
-file_dir='09_26_23_10_38'
+file_dir='10_08_23_04_08'
+#file_dir='09_26_23_10_38'
+bkg_file_dir='v9p1'
+sig_file_dir='v8p1'
+
 #file_dir='09_27_23_01_32'
 all_dir=f'/nevis/katya01/data/users/kpark/svj-vae/results/grid_sept26/{file_dir}/' # change
 #all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/grid_sept26/09_27_23_01_32/'
@@ -315,20 +319,20 @@ for dsid in dsids:
 #sys.stdout = open(applydir+f'stdout.txt', 'w')
 filetag_ls=[extract_tag(filename=fl) for fl in file_ls]
 if vae_model=='': # if evaluating PFN
-  sig_file_prefix='v8p1_'
-else:sig_file_prefix=f'v8p1_{vae_model}_' # if evaluating ANTELOPE
+  sig_file_prefix=f'{sig_file_dir}_'
+else:sig_file_prefix=f'{sig_file_dir}_{vae_model}_' # if evaluating ANTELOPE
 if vae_model=='': # if evaluating PFN
-  bkg_file_prefix='v9p1_'
-else:bkg_file_prefix=f'v8p1_{vae_model}_' # if evaluating ANTELOPE
+  bkg_file_prefix='{bkg_file_dir}_'
+else:bkg_file_prefix=f'{bkg_file_dir}_{vae_model}_' # if evaluating ANTELOPE
+sig_read_dir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt('v8.1')+'/'
+bkg_read_dir='/data/users/kpark/SVJ/MicroNTuples/'+transform_dir_txt('v9.2')+'/'
+#bkg_read_dir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt('v9.1')+'/'
 # HERE
+"""
+Here we evaluate on signal files 
+"""
 
-
-
-
-'''  
-  
-
-
+""" 
 for fl in file_ls:
   dsid=fl.split('.')[-2]
   print('*'*30)
@@ -341,33 +345,37 @@ for fl in file_ls:
   tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
   cprint(fl,'blue')
   cprint(f'{h5path}', 'blue')
-  """ 
   if  os.path.exists(h5path): # and (dsid !=515429):
     with h5py.File(h5path,"r") as f:
       dset = f.get('data')[:]
-  else:    rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v8.1/', file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
-  """
+  else:    rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir=sig_read_dir, file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
+  #Here you can add a column to a hdf5 file that was already processed and has new columns  
   add_column(input_h5path=h5path, output_h5path=output_h5path, plot_dir=plot_dir,vae_model=vae_model, dsid=dsid) 
+  #""" 
 
-bkg_file="skim0.user.ebusch.QCDskim.root"
+"""
+Here we evaluate on background files 
+"""
+bkg_file="user.ebusch.dataALL.root"
+#bkg_file="skim0.user.ebusch.QCDskim.root"
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 dsid=bkg_file.split('.')[-2]
 h5path=applydir+'/'+f'{sig_file_prefix}{dsid}'+".hdf5" 
 output_h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_log10'+".hdf5" 
 #h5path=applydir+'/'+"v8p1_"+str(dsid)+".hdf5"
 cprint(h5path, 'magenta')
-""" 
 if  os.path.exists(h5path):
   with h5py.File(h5path,"r") as f:
     dset = f.get('data')[:]
 
-else: rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir='/data/users/ebusch/SVJ/autoencoder/v9.1/',file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
-  """ 
+else: rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir=bkg_read_dir,file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
+"""
+Here you can add a column to a hdf5 file that was already processed and has new columns  
+""" 
+""" 
 add_column(input_h5path=h5path, output_h5path=output_h5path, plot_dir=plot_dir,vae_model=vae_model, dsid=dsid) 
-#comment here
-'''
-'''
-'''  
+""" 
+
 title=f'track={max_track}'
 key='multi_kl_transformed_log10_sig'
 keys=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
@@ -388,8 +396,8 @@ cprint(keys, 'red')
 #grid_s_sqrt_b( bkg_scale=5, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix, title=title, all_dir=all_dir,cms=False, key=key)
 for key in keys:
   print(file_dir,key)
-  grid_s_sqrt_b(score_cut_dict[file_dir][key], bkg_scale=5, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix, title=title, all_dir=all_dir,cms=False, key=key)
   grid_scan(title, all_dir=all_dir, sig_file_prefix=sig_file_prefix,bkg_file_prefix=sig_file_prefix, key=key)
+  grid_s_sqrt_b(score_cut_dict[file_dir][key], bkg_scale=5, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix, title=title, all_dir=all_dir,cms=False, key=key)
 #sys.stdout =stdoutOrigin
 vae_min_dict, vae_max_dict, pfn_min_dict,pfn_max_dict={},{},{},{}
 sys.exit()

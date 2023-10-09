@@ -14,6 +14,8 @@ def get_weighted_elements(tree, nEvents, seed=0):
     my_weight_array = tree.arrays(weight_array, library = "np")
     my_weight_array = my_weight_array[weight_array[0]]
     np.random.seed(seed)
+    print(f'{my_weight_array=}')
+    print(f'{np.isnan(np.sum(my_weight_array))=}')
     idx = np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
     idx = np.sort(idx)
     return idx

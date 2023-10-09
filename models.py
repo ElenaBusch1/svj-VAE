@@ -476,8 +476,8 @@ def get_decoder(input_dim, encoding_dim, latent_dim, decoder_activation="relu"):
  
   x = keras.layers.Dense(encoding_dim, activation="relu")(latent_inputs)
   x = keras.layers.Dense(encoding_dim*2., activation="relu")(x)
-  decoder_o)utputs = keras.layers.Dense(input_dim, activation=decoder_activation)(x)
-  #decoder_o)utputs = keras.layers.Dense(input_dim, activation="relu")(x)
+  decoder_outputs = keras.layers.Dense(input_dim, activation=decoder_activation)(x)
+  #decoder_outputs = keras.layers.Dense(input_dim, activation="relu")(x)
   #decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid")(x)
 
   print(f'{decoder_outputs.dtype=}')
@@ -540,7 +540,7 @@ def get_ECG_ae(input_dim, encoding_dim, latent_dim):
   return ae
 
 ## ------------------------------------------------------------------------------------
-def get_vae(input_dim, encoding_dim, latent_dim, activation,bool_float64,learning_rate=0.00001, kl_loss_scalar=100, bool_test=False,  scalar_ecg=1):
+def get_vae(input_dim, encoding_dim, latent_dim, decoder_activation,bool_float64,learning_rate=0.00001, kl_loss_scalar=100, bool_test=False,  scalar_ecg=1):
   # change the default precision
   if bool_float64:
     tf.keras.backend.set_floatx('float64')
@@ -553,7 +553,7 @@ def get_vae(input_dim, encoding_dim, latent_dim, activation,bool_float64,learnin
   
   #if bool_test: decoder = get_decoder_test_Conv(input_dim, encoding_dim, latent_dim)
   if bool_test: decoder = get_decoder_test_Dense(input_dim, encoding_dim, latent_dim, scalar_ecg)
-  else:decoder = get_decoder(input_dim, encoding_dim, latent_dim, activation=decoder_activation)
+  else:decoder = get_decoder(input_dim, encoding_dim, latent_dim, decoder_activation=decoder_activation)
 
   vae = VAE(encoder, decoder, kl_loss_scalar)
   vae.compile(optimizer=keras.optimizers.Adam(learning_rate=learning_rate))

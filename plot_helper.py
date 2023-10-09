@@ -52,7 +52,7 @@ def plot_pca(latent,latent_label, nlabel,  n_components=2, tag_file="", tag_titl
   x_transform = pca.fit_transform(latent)
   print(x_transform.shape)
   if n_components==2:
-    plt.scatter(x_transform[:,0], x_transform[:,1], c=latent_label, cmap=plt.cm.get_cmap("jet", nlabel))
+    plt.scatter(x_transform[:,0], x_transform[:,1], c=latent_label, cmap=plt.cm.get_cmap("jet", nlabel), alpha= 0.6)
     plt.colorbar(ticks=range(10))
     plt.clim(-0.5, 9.5)
     plt.title(f'{tag_title} Latent Space Visualization (PCA)')
@@ -416,7 +416,7 @@ def zero_div(a,b, bool_print=False): # this avoid zero division error
     #e.g. a= [2 2 4], b= [1 0 3], result [2 0 1.333]
     return np.divide(a, b, out=np.zeros_like(a), where=mask) 
 
-def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, logy=False, len_ls=[],  plot_dir="", tag_file=''):
+def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, logy=False, len_ls=[],  plot_dir="", tag_file='', bool_weight=True):
   nbins=100
   #nbins=50
   hists_flat=np.concatenate(hists)
@@ -431,7 +431,10 @@ def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, 
   len0=len(hists[cut0_idx])
  
   for data,name,weights,i in zip(hists,h_names,weights_ls, range(len(hists))):
-    y,_, _=plt.hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {name}')
+    if bool_weight:
+      y,_, _=plt.hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {name}')
+    else: 
+      y,_, _=plt.hist(data, bins=bins, density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {name}')
     #y,_, _=plt.hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i]*100,1)}% left, cut={name}')
 #    y_unnorm,_, _=plt[0].hist(data, bins=bins, density=False,histtype='step', alpha=0)
 #    print(i, len(bins), len(y), bins, y) 
@@ -665,7 +668,7 @@ def plot_vectors(train,sig, tag_file="", tag_title="", bool_one=True,  plot_dir=
 
 
 def plot_1D_phi(bkg, sig, labels, plot_dir, tag_file, tag_title, bool_norm=False, ylog=True, bins=[]):
-  
+  if ylog and bool_norm:ylog=False # if bool_norm (draw gaussian), then can't draw in ylog form
   per_plot=4 # 4 plots per figure
   length= int(bkg.shape[1]/per_plot)# 12
   for j in range(length):

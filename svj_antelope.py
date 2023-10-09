@@ -52,9 +52,10 @@ class Param_ANTELOPE(Param):
       bool_no_scaling=False,
       bool_nonzero=True,
       scalar_ecg=1,
-      decoder_activation='relu'
-      bool_float64=False
-      sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim0.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],seed=0 ):
+      decoder_activation='relu',
+      bool_float64=False,
+      sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="user.ebusch.dataALL.root",  bool_weight=True, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],seed=0 ):
+      #sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim0.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],seed=0 ):
       #changeable: encoding_dim,latent_dim, nepochs, learning_rate, bkg_events, sig_events
 
     super().__init__( arch_dir,print_dir,plot_dir,h5_dir,
@@ -408,9 +409,9 @@ class Param_ANTELOPE(Param):
     bkg, mT_bkg, _, _, _, _ = getTwoJetSystem(nevents=self.bkg_events,input_file=self.bkg_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
       bool_weight=self.bool_weight,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed, max_track=self.max_track,bool_pt=self.bool_pt,h5_dir=self.h5_dir,
-      read_dir='/data/users/ebusch/SVJ/autoencoder/v9.1/') 
-    print('hola') 
+      read_dir='/data/users/kpark/SVJ/MicroNTuples/v9.2/') 
       #read_dir='/data/users/ebusch/SVJ/autoencoder/v9.1/') 
+    print('hola') 
     bkg2,_ = apply_StandardScaling(bkg,scaler,False) # change
     sig2,_ = apply_StandardScaling(sig,scaler,False) # change
     plot_vectors(bkg2,sig2,tag_file="ANTELOPE", tag_title=" (ANTELOPE)", plot_dir=self.plot_dir)# change
@@ -437,8 +438,8 @@ class Param_ANTELOPE(Param):
     print('idx',phi_evalb_idx, phi_testb_idx)
     print('after',phi_evalb.shape, phi_testb.shape,  mT_evalb.shape, mT_testb.shape)
 
-    plot_single_variable([mT_evalb[:,2], mT_testb[:,2]],h_names= ['training and validation', 'test'],weights_ls=[mT_evalb[:,1], mT_testb[:,1]], tag_title= 'leading jet pT (QCD)', plot_dir=self.plot_dir,logy=True, tag_file='jet1_pt')
-    plot_single_variable([mT_evalb[:,3], mT_testb[:,3]],h_names= ['training and validation', 'test'],weights_ls=[mT_evalb[:,1], mT_testb[:,1]], tag_title= 'subleading jet pT (QCD)', plot_dir=self.plot_dir, logy=True, tag_file='jet2_pt')
+    plot_single_variable([mT_evalb[:,2], mT_testb[:,2]],h_names= ['training and validation', 'test'],weights_ls=[mT_evalb[:,1], mT_testb[:,1]], tag_title= 'leading jet pT (QCD)', plot_dir=self.plot_dir,logy=True, tag_file='jet1_pt', bool_weight=self.bool_weight)
+    plot_single_variable([mT_evalb[:,3], mT_testb[:,3]],h_names= ['training and validation', 'test'],weights_ls=[mT_evalb[:,1], mT_testb[:,1]], tag_title= 'subleading jet pT (QCD)', plot_dir=self.plot_dir, logy=True, tag_file='jet2_pt',bool_weight=self.bool_weight)
 
     #plot_phi(phi_evalb,tag_file="PFN_phi_train_raw",tag_title="Train",plot_dir=self.plot_dir) # change
     #plot_phi(phi_testb,tag_file="PFN_phi_test_raw",tag_title="Test", plot_dir=self.plot_dir)
@@ -446,9 +447,7 @@ class Param_ANTELOPE(Param):
     plot_phi(phi_bkg,tag_file="PFN_phi_bkg_raw",tag_title="QCD",plot_dir=self.plot_dir) # change
      
     if self.bool_no_scaling:
-      """
       plot_1D_phi(phi_bkg, phi_sig,labels=['QCD', 'sig'], plot_dir=self.plot_dir, tag_file=self.pfn_model+'_input', tag_title=self.pfn_model+' Input')
-      """
       plot_phi(phi_sig,tag_file="PFN_phi_sig_input", tag_title="Signal Input", plot_dir=self.plot_dir)
       plot_phi(phi_bkg,tag_file="PFN_phi_bkg_input", tag_title="QCD Input", plot_dir=self.plot_dir)
       print('---no scaling or shifting for phis---')
@@ -506,9 +505,7 @@ class Param_ANTELOPE(Param):
     if not(self.bool_shift): phi_bkg, phi_testb, phi_evalb, phi_sig = phi_bkg_pre, phi_testb_pre, phi_evalb_pre, phi_sig_pre
     plot_phi(phi_sig,tag_file="PFN_phi_sig_input", tag_title="Signal Input", plot_dir=self.plot_dir)
     plot_phi(phi_bkg,tag_file="PFN_phi_bkg_input", tag_title="QCD Input", plot_dir=self.plot_dir)
-    """
     plot_1D_phi(phi_bkg, phi_sig,labels=['QCD', 'sig'], plot_dir=self.plot_dir, tag_file=self.pfn_model+'_input', tag_title=self.pfn_model+' Input')
-    """
     return  phi_bkg, phi_testb, phi_evalb, phi_sig
  
 
@@ -516,7 +513,7 @@ class Param_ANTELOPE(Param):
   #def train_vae(self, phi_evalb_train, phi_evalb_val, y_phi_evalb_train=[], y_phi_evalb_val=[]):
 
     #vae = get_ECG_ae(self.phi_dim,self.encoding_dim,self.latent_dim)
-    vae = get_vae(self.phi_dim,self.encoding_dim,self.latent_dim, self.learning_rate, self.kl_loss_scalar, bool_test=False, scalar_ecg=self.scalar_ecg, decoder_activation=self.decoder_activation,  bool_float64=self.bool_float64)
+    vae = get_vae(input_dim=self.phi_dim,encoding_dim=self.encoding_dim,latent_dim=self.latent_dim, learning_rate=self.learning_rate,kl_loss_scalar= self.kl_loss_scalar, bool_test=False, scalar_ecg=self.scalar_ecg, decoder_activation=self.decoder_activation,  bool_float64=self.bool_float64)
       
 #    h2 = vae.fit(phi_evalb_train, 
     h2 = vae.fit(phi_evalb, 
@@ -571,8 +568,8 @@ class Param_ANTELOPE(Param):
       for method in old_methods:
         new_method=f'{method}_transformed'
         print(f'{method=}, {new_method=}')
-        loss_dict[new_method+'_log_sig']={}
-        loss_dict[new_method+'_log']={}
+        loss_dict[new_method+'_log10_sig']={}
+        loss_dict[new_method+'_log10']={}
         loss_dict[new_method+'_negx']={}
         loss_bkg=np.log10(loss_dict[method]['bkg'])
       
@@ -588,23 +585,23 @@ class Param_ANTELOPE(Param):
         loss_transformed_bkg = (loss_bkg - min_loss)/(max_loss -min_loss) 
 
           """
-        loss_dict[new_method+'_log']['bkg'] =loss_bkg 
+        loss_dict[new_method+'_log10']['bkg'] =loss_bkg 
         loss_transformed_bkg = 1/(1 + np.exp(-loss_bkg)) 
-        loss_dict[new_method+'_log_sig']['bkg'] =loss_transformed_bkg 
+        loss_dict[new_method+'_log10_sig']['bkg'] =loss_transformed_bkg 
         loss_transformed_bkg = 1/(1 + np.exp(loss_bkg)) 
         loss_dict[new_method+'_negx']['bkg'] =loss_transformed_bkg 
         if len(sig)!=0:
           """
           loss_transformed_sig = (loss_sig - min_loss)/(max_loss -min_loss) 
           """
-          loss_dict[new_method+'_log']['sig'] =loss_sig 
+          loss_dict[new_method+'_log10']['sig'] =loss_sig 
           loss_transformed_sig = 1/(1 + np.exp(-loss_sig)) 
-          loss_dict[new_method+'_log_sig']['sig'] =loss_transformed_sig 
+          loss_dict[new_method+'_log10_sig']['sig'] =loss_transformed_sig 
           loss_transformed_sig = 1/(1 + np.exp(loss_sig)) 
           loss_dict[new_method+'_negx']['sig'] =loss_transformed_sig 
   
-        methods.append(new_method+'_log_sig')
-        methods.append(new_method+'_log')
+        methods.append(new_method+'_log10_sig')
+        methods.append(new_method+'_log10')
         methods.append(new_method+'_negx')
 
     return loss_dict, methods, y
@@ -734,7 +731,7 @@ class Param_ANTELOPE(Param):
     print(f'{latent_test.shape=}')
     print(f'{bkg_latent_test.shape=}')
     print(f'{y_testb.shape=}')
-    """ 
+    #""" 
     var='mu'     
     plot_pca(latent_test[0,:,:], latent_label=np.array(y_testb), nlabel=10,n_components=2, tag_file=self.vae_model+f'_test_{var}', tag_title=self.vae_model+f' Test {var.capitalize()}', plot_dir=self.plot_dir)
     plot_pca(bkg_latent_train[0,:,:],latent_label=np.array(y_evalb_train), nlabel=10, n_components=2, tag_file=self.vae_model+f'_train_{var}', tag_title=self.vae_model+f' Train {var.capitalize()}', plot_dir=self.plot_dir)
@@ -747,7 +744,7 @@ class Param_ANTELOPE(Param):
     plot_pca(latent_test[2,:,:], latent_label=np.array(y_testb), nlabel=10,n_components=2, tag_file=self.vae_model+f'_test_{var}', tag_title=self.vae_model+f' Test {var.capitalize()}', plot_dir=self.plot_dir)
     plot_pca(bkg_latent_train[2,:,:],latent_label=np.array(y_evalb_train), nlabel=10, n_components=2, tag_file=self.vae_model+f'_train_{var}', tag_title=self.vae_model+f' Train {var.capitalize()}', plot_dir=self.plot_dir)
 
-    """ 
+    #""" 
     y_bkg_train, y_bkg_test, y_sig_train, y_sig_test = np.array([]), np.array([]),  np.array([]), np.array([]) 
 
     bkg_latent_test_recon = vae.get_layer('decoder').predict(bkg_latent_test[0,:,:])
@@ -757,7 +754,7 @@ class Param_ANTELOPE(Param):
    
     bkg_latent_test_sigma, sig_latent_test_sigma = self.transform_sigma(bkg_latent_test[1,:,:]), self.transform_sigma(sig_latent_test[1, :,:])
     labels=['test QCD', 'SIG']
-    """
+    #"""
     plot_1D_phi(bkg_latent_test[0,:,:],sig_latent_test[0,:,:] , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_mu', tag_title=self.vae_model +r" $\mu$", ylog=True)
     plot_1D_phi(bkg_latent_test_sigma,sig_latent_test_sigma , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sigma', tag_title=self.vae_model +r" $\sigma$", ylog=True)
 
@@ -765,7 +762,7 @@ class Param_ANTELOPE(Param):
     plot_1D_phi(bkg_latent_test_sigma,sig_latent_test_sigma , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sigma_custom', tag_title=self.vae_model +r" $\sigma$", bins=np.linspace(0.9998,1.0002,num=50))
 
     plot_1D_phi(bkg_latent_test[2,:,:],sig_latent_test[2,:,:] , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sampling', tag_title=self.vae_model +" Sampling", bool_norm=True)
-    """
+    #"""
 
     ######## EVALUATE SUPERVISED ######
     # # --- Eval plots 
@@ -779,10 +776,8 @@ class Param_ANTELOPE(Param):
     
 #    """
     loss_dict_all={}
-    """
     loss_dict_train, methods,y = self.calculate_loss(model = vae, bkg = x_evalb_train, sig =np.array([]) , y_bkg = y_bkg_train, y_sig = y_sig_train)
     loss_dict_all['train'] = loss_dict_train # cannot calculate a metric b/c sig_train is empty
-    """
     loss_dict_test, methods,y  = self.calculate_loss(model = vae, bkg = x_testb, sig = x_sig, y_bkg = y_bkg_test, y_sig = y_sig_test)
     loss_dict_all['test'] = self.calculate_metric(loss_dict_test, methods,y)
     sic_vals_dict = self.plot_loss_dict(loss_dict_all)
@@ -809,7 +804,7 @@ if __name__=="__main__":
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, arch_dir_vae='/data/users/kpark/svj-vae/results/grid_sept26/09_27_23_01_32/architectures_saved/', step_size=1, bool_no_scaling=True)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=False, bool_shift=True)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=True, bool_shift=True)
-      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1, bool_no_scaling=True, decoder_activation='relu', bool_float64=False)
+      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1, bool_no_scaling=True, decoder_activation='relu', bool_float64=False, bool_weight=False)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1) # MAKE SURE TO CHECK RELU VS SIGMOID 
       #extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],  step_size=1, bool_no_scaling=True, kl_loss_scalar=1000)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8)
