@@ -84,8 +84,8 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
   bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
 
   plot_vectors(bkg2,bkg2,tag_file="ANTELOPE_"+str(dsid)+'_', tag_title=f" (ANTELOPE) {str(dsid)}", plot_dir=plot_dir, bool_sig_on=False, labels=[str(dsid)])# change
-  plot_single_variable([mT_bkg[:,2]],h_names= [bkg_file],weights_ls=[mT_bkg[:,1]], tag_title= f'leading jet pT  {str(dsid)}', plot_dir=plot_dir,logy=True, tag_file='jet1_pt_'+str(dsid))
-  plot_single_variable([mT_bkg[:,0]],h_names= [bkg_file],weights_ls=[mT_bkg[:,1]], tag_title= f'{extraVars[0]} {str(dsid)} (weighted)', plot_dir=plot_dir,logy=True, tag_file='mT_jj_'+str(dsid))
+  plot_single_variable([mT_bkg[:,2]],h_names= [bkg_file],weights_ls=[mT_bkg[:,1]], tag_title= f'leading jet pT  {str(dsid)}', plot_dir=plot_dir,logy=True, tag_file='jet1_pt_'+str(dsid), bool_weight=bool_weight)
+  plot_single_variable([mT_bkg[:,0]],h_names= [bkg_file],weights_ls=[mT_bkg[:,1]], tag_title= f'{extraVars[0]} {str(dsid)} (weighted)', plot_dir=plot_dir,logy=True, tag_file='mT_jj_'+str(dsid), bool_weight=bool_weight)
 
 # plot_vectors(bkg2,sig2,"PFN")
   phi_bkg = graph.predict(bkg2)
@@ -271,7 +271,7 @@ vae_model = 'vANTELOPE'
 sig_events =100000
 #bkg_events =10
 bkg_events = -1
-bool_weight=True
+bool_weight=False
 if bool_weight:weight_tag='ws'
 else:weight_tag='nws'
 #tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
