@@ -135,7 +135,7 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
     if bool_transformed:
       old_methods=methods.copy() # essential that new_methods and methods are separate b/c otherwise, will loop through methods that are already transformed
       for method in old_methods:
-        new_method=f'{method}_transformed_log_sig'
+        new_method=f'{method}_transformed_log10_sig'
         #new_method=f'{method}_transformed'
         print(f'{method=}, {new_method=}')
         loss=np.log10(bkg_loss[method])
@@ -158,8 +158,9 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
     
     plot_score(bkg_loss[method][bkg_loss[method]>0], np.array([]),False, xlog=True, tag_file=vae_model+'_pos'+f'_{method}_{str(dsid)}', tag_title=vae_model + ' (score > 0)'+f' {method} {str(dsid)}', plot_dir=plot_dir, bool_pfn=False, labels=[str(dsid)]) # anomaly score
 #    except: print('skip b/c it failed for some reason')
-  newVars=['mse', 'multi_reco', 'multi_kl', 'multi_mse',
-    'mse_transformed', 'multi_reco_transformed', 'multi_kl_transformed', 'multi_mse_transformed']
+  newVars= methods+ new_methods
+#  newVars=['mse', 'multi_reco', 'multi_kl', 'multi_mse',
+#    'mse_transformed', 'multi_reco_transformed', 'multi_kl_transformed', 'multi_mse_transformed']
 #  newVars=['score', 'score_total', 'score_kl', 'score_reco', ]
   newVars+=extraVars
 
@@ -171,10 +172,10 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
    bkg_loss['multi_mse'][:,None],
 
 
-   bkg_loss['mse_transformed'][:,None],
-   bkg_loss['multi_reco_transformed'][:,None],
-   bkg_loss['multi_kl_transformed'][:,None],
-   bkg_loss['multi_mse_transformed'][:,None],
+   bkg_loss['mse_transformed_log10_sig'][:,None],
+   bkg_loss['multi_reco_transformed_log10_sig'][:,None],
+   bkg_loss['multi_kl_transformed_log10_sig'][:,None],
+   bkg_loss['multi_mse_transformed_log10_sig'][:,None],
 
    mT_bkg),axis=1)
 
@@ -282,7 +283,8 @@ bool_pt=False
 #max_track=15# CHECK THIS
 max_track=80# CHECK THIS
 #h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/jul28/'
-h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/antelope/aug17_jetpt'
+h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/antelope/v9p2'
+#h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/antelope/aug17_jetpt'
 #all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/paramscan_new/07_24_23_07_11/' # change
 bool_transformed=True
 
@@ -290,8 +292,9 @@ bool_transformed=True
 # change
 file_dir='10_08_23_04_08'
 #file_dir='09_26_23_10_38'
-bkg_file_dir='v9p1'
-sig_file_dir='v8p1'
+bkg_file_dir='v9p2'
+sig_file_dir='v9p2'
+#sig_file_dir='v8p1'
 
 #file_dir='09_27_23_01_32'
 all_dir=f'/nevis/katya01/data/users/kpark/svj-vae/results/grid_sept26/{file_dir}/' # change
@@ -314,7 +317,8 @@ corrupt_files=[515508, 515511,515493]
 dsids=[x for x in dsids if x not in corrupt_files ]
 file_ls=[]
 for dsid in dsids:
-  file_ls.append("skim3.user.ebusch."+str(dsid)+".root")
+  file_ls.append("user.ebusch."+str(dsid)+".root")
+  #file_ls.append("skim3.user.ebusch."+str(dsid)+".root")
 #stdoutOrigin=sys.stdout
 #sys.stdout = open(applydir+f'stdout.txt', 'w')
 filetag_ls=[extract_tag(filename=fl) for fl in file_ls]
@@ -324,20 +328,23 @@ else:sig_file_prefix=f'{sig_file_dir}_{vae_model}_' # if evaluating ANTELOPE
 if vae_model=='': # if evaluating PFN
   bkg_file_prefix='{bkg_file_dir}_'
 else:bkg_file_prefix=f'{bkg_file_dir}_{vae_model}_' # if evaluating ANTELOPE
-sig_read_dir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt('v8.1')+'/'
-bkg_read_dir='/data/users/kpark/SVJ/MicroNTuples/'+transform_dir_txt('v9.2')+'/'
+sig_read_dir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt(sig_file_dir)+'/'
+#sig_read_dir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt('v8.1')+'/'
+bkg_read_dir='/data/users/kpark/SVJ/MicroNTuples/'+transform_dir_txt(bkg_file_dir)+'/'
 #bkg_read_dir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt('v9.1')+'/'
 # HERE
 """
 Here we evaluate on signal files 
 """
 
-""" 
+
+
 for fl in file_ls:
   dsid=fl.split('.')[-2]
   print('*'*30)
   print(fl) 
-  h5path=applydir+'/'+f'{sig_file_prefix}{dsid}'+".hdf5" 
+  h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_log10'+".hdf5" 
+  #h5path=applydir+'/'+f'{sig_file_prefix}{dsid}'+".hdf5" 
   output_h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_log10'+".hdf5" 
   #h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_{bkg_loss_type}'+".hdf5" 
   cprint(f'{dsid=}, {h5path=}', 'green')
@@ -350,17 +357,18 @@ for fl in file_ls:
       dset = f.get('data')[:]
   else:    rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir=sig_read_dir, file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
   #Here you can add a column to a hdf5 file that was already processed and has new columns  
-  add_column(input_h5path=h5path, output_h5path=output_h5path, plot_dir=plot_dir,vae_model=vae_model, dsid=dsid) 
+#  add_column(input_h5path=h5path, output_h5path=output_h5path, plot_dir=plot_dir,vae_model=vae_model, dsid=dsid) 
   #""" 
-
 """
 Here we evaluate on background files 
 """
 bkg_file="user.ebusch.dataALL.root"
+#bkg_file="skim0.user.ebusch.bkgAll.root"
 #bkg_file="skim0.user.ebusch.QCDskim.root"
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 dsid=bkg_file.split('.')[-2]
-h5path=applydir+'/'+f'{sig_file_prefix}{dsid}'+".hdf5" 
+h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_log10'+".hdf5" 
+#h5path=applydir+'/'+f'{sig_file_prefix}{dsid}'+".hdf5" 
 output_h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_log10'+".hdf5" 
 #h5path=applydir+'/'+"v8p1_"+str(dsid)+".hdf5"
 cprint(h5path, 'magenta')
@@ -481,6 +489,4 @@ for method_scale in keys:
   """
   plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=False)
   plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=True)
-  
-  
   
