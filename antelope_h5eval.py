@@ -170,7 +170,8 @@ def grid_scan(title, all_dir, sig_file_prefix, bkg_file_prefix, key='multi_reco'
   plot_dir=h5dir+'/plots/'
   if not os.path.exists(plot_dir):os.mkdir(plot_dir)
   #bkgpath=h5dir+"v8p1_QCDskim.hdf5"
-  bkgpath=h5dir+f"{bkg_file_prefix}QCDskim_log10.hdf5"
+  bkgpath=h5dir+f"{bkg_file_prefix}dataALL_log10.hdf5"
+  #bkgpath=h5dir+f"{bkg_file_prefix}QCDskim_log10.hdf5"
   #bkgpath="v8p1_PFNv3_QCDskim.hdf5"
   with h5py.File(bkgpath,"r") as f:
     bkg_data1 = f.get('data')[:]
@@ -184,7 +185,11 @@ def grid_scan(title, all_dir, sig_file_prefix, bkg_file_prefix, key='multi_reco'
 
   variables = [f_name for (f_name,f_type) in bkg_data.dtype.descr]
   bkg_loss = bkg_data[key]
-  bkg_weights = np.reshape(bkg_data["weight"],len(bkg_data["weight"]))
+  if bkg_data['weight'].any(): 
+    bkg_data_weights=bkg_data['weight']
+  else:  bkg_data_weights=np.ones(bkg_data['weight'].shape)
+  bkg_weights = np.reshape(bkg_data_weights,len(bkg_data_weights))
+  #bkg_weights = np.reshape(bkg_data["weight"],len(bkg_data["weight"]))
   print("bkg events", len(bkg_loss))
   print(bkg_data1['mT_jj'],bkg_data1['weight']) 
   print(bkg_data1['mT_jj'].shape,bkg_data1['weight'].shape) 
@@ -221,7 +226,7 @@ def grid_s_sqrt_b(score_cut, bkg_scale, sig_file_prefix, bkg_file_prefix,title, 
   h5dir=all_dir+'applydir/'
   plot_dir=h5dir+'/plots/'
   if not os.path.exists(plot_dir):os.mkdir(plot_dir)
-  bkgpath=h5dir+f"{bkg_file_prefix}QCDskim_log10.hdf5"
+  bkgpath=h5dir+f"{bkg_file_prefix}dataALL_log10.hdf5"
   with h5py.File(bkgpath,"r") as f:
     bkg_data = f.get('data')[:]
   
@@ -236,7 +241,12 @@ def grid_s_sqrt_b(score_cut, bkg_scale, sig_file_prefix, bkg_file_prefix,title, 
   else:
     bkg_loss = bkg_data[key]
     bkg_mT = bkg_data["mT_jj"][bkg_loss>score_cut]
-    bkg_weight = bkg_data["weight"][bkg_loss>score_cut]
+    if bkg_data['weight'].any(): 
+      bkg_data_weights=bkg_data['weight']
+    else:  bkg_data_weights=np.ones(bkg_data['weight'].shape)
+
+    bkg_weight = bkg_data_weights[bkg_loss>score_cut]
+    #bkg_weight = bkg_data["weight"][bkg_loss>score_cut]
     bkg_weight = bkg_scale*bkg_weight
 
   y0_total = np.sum(bkg_weight)

@@ -453,7 +453,7 @@ def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, 
   plt.savefig(plot_dir+'hist_'+tag_file+'_weighted'+'.png')
   #plt.savefig(plot_dir+'hist_'+tag_title.replace(" ","").replace('(','')+'_weighted_cut'+'.png')
   plt.clf()
-  print("Saved plot",tag_title)
+  print("Saved plot",tag_title, tag_file)
 
 
 
@@ -470,9 +470,9 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
   gap=(bin_max-bin_min)*0.05
   gap=0
   bins=np.linspace(bin_min-gap,bin_max+gap,nbins)
-  print('bins',bins)
+#  print('bins',bins)
   x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
-  print('x_bins',x_bins)
+#  print('x_bins',x_bins)
   hists=list(hists)
 
   cut0_idx=0

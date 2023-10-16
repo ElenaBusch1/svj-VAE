@@ -29,7 +29,7 @@ def extract_tag(filename):
   return tag
 #h5_dir, max_track
 # ---------- Load graph model ----------
-def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, applydir,h5path, bool_pt, max_track, h5_dir,read_dir,pfn_model,file_dir,vae_model='', bool_no_scaling=False, bool_transformed=True, arch_dir_pfn=''):
+def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, applydir,h5path, bool_pt, max_track, h5_dir,read_dir,pfn_model,file_dir,vae_model='', bool_no_scaling=False, bool_transformed=True, arch_dir_pfn='', bool_float64=False):
   cprint(f'{extraVars=}, {pfn_model=}, {vae_model=}', 'red')
   print(arch_dir_pfn+pfn_model+'_graph_arch')
   graph = keras.models.load_model(arch_dir_pfn+pfn_model+'_graph_arch')
@@ -82,6 +82,10 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
   print(mT_bkg.shape)
   scaler = load(arch_dir_pfn+pfn_model+'_scaler.bin')
   bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
+  
+  if mT_bkg[:,1].any():
+    bool_weight=True
+  else: bool_weight=False # if data, not drawing with weights
 
   plot_vectors(bkg2,bkg2,tag_file="ANTELOPE_"+str(dsid)+'_', tag_title=f" (ANTELOPE) {str(dsid)}", plot_dir=plot_dir, bool_sig_on=False, labels=[str(dsid)])# change
   plot_single_variable([mT_bkg[:,2]],h_names= [bkg_file],weights_ls=[mT_bkg[:,1]], tag_title= f'leading jet pT  {str(dsid)}', plot_dir=plot_dir,logy=True, tag_file='jet1_pt_'+str(dsid), bool_weight=bool_weight)
@@ -112,7 +116,8 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
     bkg_loss = pred_phi_bkg[:,1]
   else: # if PFN + AE
     ## Scale phis - values from v1 training
-    phi_bkg = phi_bkg.astype('float64')
+    if bool_float64:
+      phi_bkg = phi_bkg.astype('float64')
     eval_min = 0.0
     eval_max = 109.87523
     #eval_max = np.amax(phi_bkg)
@@ -125,6 +130,19 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
     
     plot_phi(phi_bkg,tag_file="PFN_phi_input_"+str(dsid), tag_title=f"{str(dsid)} Input", plot_dir=plot_dir)
     pred_phi_bkg = vae.predict(phi_bkg)['reconstruction']
+
+  return phi_bkg, pred_phi_bkg, mT_bkg, extraVars,dsid, h5path, vae_model, bool_transformed, vae, plot_dir, file_dir
+ 
+def write_hdf5(phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model, bool_transformed, vae, plot_dir, file_dir, subset=0, n_events=0, bool_split=True):
+  if vae_model =='':
+    print('not writing hdf5 in write_hdf5 function because using VAE')
+  else:
+    print(phi_bkg.shape, pred_phi_bkg.shape, mT_bkg.shape)
+    # only selects some indices of phi_bkg, pred_phi_bkg, mT_bkg to evaluate
+    if bool_split:
+      phi_bkg, pred_phi_bkg, mT_bkg= phi_bkg[subset*n_events: (subset+1)*n_events, :]  , pred_phi_bkg[subset*n_events: (subset+1)*n_events, :],   mT_bkg[subset*n_events: (subset+1)*n_events, :]
+      print('after split',phi_bkg.shape, pred_phi_bkg.shape, mT_bkg.shape)
+#    phi_bkg, pred_phi_bkg, mT_bkg = 
     bkg_loss={}
     # ## AE loss
     bkg_loss['mse'] = np.array(keras.losses.mse(phi_bkg, pred_phi_bkg))
@@ -183,7 +201,7 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
   rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
  
 
-  with h5py.File(h5path,"w") as f:
+  with h5py.File(f"{h5path.split('.hdf5')[-2]}_{subset}.hdf5","w") as f:
     dset = f.create_dataset("data",data=rec_bkg)
   return rec_bkg
   #return rec_bkg, rec_sig
@@ -330,15 +348,21 @@ if vae_model=='': # if evaluating PFN
 else:bkg_file_prefix=f'{bkg_file_dir}_{vae_model}_' # if evaluating ANTELOPE
 sig_read_dir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt(sig_file_dir)+'/'
 #sig_read_dir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt('v8.1')+'/'
-bkg_read_dir='/data/users/kpark/SVJ/MicroNTuples/'+transform_dir_txt(bkg_file_dir)+'/'
+bkg_read_dir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt(bkg_file_dir)+'/'
+#bkg_read_dir='/data/users/kpark/SVJ/MicroNTuples/'+transform_dir_txt(bkg_file_dir)+'/'
 #bkg_read_dir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt('v9.1')+'/'
 # HERE
 """
 Here we evaluate on signal files 
 """
-
-
-
+'''
+for dsid in dsids:
+  mass=Label(str(dsid)).get_m(bool_num=True)
+  rinv=Label(str(dsid)).get_rinv(bool_num=True)
+  print(dsid, mass, rinv)
+sys.exit()
+'''
+'''
 for fl in file_ls:
   dsid=fl.split('.')[-2]
   print('*'*30)
@@ -355,28 +379,61 @@ for fl in file_ls:
   if  os.path.exists(h5path): # and (dsid !=515429):
     with h5py.File(h5path,"r") as f:
       dset = f.get('data')[:]
-  else:    rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir=sig_read_dir, file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
+  else:    
+    phi_bkg, pred_phi_bkg, mT_bkg,extraVars, dsid, h5path, vae_model, bool_transformed, vae, plot_dir, file_dir =  call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir=sig_read_dir, file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
+    rec_bkg_each=write_hdf5(phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg, extraVars=extraVars, dsid=dsid, h5path= h5path, vae_model=vae_model, bool_transformed=bool_transformed, vae=vae, plot_dir=plot_dir, file_dir=file_dir)
   #Here you can add a column to a hdf5 file that was already processed and has new columns  
 #  add_column(input_h5path=h5path, output_h5path=output_h5path, plot_dir=plot_dir,vae_model=vae_model, dsid=dsid) 
   #""" 
 """
 Here we evaluate on background files 
 """
-bkg_file="user.ebusch.dataALL.root"
-#bkg_file="skim0.user.ebusch.bkgAll.root"
+'''
+#bkg_file="user.ebusch.dataALL.root"
+bkg_file="skim0.user.ebusch.bkgAll.root"
+#bkg_file="user.ebusch.515487.root"
 #bkg_file="skim0.user.ebusch.QCDskim.root"
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 dsid=bkg_file.split('.')[-2]
-h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_log10'+".hdf5" 
-#h5path=applydir+'/'+f'{sig_file_prefix}{dsid}'+".hdf5" 
-output_h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_log10'+".hdf5" 
+h5path=applydir+'/'+f'{bkg_file_prefix}{dsid}_log10'+".hdf5" 
+#h5path=applydir+'/'+f'{bkg_file_prefix}{dsid}'+".hdf5" 
+output_h5path=applydir+'/'+f'{bkg_file_prefix}{dsid}_log10'+".hdf5" 
 #h5path=applydir+'/'+"v8p1_"+str(dsid)+".hdf5"
 cprint(h5path, 'magenta')
 if  os.path.exists(h5path):
   with h5py.File(h5path,"r") as f:
     dset = f.get('data')[:]
 
-else: rec_bkg=call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir=bkg_read_dir,file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
+  new_pt=dset['jet1_pt']
+  new_weight=dset['weight'] 
+  plot_single_variable([new_pt],h_names= [bkg_file],weights_ls=[new_pt], tag_title= f'leading jet pT  {str(dsid)}', plot_dir=applydir+'/plots_dsid/',logy=True, tag_file='new_jet1_pt_'+str(dsid), bool_weight=bool_weight)
+else:
+  phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model, bool_transformed, vae, plot_dir, file_dir =  call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir=bkg_read_dir,file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
+  # initialize rec_bkg
+  # decide how many loops
+  # loop thru different QCD files
+  n_events=100000
+  n_file = phi_bkg.shape[0]//n_events +1
+  for subset in range(0,n_file):
+  #for i in range(0,73):
+  # check if the file exists; if so, read
+    h5path_subset=f"{h5path.split('.hdf5')[-2]}_{subset}.hdf5"
+    if os.path.exists(h5path_subset):
+      with h5py.File(h5path_subset,"r") as f:
+        rec_bkg_each = f.get('data')[:]
+    else:
+    # else, evaluate + write
+      rec_bkg_each=write_hdf5(phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,extraVars=extraVars, dsid=dsid, h5path= h5path, vae_model=vae_model, bool_transformed=bool_transformed, vae=vae, plot_dir=plot_dir, file_dir=file_dir,  subset=subset, n_events=n_events, bool_split=True)
+    # concatenate and write
+    if subset==0:
+      rec_bkg=rec_bkg_each 
+    else: rec_bkg= np.append(rec_bkg, np.array(rec_bkg_each , dtype=rec_bkg_each.dtype))
+  
+  print(rec_bkg_each.dtype)
+  #ds_dt = np.dtype({'names':newVars,'formats':[(float)]*len(newVars)})
+  #rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
+  with h5py.File(h5path,"w") as f:
+    dset = f.create_dataset("data",data=rec_bkg)
 """
 Here you can add a column to a hdf5 file that was already processed and has new columns  
 """ 
@@ -394,9 +451,10 @@ score_cut_dict={}
 #score_cut_dict['09_27_23_01_32']={'multi_kl_transformed_log10_sig':9.37e-1, 'multi_mse_transformed_log10_sig':6.54e-1, 'multi_reco_transformed_log10_sig': 9.45e-1}
 score_cut_dict['09_26_23_10_38']={'multi_kl_transformed_log10_sig':1.06e-3, 'multi_mse_transformed_log10_sig':3.45e-2}
 score_cut_dict['09_27_23_01_32']={'multi_kl_transformed_log10_sig':0.72, 'multi_mse_transformed_log10_sig':0.573}
+score_cut_dict['10_08_23_04_08']={'multi_kl_transformed_log10_sig':0.72, 'multi_mse_transformed_log10_sig':0.573, 'multi_reco_transformed_log10_sig':0.73}
 
 
-keys=list(score_cut_dict['09_27_23_01_32'].keys())
+keys=list(score_cut_dict['10_08_23_04_08'].keys())
 cprint(keys, 'red')
 #key='multi_kl_transformed'
 #score=getSignalSensitivityScore(bkg_loss, sig_loss)
@@ -407,8 +465,8 @@ for key in keys:
   grid_scan(title, all_dir=all_dir, sig_file_prefix=sig_file_prefix,bkg_file_prefix=sig_file_prefix, key=key)
   grid_s_sqrt_b(score_cut_dict[file_dir][key], bkg_scale=5, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix, title=title, all_dir=all_dir,cms=False, key=key)
 #sys.stdout =stdoutOrigin
-vae_min_dict, vae_max_dict, pfn_min_dict,pfn_max_dict={},{},{},{}
 sys.exit()
+vae_min_dict, vae_max_dict, pfn_min_dict,pfn_max_dict={},{},{},{}
 vae_min_dict['09_26_23_10_38']= {'mse': -12.634254306189314, 'multi_reco':-12.545995242335483, 'multi_kl': -20.211301490367624 , 'multi_mse': -12.542977457162644}
 vae_max_dict['09_26_23_10_38']= {'mse': -3.456886217152505, 'multi_reco':-3.4590470421545785, 'multi_kl':-9.330598758710815, 'multi_mse': -3.458533554054478}
 vae_max_dict['09_27_23_01_32']= {'mse': 4.051665855814887 ,'multi_reco': 4.14657246457546, 'multi_kl':6.57444001122076, 'multi_mse':6.6017456361377675 }
@@ -420,16 +478,20 @@ dsids= ['515502']
 
 #"""
 
-dsids= ['515502', '515499']
+#dsids= ['515502', '515499']
+dsids= [ '515499', '515502', '515515', '515518']
 from helper import Label
 keys=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
 for method_scale in keys:
   hists=[]
   weight_ls=[]
   h_names=[]
-  method=f'{method_scale}_transformed_log10_sig'
+  method=method_scale
+#  method=f'{method_scale}_transformed_log10_sig'
   #method='multi_reco_transformed'
-  bkgpath=applydir+f"{bkg_file_prefix}QCDskim_log10.hdf5"
+  bkgpath=applydir+f"{bkg_file_prefix}dataALL_log10.hdf5"
+  dsid=bkgpath.split('.')[-2].split('_')[-2]
+  #bkgpath=applydir+f"{bkg_file_prefix}QCDskim_log10.hdf5"
   with h5py.File(bkgpath,"r") as f:
     bkg_data = f.get('data')[:]
   
@@ -442,10 +504,16 @@ for method_scale in keys:
   """
   loss_fixed=bkg_data[method]
   hists.append(loss_fixed)
-  weight_ls.append(bkg_data['weight'])
-  h_names.append(f'QCD ( log + sigmoid: [{round(np.min(loss_fixed),3)}, {round(np.max(loss_fixed),3)}]) ')
-  #h_names.append(f'QCD (s.w. test: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}]) ')
+  if bkg_data['weight'].any(): # if array contains some element other than 0 
+    weight_ls.append(bkg_data['weight'])
+  else:#if array contains only zeros
+    print(np.ones(bkg_data['weight'].shape).shape)
+    print(bkg_data['weight'].shape)
+    weight_ls.append(np.ones(bkg_data['weight'].shape))
   
+  h_names.append(f'dataALL ( log + sigmoid: [{round(np.min(loss_fixed),3)}, {round(np.max(loss_fixed),3)}]) ')
+  #h_names.append(f'QCD ( log + sigmoid: [{round(np.min(loss_fixed),3)}, {round(np.max(loss_fixed),3)}]) ')
+  #h_names.append(f'QCD (s.w. test: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}]) ')
   for dsid in dsids:
     sigpath=applydir+f"{sig_file_prefix}{dsid}_log10"+".hdf5"
       # sigpath="../v8.1/"+sig_file_prefix+str(dsid)+".hdf5"

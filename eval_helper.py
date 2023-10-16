@@ -89,7 +89,11 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
       x_1_2, _, bkg_nz1_2,x_pt_1_2  = apply_TrackSelection(bkg_in1,  ntrack=2, bool_pt=bool_pt)
       bkg_nz_2 = bkg_nz0_2 & bkg_nz1_2 
       """
-  
+      print(f'{bkg_in0.dtype=}')
+
+      bkg_in0=np.float32(bkg_in0) 
+      bkg_in1=np.float32(bkg_in1)
+      print(f'{bkg_in0.flatten()[:5]=}')
       # select events which have both valid leading and subleading jet tracks
       #with pt requirement and track selection
       #x_0, _, bkg_nz0,x_pt_0 = apply_TrackSelection(bkg_in0,  bool_pt=bool_pt) #x_0 is leading jet 1 indices applied, x_pt_0 only pt selection applied -> so should use x_pt_0 for the compatibility of dimension with bkg_nz
