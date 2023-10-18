@@ -457,14 +457,20 @@ def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, 
 
 
 
-def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir="", bool_ratio=True):
+def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir="", bool_ratio=True, hists_cut=[], cut_ls=[], cut_operator=[], method_cut=''):
   if bool_ratio:
     f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
   else:
     f, axs = plt.subplots(1, 1, sharex=True)
     
+  if cut_ls !=[]:
+    hists[0].shape == hists_cut[0].shape
+
+  
   nbins=50
   hists_flat=np.concatenate(hists)
+  bin_min=0
+  bin_max=50000
   bin_min=np.min(hists_flat)
   bin_max=np.max(hists_flat)
   gap=(bin_max-bin_min)*0.05
@@ -479,10 +485,23 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
   len0=len(hists[cut0_idx])
  
   ratio_all=np.array([]) 
+  cut_operator_str=[]
   for data,name,weights,i in zip(hists,h_names,weights_ls, range(len(hists))):
+    if cut_ls !=[]:
+      assert (len(cut_ls)==len(cut_operator))
+      if cut_operator[i]:
+        data=data[hists_cut[i]>=cut_ls[i]]
+        weights=weights[hists_cut[i]>=cut_ls[i]]
+        cut_operator_str.append('>=')
+      else: 
+        data=data[hists_cut[i]>cut_ls[i]]
+        weights=weights[hists_cut[i]>cut_ls[i]]
+        cut_operator_str.append('<')
     #y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i],1)*100}% left, cut={name}')
-    if bool_ratio:y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'{name} (NE={len(data)})')
-    else: y,_, _=axs.hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'{name} (NE={len(data)})')
+    label=f'{name} (NE={len(data)})'
+    if cut_ls!=[]: label+=f', {method_cut}{cut_operator_str[i]}{cut_ls[i]}'
+    if bool_ratio:y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=label)
+    else: y,_, _=axs.hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=label)
     #y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len0*100,1)}% left, cut={name}')
 #    y_unnorm,_, _=axs[0].hist(data, bins=bins, density=False,histtype='step', alpha=0)
 #    print(i, len(bins), len(y), bins, y) 

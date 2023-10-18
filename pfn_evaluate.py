@@ -215,7 +215,8 @@ def add_column(input_h5path, output_h5path, plot_dir, vae_model, dsid):
   print(bkg_loss['mse'])
   methods=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
   new_methods=[]
-  bkg_loss_new={} 
+  bkg_loss_new={}
+  ''' 
   for method in methods:
     new_method=f'{method}_transformed_log10_sig'
     print(f'{method=}, {new_method=}')
@@ -226,28 +227,35 @@ def add_column(input_h5path, output_h5path, plot_dir, vae_model, dsid):
     new_methods.append(new_method)
   # reevaluate from the columns from old methods
 
+  ''' 
   print(bkg_loss['mse'].shape,bkg_loss_new['mse_transformed_log10_sig'].shape) 
   print(bkg_loss['mse'][:,None].shape,bkg_loss_new['mse_transformed_log10_sig'][:,None].shape) 
   print(bkg_loss_new[new_method].shape)
+  """
+   bkg_loss['mse_transformed'],
+   bkg_loss['multi_reco_transformed'],
+   bkg_loss['multi_kl_transformed'],
+   bkg_loss['multi_mse_transformed'],
+    bkg_loss_new['mse_transformed_log10_sig'][:,None],
+   bkg_loss_new['multi_reco_transformed_log10_sig'][:,None],
+   bkg_loss_new['multi_kl_transformed_log10_sig'][:,None],
+   bkg_loss_new['multi_mse_transformed_log10_sig'][:,None]
+  """
   save_bkg = np.concatenate(( # it is important that the data from the hdf5 file doesn't get expanded to a new shape ( no calling with [:, None] to be compatible with the new column datashapes)
    bkg_loss['mse'], 
    bkg_loss['multi_reco'],
    bkg_loss['multi_kl'],
    bkg_loss['multi_mse'],
-
-   bkg_loss['mse_transformed'],
-   bkg_loss['multi_reco_transformed'],
-   bkg_loss['multi_kl_transformed'],
-   bkg_loss['multi_mse_transformed'],
+   bkg_loss['mse_transformed_log10_sig'],
+   bkg_loss['multi_reco_transformed_log10_sig'],
+   bkg_loss['multi_kl_transformed_log10_sig'],
+   bkg_loss['multi_mse_transformed_log10_sig'],
 
    bkg_loss['mT_jj'], 
    bkg_loss['weight'],
    bkg_loss['jet1_pt'],
 
-   bkg_loss_new['mse_transformed_log10_sig'][:,None],
-   bkg_loss_new['multi_reco_transformed_log10_sig'][:,None],
-   bkg_loss_new['multi_kl_transformed_log10_sig'][:,None],
-   bkg_loss_new['multi_mse_transformed_log10_sig'][:,None]
+   bkg_loss_new['jet2_width'][:,None] 
    ),axis=1)
 
 #  print(f"{bkg_loss.shape=} , {bkg_loss_new['mse_transformed_log_sig'].shape=}, {bkg_loss_new['multi_kl_transformed_log_sig'].shape=}, { bkg_loss_new['multi_kl_transformed_log_sig'].shape=},{bkg_loss_new['multi_mse_transformed_log_sig'].shape=}") 
@@ -389,6 +397,12 @@ for fl in file_ls:
 Here we evaluate on background files 
 """
 '''
+def list_files(ls):
+  ls=sorted(ls)
+  min_ls=min(ls)
+  max_ls=max(ls)
+  assert ls== list(set(range(min_ls, max_ls+1))), "a missing integer between the minimum and the maximum element"
+  return f'{min_ls}-{max_ls}' 
 #bkg_file="user.ebusch.dataALL.root"
 bkg_file="skim0.user.ebusch.bkgAll.root"
 #bkg_file="user.ebusch.515487.root"
@@ -408,12 +422,14 @@ if  os.path.exists(h5path):
   new_weight=dset['weight'] 
   plot_single_variable([new_pt],h_names= [bkg_file],weights_ls=[new_pt], tag_title= f'leading jet pT  {str(dsid)}', plot_dir=applydir+'/plots_dsid/',logy=True, tag_file='new_jet1_pt_'+str(dsid), bool_weight=bool_weight)
 else:
-  phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model, bool_transformed, vae, plot_dir, file_dir =  call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir=bkg_read_dir,file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
+#  phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model, bool_transformed, vae, plot_dir, file_dir =  call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir=bkg_read_dir,file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
   # initialize rec_bkg
   # decide how many loops
   # loop thru different QCD files
   n_events=100000
-  n_file = phi_bkg.shape[0]//n_events +1
+#  n_file = phi_bkg.shape[0]//n_events +1
+  n_file=47
+  ls_files=[]
   for subset in range(0,n_file):
   #for i in range(0,73):
   # check if the file exists; if so, read
@@ -421,19 +437,27 @@ else:
     if os.path.exists(h5path_subset):
       with h5py.File(h5path_subset,"r") as f:
         rec_bkg_each = f.get('data')[:]
+
+      ls_files.append(subset)
+    else: break # if the subset hdf5 doesn't exist, then break right away 
+    """
     else:
     # else, evaluate + write
       rec_bkg_each=write_hdf5(phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,extraVars=extraVars, dsid=dsid, h5path= h5path, vae_model=vae_model, bool_transformed=bool_transformed, vae=vae, plot_dir=plot_dir, file_dir=file_dir,  subset=subset, n_events=n_events, bool_split=True)
     # concatenate and write
+    """
     if subset==0:
-      rec_bkg=rec_bkg_each 
-    else: rec_bkg= np.append(rec_bkg, np.array(rec_bkg_each , dtype=rec_bkg_each.dtype))
-  
+      rec_bkg=rec_bkg_each
+    else:
+      print(rec_bkg.shape)
+      rec_bkg= np.append(rec_bkg, np.array(rec_bkg_each , dtype=rec_bkg_each.dtype))
   print(rec_bkg_each.dtype)
   #ds_dt = np.dtype({'names':newVars,'formats':[(float)]*len(newVars)})
   #rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
-  with h5py.File(h5path,"w") as f:
-    dset = f.create_dataset("data",data=rec_bkg)
+  ls_files=list_files(ls_files)
+  combined_h5path=f"{h5path.split('.hdf5')[-2]}_{ls_files}.hdf5"
+  with h5py.File(combined_h5path,"w") as f:
+    dset = f.create_dataset("data",data=rec_bkg[:,None]) # has to have [:, None] to be compatible with the original hdf5 format
 """
 Here you can add a column to a hdf5 file that was already processed and has new columns  
 """ 
@@ -460,12 +484,15 @@ cprint(keys, 'red')
 #score=getSignalSensitivityScore(bkg_loss, sig_loss)
 #print("95 percentile score = ",score)
 #grid_s_sqrt_b( bkg_scale=5, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix, title=title, all_dir=all_dir,cms=False, key=key)
+'''
+bkg_file='dataALL_log10_0-44.hdf5'
 for key in keys:
   print(file_dir,key)
-  grid_scan(title, all_dir=all_dir, sig_file_prefix=sig_file_prefix,bkg_file_prefix=sig_file_prefix, key=key)
-  grid_s_sqrt_b(score_cut_dict[file_dir][key], bkg_scale=5, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix, title=title, all_dir=all_dir,cms=False, key=key)
+  grid_scan(title, all_dir=all_dir, sig_file_prefix=sig_file_prefix,bkg_file_prefix=sig_file_prefix, bkg_file=bkg_file,key=key)
+  grid_s_sqrt_b(score_cut_dict[file_dir][key], bkg_scale=5, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix,bkg_file=bkg_file, title=title, all_dir=all_dir,cms=False, key=key)
 #sys.stdout =stdoutOrigin
 sys.exit()
+'''
 vae_min_dict, vae_max_dict, pfn_min_dict,pfn_max_dict={},{},{},{}
 vae_min_dict['09_26_23_10_38']= {'mse': -12.634254306189314, 'multi_reco':-12.545995242335483, 'multi_kl': -20.211301490367624 , 'multi_mse': -12.542977457162644}
 vae_max_dict['09_26_23_10_38']= {'mse': -3.456886217152505, 'multi_reco':-3.4590470421545785, 'multi_kl':-9.330598758710815, 'multi_mse': -3.458533554054478}
@@ -484,10 +511,12 @@ from helper import Label
 keys=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
 for method_scale in keys:
   hists=[]
+  hists_var=[]
+  var='mT_jj'
   weight_ls=[]
   h_names=[]
-  method=method_scale
-#  method=f'{method_scale}_transformed_log10_sig'
+#  method=method_scale
+  method=f'{method_scale}_transformed_log10_sig'
   #method='multi_reco_transformed'
   bkgpath=applydir+f"{bkg_file_prefix}dataALL_log10.hdf5"
   dsid=bkgpath.split('.')[-2].split('_')[-2]
@@ -495,15 +524,9 @@ for method_scale in keys:
   with h5py.File(bkgpath,"r") as f:
     bkg_data = f.get('data')[:]
   
-  """
-  loss= np.log(bkg_data[method_scale])
-  min_loss = vae_min_dict[file_dir][method_scale]
-  max_loss = vae_max_dict[file_dir][method_scale]
-  loss_fixed = (loss - min_loss)/(max_loss -min_loss)
-  print(f'{file_dir=}, {min_loss=}, {max_loss=} {np.max(loss_fixed)=}, {np.min(loss_fixed)=}')
-  """
   loss_fixed=bkg_data[method]
   hists.append(loss_fixed)
+  hists_var.append(bkg_data[var])
   if bkg_data['weight'].any(): # if array contains some element other than 0 
     weight_ls.append(bkg_data['weight'])
   else:#if array contains only zeros
@@ -514,6 +537,7 @@ for method_scale in keys:
   h_names.append(f'dataALL ( log + sigmoid: [{round(np.min(loss_fixed),3)}, {round(np.max(loss_fixed),3)}]) ')
   #h_names.append(f'QCD ( log + sigmoid: [{round(np.min(loss_fixed),3)}, {round(np.max(loss_fixed),3)}]) ')
   #h_names.append(f'QCD (s.w. test: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}]) ')
+  '''
   for dsid in dsids:
     sigpath=applydir+f"{sig_file_prefix}{dsid}_log10"+".hdf5"
       # sigpath="../v8.1/"+sig_file_prefix+str(dsid)+".hdf5"
@@ -523,38 +547,35 @@ for method_scale in keys:
     print(mass)
     rinv=Label(dsid).get_rinv(bool_num=True)
   #  loss= np.log(sig1_data[method_scale])
-    """
-    min_loss = vae_min_dict[file_dir][method_scale]
-    max_loss = vae_max_dict[file_dir][method_scale]
-    loss_fixed = (loss - min_loss)/(max_loss -min_loss)
-    print(f'{file_dir=}, {min_loss=}, {max_loss=}, {np.max(loss_fixed)=}, {np.min(loss_fixed)=}')
-    """
     loss_fixed=sig1_data[method]
     hists.append(loss_fixed)
     weight_ls.append(sig1_data['weight'])
     #mass = dsid_mass[dsid]
     h_names.append(f'{mass} GeV {rinv} ( log + sigmoid: [{round(np.min(loss_fixed),3)}, {round(np.max(loss_fixed),3)}])')
     #h_names.append(f'{mass} GeV {rinv} (s.w. test: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}])')
-  """
-  loss_all=np.concatenate((np.log(bkg_data[method_scale]), np.log(sig1_data[method_scale])))
-  max_loss=np.max(loss_all)
-  min_loss=np.min(loss_all)
-  loss=bkg_data[method_scale]
-  loss_log=np.log(loss)
-  loss_fixed = (loss_log - min_loss)/(max_loss -min_loss)
-  print(f'all {min_loss=}, {max_loss=} {np.max(loss_fixed)=}, {np.min(loss_fixed)=}')
-  hists.append(loss_fixed)
-  weight_ls.append(bkg_data['weight'])
-  h_names.append(f'QCD (s.w. evaluation: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}])')
+  '''
+  bkgpath=applydir+f"{bkg_file_prefix}bkgAll_log10_0-46.hdf5"
+  #bkgpath=applydir+f"{bkg_file_prefix}bkgAll_log10.hdf5"
+  dsid=bkgpath.split('.')[-2].split('_')[-2]
+  #bkgpath=applydir+f"{bkg_file_prefix}QCDskim_log10.hdf5"
+  with h5py.File(bkgpath,"r") as f:
+    bkg_data = f.get('data')[:]
   
-  loss=sig1_data[method_scale]
-  loss_log=np.log(loss)
-  loss_fixed = (loss_log - min_loss)/(max_loss -min_loss)
-  print(f'all {min_loss=}, {max_loss=} {np.max(loss_fixed)=}, {np.min(loss_fixed)=}')
+  loss_fixed=bkg_data[method]
   hists.append(loss_fixed)
-  weight_ls.append(sig1_data['weight'])
-  h_names.append(f'{mass} GeV {rinv} (s.w. evaluation: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}])')
-  """
-  plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=False)
-  plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=True)
+  hists_var.append(bkg_data[var])
+  if bkg_data['weight'].any(): # if array contains some element other than 0 
+    weight_ls.append(bkg_data['weight'])
+  else:#if array contains only zeros
+    print(np.ones(bkg_data['weight'].shape).shape)
+    print(bkg_data['weight'].shape)
+    weight_ls.append(np.ones(bkg_data['weight'].shape))
   
+  h_names.append(f'bkgALL ( log + sigmoid: [{round(np.min(loss_fixed),3)}, {round(np.max(loss_fixed),3)}]) ')
+  print(hists[0].shape, hists[1].shape,hists_var[0].shape, hists_var[1].shape) 
+ # plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=False)
+  #plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=True)
+  
+#  plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=False)
+  plot_single_variable_ratio([hists_var[-1],hists_var[-1]],h_names=['bkgALL', 'bkgALL'],weights_ls=[weight_ls[-1], weight_ls[-1]],plot_dir=plot_dir,logy=True, title= f'{var}_{method}_comparison', bool_ratio=True, hists_cut=[hists[-1], hists[-1]],cut_ls=[0.7,0.7], cut_operator = [True, False], method_cut=method)
+
