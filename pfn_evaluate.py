@@ -62,11 +62,7 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
 
 #change here -> file and other changes
 
-  track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e","jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
-  track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e","jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
-  jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"] # order is important in apply_JetScalingRotation
  
-  seed=0
   
   plot_dir=applydir+'/plots_dsid/'
   if not os.path.exists(plot_dir):
@@ -205,7 +201,17 @@ def write_hdf5(phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model
     dset = f.create_dataset("data",data=rec_bkg)
   return rec_bkg
   #return rec_bkg, rec_sig
-def add_column(input_h5path, output_h5path, plot_dir, vae_model, dsid):
+def add_column(input_h5path, output_h5path, vae_model, dsid, columns, 
+     bkg_events, bkg_file, bool_weight, extraVars, applydir, max_track, bool_pt, h5_dir, read_dir):
+  plot_dir=applydir+'/plots_dsid/'
+  bkg2, mT_bkg, _, _, _, _ = getTwoJetSystem(nevents=bkg_events,input_file=bkg_file,
+  #bkg2, mT_bkg, bkg_sel, jet_bkg, _, _ = getTwoJetSystem(nevents=bkg_events,input_file=bkg_file,
+      track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
+      bool_weight=bool_weight,  extraVars=extraVars+columns, plot_dir=plot_dir,seed=seed,max_track=max_track, bool_pt=bool_pt, h5_dir=h5_dir, bool_select_all=True, read_dir=read_dir)
+ 
+  print(columns)
+  cprint(mT_bkg.shape, 'yellow') 
+
   
   # read hdf5 
   with h5py.File(input_h5path,"r") as f:
@@ -213,10 +219,14 @@ def add_column(input_h5path, output_h5path, plot_dir, vae_model, dsid):
   # transform
   print(bkg_loss.dtype.names)
   print(bkg_loss['mse'])
+  # check if the jet1_pt from this hdf5 and the jet1_pt from input_h5path are the same
+
+  cprint(f"{(bkg_loss['mT_jj'].flatten()==mT_bkg[:,0])=}", 'red')
+  print(f"{bkg_loss['mT_jj'].flatten()},{mT_bkg[:,0]=}")
+  ''' 
   methods=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
   new_methods=[]
   bkg_loss_new={}
-  ''' 
   for method in methods:
     new_method=f'{method}_transformed_log10_sig'
     print(f'{method=}, {new_method=}')
@@ -227,57 +237,42 @@ def add_column(input_h5path, output_h5path, plot_dir, vae_model, dsid):
     new_methods.append(new_method)
   # reevaluate from the columns from old methods
 
-  ''' 
   print(bkg_loss['mse'].shape,bkg_loss_new['mse_transformed_log10_sig'].shape) 
   print(bkg_loss['mse'][:,None].shape,bkg_loss_new['mse_transformed_log10_sig'][:,None].shape) 
   print(bkg_loss_new[new_method].shape)
-  """
-   bkg_loss['mse_transformed'],
-   bkg_loss['multi_reco_transformed'],
-   bkg_loss['multi_kl_transformed'],
-   bkg_loss['multi_mse_transformed'],
-    bkg_loss_new['mse_transformed_log10_sig'][:,None],
-   bkg_loss_new['multi_reco_transformed_log10_sig'][:,None],
-   bkg_loss_new['multi_kl_transformed_log10_sig'][:,None],
-   bkg_loss_new['multi_mse_transformed_log10_sig'][:,None]
-  """
-  save_bkg = np.concatenate(( # it is important that the data from the hdf5 file doesn't get expanded to a new shape ( no calling with [:, None] to be compatible with the new column datashapes)
-   bkg_loss['mse'], 
-   bkg_loss['multi_reco'],
-   bkg_loss['multi_kl'],
-   bkg_loss['multi_mse'],
-   bkg_loss['mse_transformed_log10_sig'],
-   bkg_loss['multi_reco_transformed_log10_sig'],
-   bkg_loss['multi_kl_transformed_log10_sig'],
-   bkg_loss['multi_mse_transformed_log10_sig'],
+  ''' 
+  print(f'{mT_bkg[:,0][:,None].shape=}, {bkg_loss.shape=}')
 
-   bkg_loss['mT_jj'], 
-   bkg_loss['weight'],
-   bkg_loss['jet1_pt'],
-
-   bkg_loss_new['jet2_width'][:,None] 
-   ),axis=1)
-
-#  print(f"{bkg_loss.shape=} , {bkg_loss_new['mse_transformed_log_sig'].shape=}, {bkg_loss_new['multi_kl_transformed_log_sig'].shape=}, { bkg_loss_new['multi_kl_transformed_log_sig'].shape=},{bkg_loss_new['multi_mse_transformed_log_sig'].shape=}") 
-  print(f"{save_bkg.shape}")
-  keys =list(bkg_loss.dtype.names)
-  keys+=list(bkg_loss_new.keys())
-  print(len(keys))
-  print(save_bkg.dtype.itemsize)
-  #keys =list(bkg_loss_new.keys())
-  print(keys)
-  ds_dt = np.dtype({'names':keys,'formats':[(float)]*len(keys)})
- # print(ds_dt)
-  rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
+  bkg_loss_names=list(bkg_loss.dtype.names)
+  for i, key in enumerate(bkg_loss_names):
+    if i==0:
+      new_bkg=bkg_loss[key]
+    else:  new_bkg=np.concatenate((new_bkg,bkg_loss[key]), axis=1)
+  print(f'{new_bkg.shape=}, {bkg_loss.shape=}')
+  for i, col in enumerate(columns):
+    new_bkg=np.concatenate((new_bkg,mT_bkg[:,i][:,None]), axis=1) 
+  all_keys=bkg_loss_names+columns
+  print(all_keys)
+  ds_dt = np.dtype({'names':all_keys,'formats':[(float)]*len(all_keys)})
+  save_bkg = np.rec.array(new_bkg, dtype=ds_dt)
+  
+  rec_bkg= save_bkg
+    # it is important that the data from the hdf5 file doesn't get expanded to a new shape ( no calling with [:, None] to be compatible with the new column datashapes)
+ 
+  print(f"{new_bkg.shape=}, {save_bkg.shape=}, {rec_bkg.shape=}", 'yellow')
+  print(rec_bkg.dtype.itemsize)
   with h5py.File(output_h5path,"w") as f:
     dset = f.create_dataset("data",data=rec_bkg)
-  print(output_h5path)
+  print(output_h5path, 'make sure this is jet2_Width', extraVars[-1])
+  plot_single_variable([mT_bkg[:,-1]],h_names= [bkg_file],weights_ls=[mT_bkg[:,1]], tag_title= f'{extraVars[-1]} {str(dsid)} (weighted)', plot_dir=plot_dir,logy=True, tag_file=f'{extraVars[-1]}_'+str(dsid), bool_weight=bool_weight)
+  """
   for method in new_methods: # transformed
     plot_score(rec_bkg[method], np.array([]), False, xlog=False, tag_file=vae_model+f'_{method}_{str(dsid)}', tag_title=vae_model+f' {method} {str(dsid)}', plot_dir=plot_dir, bool_pfn=False, labels=[str(dsid)]) # anomaly score 
 
   for method in methods:
     plot_score(rec_bkg[method][bkg_loss[method]>0], np.array([]),False, xlog=True, tag_file=vae_model+'_pos'+f'_{method}_{str(dsid)}', tag_title=vae_model + ' (score > 0)'+f' {method} {str(dsid)}', plot_dir=plot_dir, bool_pfn=False, labels=[str(dsid)]) # anomaly score
   # write to the file
+  """
   return rec_bkg
 
 def transform_dir_txt(file_dir):
@@ -295,7 +290,7 @@ pfn_model = 'PFNv6'
 vae_model = 'vANTELOPE'
 #bkg_loss_type='bkg_loss'#'bkg_loss' 'bkg_total_loss', 'bkg_kl_loss', ''bkg_reco_loss', 
 ## Load testing data
-sig_events =100000
+sig_events =-1
 #bkg_events =10
 bkg_events = -1
 bool_weight=False
@@ -304,7 +299,7 @@ else:weight_tag='nws'
 #tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 #bool_rewrite=False
 bool_rewrite=True
-
+seed=0
 bool_pt=False
 #max_track=15# CHECK THIS
 max_track=80# CHECK THIS
@@ -314,6 +309,9 @@ h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/antelope/v9p2'
 #all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/paramscan_new/07_24_23_07_11/' # change
 bool_transformed=True
 
+track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e","jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
+track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_phi", "jet1_GhostTrack_e","jet1_GhostTrack_z0", "jet1_GhostTrack_d0", "jet1_GhostTrack_qOverP"]
+jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"] # order is important in apply_JetScalingRotation
 
 # change
 file_dir='10_08_23_04_08'
@@ -375,10 +373,8 @@ for fl in file_ls:
   dsid=fl.split('.')[-2]
   print('*'*30)
   print(fl) 
-  h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_log10'+".hdf5" 
-  #h5path=applydir+'/'+f'{sig_file_prefix}{dsid}'+".hdf5" 
-  output_h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_log10'+".hdf5" 
-  #h5path=applydir+'/'+f'{sig_file_prefix}{dsid}_{bkg_loss_type}'+".hdf5" 
+  h5path=applydir+'/'+'hdf5_orig'+'/'+f'{sig_file_prefix}{dsid}_log10'+".hdf5" 
+  output_h5path=applydir+'/'+'hdf5_jet2_width'+'/'+f'{sig_file_prefix}{dsid}_log10_jet2_width'+".hdf5" 
   cprint(f'{dsid=}, {h5path=}', 'green')
  # my_variables= ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
   tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
@@ -391,7 +387,7 @@ for fl in file_ls:
     phi_bkg, pred_phi_bkg, mT_bkg,extraVars, dsid, h5path, vae_model, bool_transformed, vae, plot_dir, file_dir =  call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir=sig_read_dir, file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
     rec_bkg_each=write_hdf5(phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg, extraVars=extraVars, dsid=dsid, h5path= h5path, vae_model=vae_model, bool_transformed=bool_transformed, vae=vae, plot_dir=plot_dir, file_dir=file_dir)
   #Here you can add a column to a hdf5 file that was already processed and has new columns  
-#  add_column(input_h5path=h5path, output_h5path=output_h5path, plot_dir=plot_dir,vae_model=vae_model, dsid=dsid) 
+#  add_column(input_h5path=h5path, output_h5path=output_h5path, vae_model=vae_model, dsid=dsid) 
   #""" 
 """
 Here we evaluate on background files 
@@ -403,17 +399,19 @@ def list_files(ls):
   max_ls=max(ls)
   assert ls== list(set(range(min_ls, max_ls+1))), "a missing integer between the minimum and the maximum element"
   return f'{min_ls}-{max_ls}' 
-#bkg_file="user.ebusch.dataALL.root"
-bkg_file="skim0.user.ebusch.bkgAll.root"
+bkg_file="user.ebusch.dataALL.root"
+#bkg_file="skim0.user.ebusch.bkgAll.root"
 #bkg_file="user.ebusch.515487.root"
 #bkg_file="skim0.user.ebusch.QCDskim.root"
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 dsid=bkg_file.split('.')[-2]
-h5path=applydir+'/'+f'{bkg_file_prefix}{dsid}_log10'+".hdf5" 
-#h5path=applydir+'/'+f'{bkg_file_prefix}{dsid}'+".hdf5" 
-output_h5path=applydir+'/'+f'{bkg_file_prefix}{dsid}_log10'+".hdf5" 
+h5path=applydir+'/'+'hdf5_orig'+'/'+f'{bkg_file_prefix}{dsid}_log10'+".hdf5" 
+#h5path=applydir+'/'+'hdf5_orig'+'/'+f'{bkg_file_prefix}{dsid}_log10_0-67'+".hdf5" 
+#h5path=applydir+'/'+f'{bkg_file_prefix}{dsid}_log10'+".hdf5" 
+output_h5path=applydir+'/'+'hdf5_jet2_width'+'/'+f'{bkg_file_prefix}{dsid}_log10_0-67_jet2_width'+".hdf5" 
 #h5path=applydir+'/'+"v8p1_"+str(dsid)+".hdf5"
 cprint(h5path, 'magenta')
+"""
 if  os.path.exists(h5path):
   with h5py.File(h5path,"r") as f:
     dset = f.get('data')[:]
@@ -422,13 +420,14 @@ if  os.path.exists(h5path):
   new_weight=dset['weight'] 
   plot_single_variable([new_pt],h_names= [bkg_file],weights_ls=[new_pt], tag_title= f'leading jet pT  {str(dsid)}', plot_dir=applydir+'/plots_dsid/',logy=True, tag_file='new_jet1_pt_'+str(dsid), bool_weight=bool_weight)
 else:
-#  phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model, bool_transformed, vae, plot_dir, file_dir =  call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir=bkg_read_dir,file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
+  #phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model, bool_transformed, vae, plot_dir, file_dir =  call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir=bkg_read_dir,file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
   # initialize rec_bkg
   # decide how many loops
   # loop thru different QCD files
   n_events=100000
 #  n_file = phi_bkg.shape[0]//n_events +1
-  n_file=47
+#  n_file=47
+  n_file=68
   ls_files=[]
   for subset in range(0,n_file):
   #for i in range(0,73):
@@ -439,30 +438,30 @@ else:
         rec_bkg_each = f.get('data')[:]
 
       ls_files.append(subset)
-    else: break # if the subset hdf5 doesn't exist, then break right away 
-    """
+#    else: break # if the subset hdf5 doesn't exist, then break right away 
+    
     else:
     # else, evaluate + write
       rec_bkg_each=write_hdf5(phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,extraVars=extraVars, dsid=dsid, h5path= h5path, vae_model=vae_model, bool_transformed=bool_transformed, vae=vae, plot_dir=plot_dir, file_dir=file_dir,  subset=subset, n_events=n_events, bool_split=True)
     # concatenate and write
-    """
+    
     if subset==0:
       rec_bkg=rec_bkg_each
     else:
-      print(rec_bkg.shape)
       rec_bkg= np.append(rec_bkg, np.array(rec_bkg_each , dtype=rec_bkg_each.dtype))
-  print(rec_bkg_each.dtype)
+
   #ds_dt = np.dtype({'names':newVars,'formats':[(float)]*len(newVars)})
   #rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
   ls_files=list_files(ls_files)
+  cprint(ls_files, 'yellow')
   combined_h5path=f"{h5path.split('.hdf5')[-2]}_{ls_files}.hdf5"
   with h5py.File(combined_h5path,"w") as f:
     dset = f.create_dataset("data",data=rec_bkg[:,None]) # has to have [:, None] to be compatible with the original hdf5 format
 """
+"""
 Here you can add a column to a hdf5 file that was already processed and has new columns  
-""" 
-""" 
-add_column(input_h5path=h5path, output_h5path=output_h5path, plot_dir=plot_dir,vae_model=vae_model, dsid=dsid) 
+add_column(input_h5path=h5path, output_h5path=output_h5path, vae_model=vae_model, dsid=dsid, columns=['jet2_Width'], 
+     bkg_events=bkg_events, bkg_file=bkg_file,bool_weight=bool_weight, extraVars=myVars, applydir=applydir, max_track=max_track, bool_pt=bool_pt, h5_dir=h5_dir, read_dir=bkg_read_dir)
 """ 
 
 title=f'track={max_track}'
@@ -512,15 +511,19 @@ keys=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
 for method_scale in keys:
   hists=[]
   hists_var=[]
-  var='mT_jj'
+#  var='jet2_Width'
+  var='jet1_pt'
+#  var='mT_jj'
   weight_ls=[]
   h_names=[]
 #  method=method_scale
   method=f'{method_scale}_transformed_log10_sig'
   #method='multi_reco_transformed'
-  bkgpath=applydir+f"{bkg_file_prefix}dataALL_log10.hdf5"
+#  bkgpath=applydir+f"{bkg_file_prefix}dataALL_log10.hdf5"
+  bkgpath=applydir+'/'+'hdf5_jet2_width'+'/'+f"{bkg_file_prefix}dataALL_log10.hdf5"
   dsid=bkgpath.split('.')[-2].split('_')[-2]
   #bkgpath=applydir+f"{bkg_file_prefix}QCDskim_log10.hdf5"
+  '''
   with h5py.File(bkgpath,"r") as f:
     bkg_data = f.get('data')[:]
   
@@ -538,6 +541,7 @@ for method_scale in keys:
   #h_names.append(f'QCD ( log + sigmoid: [{round(np.min(loss_fixed),3)}, {round(np.max(loss_fixed),3)}]) ')
   #h_names.append(f'QCD (s.w. test: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}]) ')
   '''
+  '''
   for dsid in dsids:
     sigpath=applydir+f"{sig_file_prefix}{dsid}_log10"+".hdf5"
       # sigpath="../v8.1/"+sig_file_prefix+str(dsid)+".hdf5"
@@ -548,19 +552,22 @@ for method_scale in keys:
     rinv=Label(dsid).get_rinv(bool_num=True)
   #  loss= np.log(sig1_data[method_scale])
     loss_fixed=sig1_data[method]
-    hists.append(loss_fixed)
+    hists.apend(loss_fixed)
     weight_ls.append(sig1_data['weight'])
     #mass = dsid_mass[dsid]
     h_names.append(f'{mass} GeV {rinv} ( log + sigmoid: [{round(np.min(loss_fixed),3)}, {round(np.max(loss_fixed),3)}])')
     #h_names.append(f'{mass} GeV {rinv} (s.w. test: [{round(np.min(loss_fixed),1)}, {round(np.max(loss_fixed),1)}])')
   '''
-  bkgpath=applydir+f"{bkg_file_prefix}bkgAll_log10_0-46.hdf5"
+  bkgpath=applydir+'/'+'hdf5_jet2_width'+'/'+f"{bkg_file_prefix}bkgAll_log10_0-67_jet2_width.hdf5"
+  #bkgpath=applydir+'/'+'hdf5_jet2_width'+'/'+f"{bkg_file_prefix}bkgAll_log10_0-67.hdf5"
+  #bkgpath=applydir+f"{bkg_file_prefix}bkgAll_log10_0-46.hdf5"
   #bkgpath=applydir+f"{bkg_file_prefix}bkgAll_log10.hdf5"
   dsid=bkgpath.split('.')[-2].split('_')[-2]
   #bkgpath=applydir+f"{bkg_file_prefix}QCDskim_log10.hdf5"
   with h5py.File(bkgpath,"r") as f:
     bkg_data = f.get('data')[:]
-  
+
+  cprint(bkg_data.dtype.names, 'yellow')  
   loss_fixed=bkg_data[method]
   hists.append(loss_fixed)
   hists_var.append(bkg_data[var])
@@ -572,10 +579,10 @@ for method_scale in keys:
     weight_ls.append(np.ones(bkg_data['weight'].shape))
   
   h_names.append(f'bkgALL ( log + sigmoid: [{round(np.min(loss_fixed),3)}, {round(np.max(loss_fixed),3)}]) ')
-  print(hists[0].shape, hists[1].shape,hists_var[0].shape, hists_var[1].shape) 
  # plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=False)
-  #plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=True)
-  
+#  plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=True)
+  print(weight_ls[-1]) 
 #  plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=False)
-  plot_single_variable_ratio([hists_var[-1],hists_var[-1]],h_names=['bkgALL', 'bkgALL'],weights_ls=[weight_ls[-1], weight_ls[-1]],plot_dir=plot_dir,logy=True, title= f'{var}_{method}_comparison', bool_ratio=True, hists_cut=[hists[-1], hists[-1]],cut_ls=[0.7,0.7], cut_operator = [True, False], method_cut=method)
+  plot_single_variable_ratio([hists_var[-1],hists_var[-1]],h_names=['bkgALL', 'bkgALL'],weights_ls=[weight_ls[-1], weight_ls[-1]],plot_dir=plot_dir,logy=True, title= f'{var}_{method}_comparison', bool_ratio=True, hists_cut=[hists[-1], hists[-1]],cut_ls=[0.7,0.7], cut_operator = [True, False], method_cut=method, bin_min=0)
+#  plot_single_variable_ratio([hists_var[-1],hists_var[-1]],h_names=['bkgALL', 'bkgALL'],weights_ls=[weight_ls[-1], weight_ls[-1]],plot_dir=plot_dir,logy=True, title= f'{var}_{method}_comparison', bool_ratio=True, hists_cut=[hists[-1], hists[-1]],cut_ls=[0.7,0.7], cut_operator = [True, False], method_cut=method, bin_min=1000, bin_max=5000)
 

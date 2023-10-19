@@ -457,7 +457,7 @@ def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, 
 
 
 
-def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir="", bool_ratio=True, hists_cut=[], cut_ls=[], cut_operator=[], method_cut=''):
+def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir="", bool_ratio=True, hists_cut=[], cut_ls=[], cut_operator=[], method_cut='', bin_min=-999,bin_max=-999):
   if bool_ratio:
     f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
   else:
@@ -469,10 +469,8 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
   
   nbins=50
   hists_flat=np.concatenate(hists)
-  bin_min=0
-  bin_max=50000
-  bin_min=np.min(hists_flat)
-  bin_max=np.max(hists_flat)
+  if bin_min==-999:  bin_min=np.min(hists_flat)
+  if bin_max==-999:   bin_max=np.max(hists_flat)
   gap=(bin_max-bin_min)*0.05
   gap=0
   bins=np.linspace(bin_min-gap,bin_max+gap,nbins)
@@ -480,7 +478,7 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
   x_bins=bins[:-1]+ 0.5*(bins[1:] - bins[:-1])
 #  print('x_bins',x_bins)
   hists=list(hists)
-
+  
   cut0_idx=0
   len0=len(hists[cut0_idx])
  
@@ -494,10 +492,12 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
         weights=weights[hists_cut[i]>=cut_ls[i]]
         cut_operator_str.append('>=')
       else: 
-        data=data[hists_cut[i]>cut_ls[i]]
-        weights=weights[hists_cut[i]>cut_ls[i]]
+        data=data[hists_cut[i]<cut_ls[i]]
+        weights=weights[hists_cut[i]<cut_ls[i]]
         cut_operator_str.append('<')
     #y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i],1)*100}% left, cut={name}')
+
+
     label=f'{name} (NE={len(data)})'
     if cut_ls!=[]: label+=f', {method_cut}{cut_operator_str[i]}{cut_ls[i]}'
     if bool_ratio:y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=label)
@@ -511,7 +511,7 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
       #y0=y_unnorm
 #      axs[0].set_ylim([min(y)/1e2, max(y)*1e2])
     if bool_ratio:
-      axs[1].scatter(x_bins,y/y0)
+      axs[1].scatter(x_bins,y/y0, marker='+')
 #    axs[1].set_ylim([])
     #axs[1].scatter(x_bins,zero_div(y,y0))
   if bool_ratio:
@@ -532,7 +532,7 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
     axs.set_title(title)
   plt.tick_params(axis='y', which='minor') 
   plt.grid()
-  if bool_ratio:  plt.savefig(plot_dir+'hist_ratio_'+title.replace(" ","")+'.png')
+  if bool_ratio:  plt.savefig(plot_dir+'hist_ratio_'+title.replace(" ","")+'_trial'+'.png')
   else:  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
   plt.clf()
   print("Saved plot",title, plot_dir)
