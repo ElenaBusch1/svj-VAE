@@ -209,10 +209,7 @@ def add_column(input_h5path, output_h5path, vae_model, dsid, columns,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
       bool_weight=bool_weight,  extraVars=extraVars+columns, plot_dir=plot_dir,seed=seed,max_track=max_track, bool_pt=bool_pt, h5_dir=h5_dir, bool_select_all=True, read_dir=read_dir)
  
-  print(columns)
   cprint(mT_bkg.shape, 'yellow') 
-
-  
   # read hdf5 
   with h5py.File(input_h5path,"r") as f:
     bkg_loss = f.get('data')[:]
@@ -242,15 +239,16 @@ def add_column(input_h5path, output_h5path, vae_model, dsid, columns,
   print(bkg_loss_new[new_method].shape)
   ''' 
   print(f'{mT_bkg[:,0][:,None].shape=}, {bkg_loss.shape=}')
-
   bkg_loss_names=list(bkg_loss.dtype.names)
   for i, key in enumerate(bkg_loss_names):
     if i==0:
       new_bkg=bkg_loss[key]
     else:  new_bkg=np.concatenate((new_bkg,bkg_loss[key]), axis=1)
-  print(f'{new_bkg.shape=}, {bkg_loss.shape=}')
-  for i, col in enumerate(columns):
-    new_bkg=np.concatenate((new_bkg,mT_bkg[:,i][:,None]), axis=1) 
+  print(f'{new_bkg.shape=},{mT_bkg.shape=},{mT_bkg[:,0].shape=}, {mT_bkg[:,0][:,None].shape=},{bkg_loss_names}, {columns}')
+  print(new_bkg[:,-2])
+  for i, col in enumerate(columns): # i was adding mT_jj as jet2_Width
+    new_bkg=np.concatenate((new_bkg,mT_bkg[:,i+len(extraVars)][:,None]), axis=1) 
+ # plot_single_variable_ratio([new_bkg[:,-1]],h_names= [bkg_file],weights_ls=[new_bkg[:,-3]], title= f'{extraVars[-1]} {str(dsid)} (weighted)', plot_dir=plot_dir,logy=True, bool_ratio=False)
   all_keys=bkg_loss_names+columns
   print(all_keys)
   ds_dt = np.dtype({'names':all_keys,'formats':[(float)]*len(all_keys)})
@@ -399,14 +397,14 @@ def list_files(ls):
   max_ls=max(ls)
   assert ls== list(set(range(min_ls, max_ls+1))), "a missing integer between the minimum and the maximum element"
   return f'{min_ls}-{max_ls}' 
-bkg_file="user.ebusch.dataALL.root"
-#bkg_file="skim0.user.ebusch.bkgAll.root"
+#bkg_file="user.ebusch.dataAll.root"
+bkg_file="skim0.user.ebusch.bkgAll.root"
 #bkg_file="user.ebusch.515487.root"
 #bkg_file="skim0.user.ebusch.QCDskim.root"
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 dsid=bkg_file.split('.')[-2]
-h5path=applydir+'/'+'hdf5_orig'+'/'+f'{bkg_file_prefix}{dsid}_log10'+".hdf5" 
-#h5path=applydir+'/'+'hdf5_orig'+'/'+f'{bkg_file_prefix}{dsid}_log10_0-67'+".hdf5" 
+#h5path=applydir+'/'+'hdf5_orig'+'/'+f'{bkg_file_prefix}{dsid}_log10'+".hdf5" 
+h5path=applydir+'/'+'hdf5_orig'+'/'+f'{bkg_file_prefix}{dsid}_log10_0-67'+".hdf5" 
 #h5path=applydir+'/'+f'{bkg_file_prefix}{dsid}_log10'+".hdf5" 
 output_h5path=applydir+'/'+'hdf5_jet2_width'+'/'+f'{bkg_file_prefix}{dsid}_log10_0-67_jet2_width'+".hdf5" 
 #h5path=applydir+'/'+"v8p1_"+str(dsid)+".hdf5"
@@ -460,9 +458,9 @@ else:
 """
 """
 Here you can add a column to a hdf5 file that was already processed and has new columns  
+""" 
 add_column(input_h5path=h5path, output_h5path=output_h5path, vae_model=vae_model, dsid=dsid, columns=['jet2_Width'], 
      bkg_events=bkg_events, bkg_file=bkg_file,bool_weight=bool_weight, extraVars=myVars, applydir=applydir, max_track=max_track, bool_pt=bool_pt, h5_dir=h5_dir, read_dir=bkg_read_dir)
-""" 
 
 title=f'track={max_track}'
 key='multi_kl_transformed_log10_sig'
@@ -507,12 +505,13 @@ dsids= ['515502']
 #dsids= ['515502', '515499']
 dsids= [ '515499', '515502', '515515', '515518']
 from helper import Label
+#keys=['mse']
 keys=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
 for method_scale in keys:
   hists=[]
   hists_var=[]
-#  var='jet2_Width'
-  var='jet1_pt'
+  var='jet2_Width'
+  #var='jet1_pt'
 #  var='mT_jj'
   weight_ls=[]
   h_names=[]

@@ -450,6 +450,7 @@ def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, 
   plt.title(tag_title)
 
   plt.tight_layout()
+  #plt.show()
   plt.savefig(plot_dir+'hist_'+tag_file+'_weighted'+'.png')
   #plt.savefig(plot_dir+'hist_'+tag_title.replace(" ","").replace('(','')+'_weighted_cut'+'.png')
   plt.clf()
@@ -532,7 +533,8 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
     axs.set_title(title)
   plt.tick_params(axis='y', which='minor') 
   plt.grid()
-  if bool_ratio:  plt.savefig(plot_dir+'hist_ratio_'+title.replace(" ","")+'_trial'+'.png')
+  #plt.show()
+  if bool_ratio:  plt.savefig(plot_dir+'hist_ratio_'+title.replace(" ","")+'.png')
   else:  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
   plt.clf()
   print("Saved plot",title, plot_dir)
