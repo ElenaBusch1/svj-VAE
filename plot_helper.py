@@ -458,7 +458,9 @@ def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, 
 
 
 
-def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir="", bool_ratio=True, hists_cut=[], cut_ls=[], cut_operator=[], method_cut='', bin_min=-999,bin_max=-999):
+def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir="", bool_ratio=True, hists_cut=[], cut_ls=[], cut_operator=[], method_cut=[], bin_min=-999,bin_max=-999):
+#def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir="", bool_ratio=True, hists_cut=[], cut_ls=[], cut_operator=[], method_cut='', bin_min=-999,bin_max=-999):
+  hists_cut, cut_ls, cut_operator, method_cut= np.array(hists_cut), np.array(cut_ls), np.array(cut_operator), np.array(method_cut) 
   if bool_ratio:
     f, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
   else:
@@ -466,7 +468,6 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
     
   if cut_ls !=[]:
     hists[0].shape == hists_cut[0].shape
-
   
   nbins=50
   hists_flat=np.concatenate(hists)
@@ -484,23 +485,31 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
   len0=len(hists[cut0_idx])
  
   ratio_all=np.array([]) 
-  cut_operator_str=[]
-  for data,name,weights,i in zip(hists,h_names,weights_ls, range(len(hists))):
+  for data_orig,name,weights_orig,i in zip(hists,h_names,weights_ls, range(len(hists))):
+    label=''
     if cut_ls !=[]:
       assert (len(cut_ls)==len(cut_operator))
-      if cut_operator[i]:
-        data=data[hists_cut[i]>=cut_ls[i]]
-        weights=weights[hists_cut[i]>=cut_ls[i]]
-        cut_operator_str.append('>=')
-      else: 
-        data=data[hists_cut[i]<cut_ls[i]]
-        weights=weights[hists_cut[i]<cut_ls[i]]
-        cut_operator_str.append('<')
+      print(hists_cut[:,:,0,0].shape, cut_ls.shape, cut_operator.shape, method_cut.shape,'shape')
+      assert (hists_cut[:,:,0,0].shape == cut_ls.shape==cut_operator.shape==method_cut.shape) # e.g. shapes (3, 2, 6710061, 1) (3, 2) (3, 2)
+      for j in range(len(hists_cut[i,:])):
+        if cut_operator[i,j]:
+          cut_arr= hists_cut[i,j, :, 0]>=cut_ls[i,j] 
+          cut_operator_str='>='
+        else: 
+          cut_arr= hists_cut[i,j, :, 0]<cut_ls[i,j] 
+          cut_operator_str='<'
+
+#        cut_arr= cut_arr.flatten()
+        data=data_orig[cut_arr]
+        weights=weights_orig[cut_arr]
+        print(data_orig.shape,  cut_arr.shape)
+        
+        label+=f', {method_cut[i,j]}{cut_operator_str}{cut_ls[i,j]}'
     #y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i],1)*100}% left, cut={name}')
 
 
-    label=f'{name} (NE={len(data)})'
-    if cut_ls!=[]: label+=f', {method_cut}{cut_operator_str[i]}{cut_ls[i]}'
+    if cut_ls ==[]:label=f'{name} (NE={len(data)})'
+    #if cut_ls!=[]: label+=f', {method_cut}{cut_operator_str[i]}{cut_ls[i]}'
     if bool_ratio:y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=label)
     else: y,_, _=axs.hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=label)
     #y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len0*100,1)}% left, cut={name}')

@@ -459,8 +459,10 @@ else:
 """
 Here you can add a column to a hdf5 file that was already processed and has new columns  
 """ 
+'''
 add_column(input_h5path=h5path, output_h5path=output_h5path, vae_model=vae_model, dsid=dsid, columns=['jet2_Width'], 
      bkg_events=bkg_events, bkg_file=bkg_file,bool_weight=bool_weight, extraVars=myVars, applydir=applydir, max_track=max_track, bool_pt=bool_pt, h5_dir=h5_dir, read_dir=bkg_read_dir)
+'''
 
 title=f'track={max_track}'
 key='multi_kl_transformed_log10_sig'
@@ -508,15 +510,16 @@ from helper import Label
 #keys=['mse']
 keys=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
 for method_scale in keys:
-  hists=[]
-  hists_var=[]
-  var='jet2_Width'
-  #var='jet1_pt'
-#  var='mT_jj'
-  weight_ls=[]
+#  hists=[]
+  hists_var={}
+#  var='jet2_Width'
+#  var='jet1_pt'
   h_names=[]
 #  method=method_scale
   method=f'{method_scale}_transformed_log10_sig'
+  var_ls=[method, 'mT_jj', 'jet2_Width']
+  for var in var_ls: hists_var[var]= []
+  weight_ls=[]
   #method='multi_reco_transformed'
 #  bkgpath=applydir+f"{bkg_file_prefix}dataALL_log10.hdf5"
   bkgpath=applydir+'/'+'hdf5_jet2_width'+'/'+f"{bkg_file_prefix}dataALL_log10.hdf5"
@@ -568,8 +571,8 @@ for method_scale in keys:
 
   cprint(bkg_data.dtype.names, 'yellow')  
   loss_fixed=bkg_data[method]
-  hists.append(loss_fixed)
-  hists_var.append(bkg_data[var])
+  for var in var_ls:
+    hists_var[var].append(bkg_data[var])
   if bkg_data['weight'].any(): # if array contains some element other than 0 
     weight_ls.append(bkg_data['weight'])
   else:#if array contains only zeros
@@ -581,7 +584,6 @@ for method_scale in keys:
  # plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=False)
 #  plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=True)
   print(weight_ls[-1]) 
-#  plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=False)
-  plot_single_variable_ratio([hists_var[-1],hists_var[-1]],h_names=['bkgALL', 'bkgALL'],weights_ls=[weight_ls[-1], weight_ls[-1]],plot_dir=plot_dir,logy=True, title= f'{var}_{method}_comparison', bool_ratio=True, hists_cut=[hists[-1], hists[-1]],cut_ls=[0.7,0.7], cut_operator = [True, False], method_cut=method, bin_min=0)
+  plot_single_variable_ratio([hists_var['mT_jj'][-1],hists_var['mT_jj'][-1], hists_var['mT_jj'][-1]],h_names=['bkgALL (CR)', 'bkgALL (VR)', 'bkgALL (SR)'],weights_ls=[weight_ls[-1], weight_ls[-1], weight_ls[-1]],plot_dir=plot_dir,logy=True, title= f'mT_jj_{method}_comparison_region', bool_ratio=True, hists_cut=[[hists_var['jet2_Width'][-1], hists_var[method][-1]],[ hists_var['jet2_Width'][-1], hists_var[method][-1]],[ hists_var['jet2_Width'][-1], hists_var[method][-1]]],cut_ls=[[0.05, 0], [0.05, 0.7],[0.05, 0.7]], cut_operator = [[False,True], [True,  False],[True, True]] , method_cut=[['jet2_Width', method], ['jet2_Width', method], ['jet2_Width', method]], bin_min=0)
 #  plot_single_variable_ratio([hists_var[-1],hists_var[-1]],h_names=['bkgALL', 'bkgALL'],weights_ls=[weight_ls[-1], weight_ls[-1]],plot_dir=plot_dir,logy=True, title= f'{var}_{method}_comparison', bool_ratio=True, hists_cut=[hists[-1], hists[-1]],cut_ls=[0.7,0.7], cut_operator = [True, False], method_cut=method, bin_min=1000, bin_max=5000)
 
