@@ -507,7 +507,7 @@ dsids= ['515502']
 #dsids= ['515502', '515499']
 dsids= [ '515499', '515502', '515515', '515518']
 from helper import Label
-#keys=['mse']
+#keys=['multi_reco']
 keys=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
 for method_scale in keys:
 #  hists=[]
@@ -584,6 +584,7 @@ for method_scale in keys:
  # plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=False)
 #  plot_single_variable_ratio(hists,h_names=h_names,weights_ls=weight_ls,plot_dir=plot_dir,logy=True, title= f'{method}_comparison', bool_ratio=True)
   print(weight_ls[-1]) 
-  plot_single_variable_ratio([hists_var['mT_jj'][-1],hists_var['mT_jj'][-1], hists_var['mT_jj'][-1]],h_names=['bkgALL (CR)', 'bkgALL (VR)', 'bkgALL (SR)'],weights_ls=[weight_ls[-1], weight_ls[-1], weight_ls[-1]],plot_dir=plot_dir,logy=True, title= f'mT_jj_{method}_comparison_region', bool_ratio=True, hists_cut=[[hists_var['jet2_Width'][-1], hists_var[method][-1]],[ hists_var['jet2_Width'][-1], hists_var[method][-1]],[ hists_var['jet2_Width'][-1], hists_var[method][-1]]],cut_ls=[[0.05, 0], [0.05, 0.7],[0.05, 0.7]], cut_operator = [[False,True], [True,  False],[True, True]] , method_cut=[['jet2_Width', method], ['jet2_Width', method], ['jet2_Width', method]], bin_min=0)
+  plot_single_variable_ratio([hists_var['mT_jj'][-1],hists_var['mT_jj'][-1],hists_var['mT_jj'][-1], hists_var['mT_jj'][-1]],h_names=['(All)','(CR)', '(VR)', ' (SR)'],weights_ls=[weight_ls[-1],weight_ls[-1], weight_ls[-1], weight_ls[-1]],plot_dir=plot_dir,logy=True, title= f'mT_jj_{method}_comparison_region', bool_ratio=True, hists_cut=[[hists_var['jet2_Width'][-1], hists_var[method][-1]],[hists_var['jet2_Width'][-1], hists_var[method][-1]],[ hists_var['jet2_Width'][-1], hists_var[method][-1]],[ hists_var['jet2_Width'][-1], hists_var[method][-1]]],cut_ls=[[0,0],[0.05, 0], [0.05, 0.7],[0.05, 0.7]], cut_operator = [[True, True],[False,True], [True,  False],[True, True]] , method_cut=[['jet2_Width', method],['jet2_Width', method], ['jet2_Width', method], ['jet2_Width', method]], bin_min=1000, bin_max= 5000)
+  #plot_single_variable_ratio([hists_var['mT_jj'][-1],hists_var['mT_jj'][-1], hists_var['mT_jj'][-1]],h_names=['(CR)', '(VR)', ' (SR)'],weights_ls=[weight_ls[-1], weight_ls[-1], weight_ls[-1]],plot_dir=plot_dir,logy=True, title= f'mT_jj_{method}_comparison_region', bool_ratio=True, hists_cut=[[hists_var['jet2_Width'][-1], hists_var[method][-1]],[ hists_var['jet2_Width'][-1], hists_var[method][-1]],[ hists_var['jet2_Width'][-1], hists_var[method][-1]]],cut_ls=[[0.05, 0], [0.05, 0.7],[0.05, 0.7]], cut_operator = [[False,True], [True,  False],[True, True]] , method_cut=[['jet2_Width', method], ['jet2_Width', method], ['jet2_Width', method]], bin_min=0, bin_max= 5000)
 #  plot_single_variable_ratio([hists_var[-1],hists_var[-1]],h_names=['bkgALL', 'bkgALL'],weights_ls=[weight_ls[-1], weight_ls[-1]],plot_dir=plot_dir,logy=True, title= f'{var}_{method}_comparison', bool_ratio=True, hists_cut=[hists[-1], hists[-1]],cut_ls=[0.7,0.7], cut_operator = [True, False], method_cut=method, bin_min=1000, bin_max=5000)
 

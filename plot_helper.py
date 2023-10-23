@@ -457,7 +457,6 @@ def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, 
   print("Saved plot",tag_title, tag_file)
 
 
-
 def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir="", bool_ratio=True, hists_cut=[], cut_ls=[], cut_operator=[], method_cut=[], bin_min=-999,bin_max=-999):
 #def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir="", bool_ratio=True, hists_cut=[], cut_ls=[], cut_operator=[], method_cut='', bin_min=-999,bin_max=-999):
   hists_cut, cut_ls, cut_operator, method_cut= np.array(hists_cut), np.array(cut_ls), np.array(cut_operator), np.array(method_cut) 
@@ -483,32 +482,46 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
   
   cut0_idx=0
   len0=len(hists[cut0_idx])
- 
   ratio_all=np.array([]) 
-  for data_orig,name,weights_orig,i in zip(hists,h_names,weights_ls, range(len(hists))):
+  for data,name,weights,i in zip(hists,h_names,weights_ls, range(len(hists))):
     label=''
+    cut_arr_all=[]
     if cut_ls !=[]:
       assert (len(cut_ls)==len(cut_operator))
       print(hists_cut[:,:,0,0].shape, cut_ls.shape, cut_operator.shape, method_cut.shape,'shape')
       assert (hists_cut[:,:,0,0].shape == cut_ls.shape==cut_operator.shape==method_cut.shape) # e.g. shapes (3, 2, 6710061, 1) (3, 2) (3, 2)
       for j in range(len(hists_cut[i,:])):
         if cut_operator[i,j]:
-          cut_arr= hists_cut[i,j, :, 0]>=cut_ls[i,j] 
+          cut_arr_each= hists_cut[i,j, :, 0]>=cut_ls[i,j] 
           cut_operator_str='>='
         else: 
-          cut_arr= hists_cut[i,j, :, 0]<cut_ls[i,j] 
+          cut_arr_each= hists_cut[i,j, :, 0]<cut_ls[i,j] 
           cut_operator_str='<'
 
+        cut_arr_all.append(cut_arr_each)
+        if 'transformed' in method_cut[i,j]:
+          label+=f' score{cut_operator_str}{cut_ls[i,j]}'
+        else: label+=f' {method_cut[i,j]}{cut_operator_str}{cut_ls[i,j]}'
+
+      cut_arr_all=np.array(cut_arr_all)
+      cut_arr=np.all(cut_arr_all, axis = 0)
+      '''
+      cprint(cut_arr, 'red')
+      cprint(cut_arr.shape,'red')
+      cprint(cut_arr_all,'blue')
+      cprint(cut_arr_all.shape,'blue')
+      '''
+# right now, it's not a cut flow
 #        cut_arr= cut_arr.flatten()
-        data=data_orig[cut_arr]
-        weights=weights_orig[cut_arr]
-        print(data_orig.shape,  cut_arr.shape)
+      data=data[cut_arr]
+      weights=weights[cut_arr]
+      print(data.shape,  cut_arr.shape)
         
-        label+=f', {method_cut[i,j]}{cut_operator_str}{cut_ls[i,j]}'
     #y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i],1)*100}% left, cut={name}')
 
 
     if cut_ls ==[]:label=f'{name} (NE={len(data)})'
+    else: label+=f' {name} (NE={len(data)})'
     #if cut_ls!=[]: label+=f', {method_cut}{cut_operator_str[i]}{cut_ls[i]}'
     if bool_ratio:y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=label)
     else: y,_, _=axs.hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=label)
@@ -542,7 +555,7 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
     axs.set_title(title)
   plt.tick_params(axis='y', which='minor') 
   plt.grid()
-  #plt.show()
+#  plt.show()
   if bool_ratio:  plt.savefig(plot_dir+'hist_ratio_'+title.replace(" ","")+'.png')
   else:  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
   plt.clf()
