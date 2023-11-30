@@ -18,18 +18,8 @@ import h5py
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
 pfn_models = ['PFNv6']
 arch_dir = "architectures_saved/"
-pfn_model = 'PFNv6'
+#pfn_model = 'PFNv6'
 x_events = -1
-
-## ---------- Load graph model ----------
-graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
-graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
-graph.compile()
-
-## Load classifier model
-classifier = keras.models.load_model(arch_dir+pfn_model+'_classifier_arch')
-classifier.load_weights(arch_dir+pfn_model+'_classifier_weights.h5')
-classifier.compile()
 
 """
 ## Load history
@@ -45,75 +35,77 @@ x_events = -1 ## -1 for all events
 my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "deltaY_12", "dphi_12", "weight", "mcEventWeight"]
 """
 
-##  ## evaluate bkg
-##  for pfn_model in pfn_models:
-##  
-##    ## ---------- Load graph model ----------
-##    graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
-##    graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
-##    graph.compile()
-##    
-##    ## Load classifier model
-##    classifier = keras.models.load_model(arch_dir+pfn_model+'_classifier_arch')
-##    classifier.load_weights(arch_dir+pfn_model+'_classifier_weights.h5')
-##    classifier.compile()
-##  
-##    for chunk in range(73):
-##      ## Load testing data
-##      x_events = -1 ## -1 for all events
-##  
-##      idx_range = range(chunk*100000, (chunk+1)*100000)
-##      if chunk == 72: idx_range = range(chunk*100000,7299018)
-##      my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "deltaY_12", "dphi_12", "weight", "mcEventWeight"]
-##      bkg2,mT_bkg = getTwoJetSystem(x_events,"../v9.1/user.ebusch.data16.root", my_variables, False)
-##      #bkg2,mT_bkg = getTwoJetSystem(x_events,"../v9.1/skim0.user.ebusch.totalBkgALL.root", my_variables, False, idx_range)
-##      scaler = load(arch_dir+pfn_model+'_scaler.bin')
-##      bkg2,_ = apply_StandardScaling(bkg2,scaler,False) 
-##      phi_bkg = graph.predict(bkg2)
-##      pred_phi_bkg = classifier.predict(phi_bkg)
-##      # ## Classifier loss
-##      bkg_loss = pred_phi_bkg[:,1]
-##      my_variables.insert(0,"score")
-##      print(my_variables)
-##      save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
-##      #print(save_bkg)
-##      ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
-##      rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
-##      #with h5py.File("v9p1_"+pfn_model+"_totalBkgALL_"+str(chunk)+".hdf5","w") as h5f:
-##      with h5py.File("v9p1_"+pfn_model+"_data16.hdf5","w") as h5f:
-##        dset = h5f.create_dataset("data",data=rec_bkg)
-##      print("Saved hdf5 for "+pfn_model+" data16 ")
-##      quit()
+## evaluate bkg
+for pfn_model in pfn_models:
 
-## evaluate signals
-#dsids = [515499, 515502]
-dsids = range(515487,515527)
-for dsid in dsids:
-  my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "deltaY_12", "dphi_12", "weight", "mcEventWeight"]
-  try:
-    bkg2,mT_bkg = getTwoJetSystem(x_events,"../v8.1/skim3.user.ebusch."+str(dsid)+".root", my_variables, False)
-  except:
-    continue
-  scaler = load(arch_dir+pfn_model+'_scaler.bin')
-  bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
+  ## ---------- Load graph model ----------
+  graph = keras.models.load_model(arch_dir+pfn_model+'_graph_arch')
+  graph.load_weights(arch_dir+pfn_model+'_graph_weights.h5')
+  graph.compile()
   
-  phi_bkg = graph.predict(bkg2)
-   
-  pred_phi_bkg = classifier.predict(phi_bkg)
-  
-  # ## Classifier loss
-  bkg_loss = pred_phi_bkg[:,1]
-  
-  my_variables.insert(0,"score")
-  print(my_variables)
-  save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
-  #print(save_bkg)
-  ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
-  rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
-  
-  with h5py.File("v8p1_PFNv8_"+str(dsid)+".hdf5","w") as h5f:
-    dset = h5f.create_dataset("data",data=rec_bkg)
-  print("Saved hdf5 for ", dsid)
+  ## Load classifier model
+  classifier = keras.models.load_model(arch_dir+pfn_model+'_classifier_arch')
+  classifier.load_weights(arch_dir+pfn_model+'_classifier_weights.h5')
+  classifier.compile()
+
+  # ## evaluate signals
+  # #dsids = [515499, 515502]
+  # dsids = range(515487,515527)
+  # for dsid in dsids:
+  #   my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "deltaY_12", "dphi_12", "weight", "mcEventWeight"]
+  #   try:
+  #     bkg2,mT_bkg = getTwoJetSystem(x_events,"../v9.2/user.ebusch."+str(dsid)+".root", my_variables, False)
+  #   except:
+  #     continue
+  #   scaler = load(arch_dir+pfn_model+'_scaler.bin')
+  #   bkg2,_ = apply_StandardScaling(bkg2,scaler,False)
+  #   
+  #   phi_bkg = graph.predict(bkg2)
+  #    
+  #   pred_phi_bkg = classifier.predict(phi_bkg)
+  #   
+  #   # ## Classifier loss
+  #   bkg_loss = pred_phi_bkg[:,1]
+  #   
+  #   my_variables.insert(0,"score")
+  #   print(my_variables)
+  #   save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+  #   #print(save_bkg)
+  #   ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
+  #   rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
+  #   
+  #   with h5py.File("v9p2_PFNv6_"+str(dsid)+".hdf5","w") as h5f:
+  #     dset = h5f.create_dataset("data",data=rec_bkg)
+  #   print("Saved hdf5 for ", dsid)
+
+  ## evaluate bkg
+  ##for chunk in range(73):
+  for dataYear in range(15,19): 
+    ## Load testing data
+    x_events = -1 ## -1 for all events
+
+    #idx_range = range(chunk*100000, (chunk+1)*100000)
+    #if chunk == 72: idx_range = range(chunk*100000,7299018)
+    my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "deltaY_12", "dphi_12", "weight", "mcEventWeight"]
+    bkg2,mT_bkg = getTwoJetSystem(x_events,"../v9.2/user.ebusch.data"+str(dataYear)+".root", my_variables, False)
+    #bkg2,mT_bkg = getTwoJetSystem(x_events,"../v9.1/skim0.user.ebusch.totalBkgALL.root", my_variables, False, idx_range)
+    scaler = load(arch_dir+pfn_model+'_scaler.bin')
+    bkg2,_ = apply_StandardScaling(bkg2,scaler,False) 
+    phi_bkg = graph.predict(bkg2)
+    pred_phi_bkg = classifier.predict(phi_bkg)
+    # ## Classifier loss
+    bkg_loss = pred_phi_bkg[:,1]
+    my_variables.insert(0,"score")
+    print(my_variables)
+    save_bkg = np.concatenate((bkg_loss[:,None], mT_bkg),axis=1)
+    #print(save_bkg)
+    ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
+    rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
+    #with h5py.File("v9p1_"+pfn_model+"_totalBkgALL_skim0.hdf5","w") as h5f:
+    with h5py.File("v9p2_"+pfn_model+"_data"+str(dataYear)+".hdf5","w") as h5f:
+      dset = h5f.create_dataset("data",data=rec_bkg)
+    print("Saved hdf5 for "+pfn_model+" data"+str(dataYear))
+
 
 
 ####### - VERSION FOR PARALLEL EVAL ON SMALL QCD FILES - ########

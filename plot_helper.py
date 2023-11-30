@@ -6,7 +6,7 @@ from matplotlib import colors
 from math import ceil
 from scipy.stats import pearsonr
 
-tag = "PFNv6_1"
+tag = "kp_relu"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def my_metric(s,b):
@@ -231,13 +231,31 @@ def plot_single_variable(hists, weights, h_names, title, logy=False):
   bin_min=np.min(hists_flat)
   bin_max=np.max(hists_flat)
   bins=np.linspace(bin_min,bin_max,nbins)
-  if(title=="mT_jj"): bins=np.linspace(1000,6000,100)
+  if(title=="mT_jj"): bins=np.linspace(1550,7950,65)
   if(title=="rT"): bins=np.linspace(0,1.0, nbins)
+  fig = plt.figure()
+  ax = fig.add_subplot(1,1,1)
   for data,weight,name in zip(hists,weights,h_names):
-    plt.hist(data, bins=bins, histtype='step', label=name, density=True, weights=weight)
-  plt.legend(loc='lower center', fontsize='x-small')
-  if (logy): plt.yscale("log")
+    h,b,_ = ax.hist(data, bins=bins, histtype='step', label=name, density=False, weights=weight)
+    print(name)
+    print(h[1],h[9],h[17])
+  #plt.legend(loc='lower center', fontsize='x-small')
+  print(bins)
+  if (logy): ax.set_yscale("log")
   plt.title(title)
+  ax.set_xticks(np.arange(2000,8001,1000))
+  ax.set_xticks(np.arange(1600,8000,200), minor=True)
+  ax.set_yticks(np.logspace(-3,3,num=7))
+  print(np.logspace(-3,3,num=7))
+  yminor = [(10**j)*i for j in range(-3,4) for i in range(2,9,2)]
+  #yminor2 = [1e0*i if i%2==0 else 1e-1*i for i in range(2,9)]
+  #yminor3 = [1e2*i if i%2==0 else 1e1*i for i in range(1,10)]
+  #yminor = yminor1+yminor2+yminor3
+  #yminor.sort()
+  print(yminor)
+  ax.set_yticks(yminor, minor=True)
+  ax.grid(which='minor', alpha=0.2) 
+  ax.grid(which='major', alpha=0.5) 
   plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'_'+tag+'.png')
   plt.clf()
   print("Saved plot",title)

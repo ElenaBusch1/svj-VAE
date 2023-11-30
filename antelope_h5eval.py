@@ -80,6 +80,21 @@ def get_sig_contamination():
 
   do_grid_plots(sig_eff, "CR Study")  
 
+def test_transform():
+  with h5py.File("../kp/v8p1_vANTELOPE_relu_QCDskim.hdf5","r") as f:
+    qcd = f.get('data')[:]
+  with h5py.File("../kp/v8p1_vANTELOPE_relu_515506.hdf5","r") as f:
+    sig1 = f.get('data')[:]
+
+  selection1 = sig1["jet1_pt"] > 0.0
+  sig1_loss = sig1["mse"][selection1]
+
+  selection0 = qcd["jet1_pt"] > 0.0
+  bkg_loss = qcd["mse"][selection0]
+  bkg_weights = np.reshape(qcd["weight"][selection0],len(qcd["weight"][selection0]))
+  bkg_idx = get_weighted_elements_h5(np.abs(bkg_weights),len(sig1_loss))
+  bkg1_loss = bkg_loss[bkg_idx]
+  sic_vals = do_roc(bkg1_loss, sig1_loss, "515506", True)
 
 def mT_shape_compare():
   with h5py.File("../v9.1/v9p1_PFNv6_totalBkgALL_skim0.hdf5","r") as f:
@@ -131,46 +146,47 @@ def mT_shape_compare():
     
 
 def cms_mT_plots():
-  with h5py.File("../v8.1/v8p1_CMS_QCDskim1.hdf5","r") as f:
+  with h5py.File("../v9.1/v9p1_CMS_totalBkgALL_skim0.hdf5","r") as f:
     bkg_data = f.get('data')[:]
    
-  with h5py.File("../v8.1/v8p1_CMSskim1_515503.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_CMSskim1_515499.hdf5","r") as f:
     sig1_data = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_CMSskim1_515506.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_CMSskim1_515507.hdf5","r") as f:
     sig2_data = f.get('data')[:]
   with h5py.File("../v8.1/v8p1_CMSskim1_515515.hdf5","r") as f:
     sig3_data = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_CMSskim1_515518.hdf5","r") as f:
+  with h5py.File("../v8.1/v8p1_CMSskim1_515519.hdf5","r") as f:
     sig4_data = f.get('data')[:]
   
   selection0 = (bkg_data["rT"] > 0.25) & (bkg_data["dphi_min"] < 0.8) & (bkg_data["deltaY_12"] < 1.5) 
   selection1 = (sig1_data["rT"] > 0.25) & (sig1_data["dphi_min"] < 0.8) & (sig1_data["deltaY_12"] < 1.5)
   selection2 = (sig2_data["rT"] > 0.25) & (sig2_data["dphi_min"] < 0.8) & (sig2_data["deltaY_12"] < 1.5)
   selection3 = (sig3_data["rT"] > 0.25) & (sig3_data["dphi_min"] < 0.8) & (sig3_data["deltaY_12"] < 1.5)
-  selection4 = (sig4_data["rT"] > 0.25) & (sig4_data["dphi_min"] < 0.8) & (sig4_data["deltaY_12"] < 1.5)
+  #selection4 = (sig4_data["rT"] > 0.25) & (sig4_data["dphi_min"] < 0.8) & (sig4_data["deltaY_12"] < 1.5)
    
-  w0 = 50*bkg_data["weight"][selection0] 
+  w0 = 0.82*5*bkg_data["weight"][selection0] 
   w1 = sig1_data["weight"][selection1] 
   w2 = sig2_data["weight"][selection2] 
   w3 = sig3_data["weight"][selection3] 
-  w4 = sig4_data["weight"][selection4] 
+  print(w1)
+  #w4 = sig4_data["weight"][selection4] 
   
-  w = [w0,w1,w2,w3,w4]
+  w = [w0,w1,w2,w3]#,w4]
   
-  labels = ["QCD", "2500 GeV,0.2", "2500 GeV,0.8", "4000 GeV,0.2", "2500 GeV,0.8"]
+  labels = ["QCD", "2000 GeV,0.2", "3000 GeV,0.2", "4000 GeV,0.2"]#, "5000 GeV,0.2"]
   for var in ["mT_jj"]:
     if (var=="weight" or var=="mcEventWeight"): continue
     bkg = bkg_data[var][selection0]
     sig1 = sig1_data[var][selection1] 
     sig2 = sig2_data[var][selection2] 
     sig3 = sig3_data[var][selection3] 
-    sig4 = sig4_data[var][selection4] 
+    #sig4 = sig4_data[var][selection4] 
     labels[0] += " ({0:.1e}, {1:.1e})".format(len(bkg),np.sum(w0))
     labels[1] += " ({0:.1e}, {1:.1e})".format(len(sig1),np.sum(w1))
     labels[2] += " ({0:.1e}, {1:.1e})".format(len(sig2),np.sum(w2))
     labels[3] += " ({0:.1e}, {1:.1e})".format(len(sig3),np.sum(w3))
-    labels[4] += " ({0:.1e}, {1:.1e})".format(len(sig4),np.sum(w4))
-    d = [bkg, sig1, sig2, sig3, sig4]
+    #labels[4] += " ({0:.1e}, {1:.1e})".format(len(sig4),np.sum(w4))
+    d = [bkg, sig1, sig2, sig3]#, sig4]
     plot_single_variable(d,w,labels, var, logy=True) 
     #plot_ratio(d,w,labels, var, logy=True) 
 
@@ -234,7 +250,7 @@ def score_cut_mT_plot():
     plot_ratio(d,w,labels, var, logy=True,cumsum=True) 
 
 def grid_scan(title):
-  with h5py.File("../v9.1/v9p1_PFNv8_totalBkgALL_skim0.hdf5","r") as f:
+  with h5py.File("../v9.1/v9p1_PFNv6_1_totalBkgALL_skim0.hdf5","r") as f:
     bkg_data = f.get('data')[:]
 
   variables = [f_name for (f_name,f_type) in bkg_data.dtype.descr]
@@ -249,7 +265,7 @@ def grid_scan(title):
   for dsid in dsids:
     print()
     try:
-      with h5py.File("../v8.1/v8p1_PFNv8_"+str(dsid)+".hdf5","r") as f:
+      with h5py.File("../v8.1/v8p1_PFNv6_1_"+str(dsid)+"_skim1.hdf5","r") as f:
         sig1_data = f.get('data')[:]
       selection1 = sig1_data["jet2_Width"] > 0.0
       sig1_loss = sig1_data["score"][selection1]
@@ -296,7 +312,7 @@ def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, cms=Fa
   dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
     try:
-      with h5py.File("../v8.1/"+sig_file_prefix+str(dsid)+".hdf5","r") as f:
+      with h5py.File("../v8.1/"+sig_file_prefix+str(dsid)+"_"+title+".hdf5","r") as f:
         sig1_data = f.get('data')[:]
 
       ## CMS selections
@@ -345,9 +361,9 @@ def grid_s_sqrt_b(score_cut, bkg_file, bkg_scale, sig_file_prefix, title, cms=Fa
 
 def compare_s_sqrt_b():
   #v2Inclusive = grid_s_sqrt_b(0.92, "v8p1_PFNv3_QCDskim3.hdf5", 5, "v8p1_PFNv3_", "PFN_PreBugFix", False)
-  v3MET = grid_s_sqrt_b(0.6, "v9p1_PFNv6_totalBkgALL_skim0.hdf5", 5, "v8p1_PFNv6_", "PFN_SR", False)
-  #cms = grid_s_sqrt_b(0.6, "v9p1_PFNv6_totalBkgALL_skim0.hdf5", 5, "v8p1_PFNv6_", "PFN_Incl", False)
-  cms = grid_s_sqrt_b(0.6, "v9p1_CMS_totalBkgALL_skim0.hdf5", 5, "v8p1_CMSskim1_", "CMS", cms=True)
+  v3MET = grid_s_sqrt_b(0.6, "v9p1_PFNv6_1_totalBkgALL_skim0.hdf5", 5, "v8p1_PFNv6_1_", "skim0", False)
+  cms = grid_s_sqrt_b(0.6, "v9p1_PFNv6_1_totalBkgALL_skim0.hdf5", 5, "v8p1_PFNv6_1_", "skim1", False)
+  #cms = grid_s_sqrt_b(0.6, "v9p1_CMS_totalBkgALL_skim0.hdf5", 5, "v8p1_CMSskim1_", "CMS", cms=True)
   v2_compare = {}
   v3_compare = {}
   for dsid in v3MET.keys():
@@ -371,17 +387,18 @@ def compare_s_sqrt_b():
     #  else:
     #    v3_compare[dsid] = {"sensitivity_Inclusive": v3incl/cmsincl, "sensitivity_mT": 0, "mT_over_Incl": 0}
   #do_grid_plots(v2_compare, "v2_compare")  
-  do_grid_plots(v3_compare, "v6_compare")  
+  do_grid_plots(v3_compare, "k_fold")  
 
 def main():
-  mT_shape_compare()
-  #grid_scan("PFNv8_inclusive")
+  #mT_shape_compare()
+  #grid_scan("PFNv6_1_skim1")
   #compare_s_sqrt_b()
   #correlation_plots()
   #get_sig_contamination()
   #grid_s_sqrt_b(0.99)
   #cms_mT_plots()
   #score_cut_mT_plot()
+  test_transform()
 
 if __name__ == '__main__':
   main()

@@ -239,15 +239,22 @@ def transform_loss(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
         plot_score(bkg_transformed, sig_transformed, False, False, plot_tag+'_Transformed')
     return truth_labels, eval_vals 
 
-def transform_loss_ex(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
+def transform_loss_sig(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
     nevents = len(sig_loss)
+    truth_sig = np.ones(nevents)
+    truth_bkg = np.zeros(nevents)
+    truth_labels = np.concatenate((truth_bkg, truth_sig))
     eval_vals = np.concatenate((bkg_loss,sig_loss))
-    eval_transformed = [1 - np.exp(-x) for x in eval_vals]
-    bkg_transformed = [1 - np.exp(-x) for x in bkg_loss]
-    sig_transformed = [1 - np.exp(-x) for x in sig_loss]
+    eval_transformed = [1/(1+np.exp(-np.log10(x))) for x in eval_vals]
+    bkg_transformed = [1/(1+np.exp(-np.log10(x))) for x in bkg_loss]
+    sig_transformed = [1/(1+np.exp(-np.log10(x))) for x in sig_loss]
+    #eval_transformed = [np.log10(x) for x in eval_vals]
+    #bkg_transformed = [np.log10(x) for x in bkg_loss]
+    #sig_transformed = [np.log10(x) for x in sig_loss]
     if make_plot:
-        plot_score(bkg_transformed, sig_transformed, False, False, plot_tag+'_TransformedEx')
-    return eval_vals 
+        plot_score(bkg_loss, sig_loss, False, False, plot_tag+'_Orig')
+        plot_score(bkg_transformed, sig_transformed, False, False, plot_tag+'_TransformedLog')
+    return truth_labels, eval_vals 
 
 def vrnn_transform(bkg_loss, sig_loss, make_plot=False, plot_tag=''):
     train_mean = np.mean(bkg_loss)
@@ -265,7 +272,7 @@ def applyScoreCut(loss,test_array,cut_val):
     return test_array[loss>cut_val] 
 
 def do_roc(bkg_loss, sig_loss, plot_tag, make_transformed_plot=False):
-    truth_labels, eval_vals = transform_loss(bkg_loss, sig_loss, make_plot=make_transformed_plot, plot_tag=plot_tag) 
+    truth_labels, eval_vals = transform_loss_sig(bkg_loss, sig_loss, make_plot=make_transformed_plot, plot_tag=plot_tag) 
     fpr, tpr, trh = roc_curve(truth_labels, eval_vals) #[fpr,tpr]
     auc = roc_auc_score(truth_labels, eval_vals)
     print("AUC - "+plot_tag+": ", auc)
