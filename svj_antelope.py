@@ -11,6 +11,8 @@ from plot_helper import *
 from eval_helper import *
 import time
 from svj_pfn import Param
+import math
+from helper import Label
 #import imageio
 #import IPython 
 #import cv2 
@@ -38,7 +40,7 @@ class Param_ANTELOPE(Param):
   def __init__(self,  
       arch_dir_pfn, arch_dir_vae='',kl_loss_scalar=100,
       arch_dir="architectures_saved/",print_dir='',plot_dir='plots/',h5_dir='h5dir/jul28/',
-      pfn_model='PFN', vae_model='vANTELOPE', bkg_events=200000, sig_events=20000,
+      pfn_model='PFN', vae_model='vANTELOPE', bkg_events=200000, sig_events=20000,sig_inj_events=0,
       num_elements=100, element_size=7, encoding_dim=32, latent_dim=12, phi_dim=64, nepochs=50, n_neuron=75, learning_rate=0.00001,
       nlayer_phi=3, nlayer_F=3,
       max_track=80,
@@ -54,7 +56,10 @@ class Param_ANTELOPE(Param):
       scalar_ecg=1,
       decoder_activation='relu',
       bool_float64=False,
-      sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="user.ebusch.dataALL.root",  bool_weight=True, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],seed=0 ):
+      sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="user.ebusch.dataALL.root",  bool_weight=True, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],seed=0, 
+
+      inj_ratio=0.01, bool_inj=False, inj_dsid=515503
+      ):
       #sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim0.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],seed=0 ):
       #changeable: encoding_dim,latent_dim, nepochs, learning_rate, bkg_events, sig_events
 
@@ -67,6 +72,17 @@ class Param_ANTELOPE(Param):
       batchsize_vae,
       bool_pt,
       sig_file, bkg_file,  bool_weight, extraVars,seed)
+ 
+    self.inj_ratio=inj_ratio
+    self.inj_nElements=math.floor((self.bkg_events-self.sig_events)*19/20 /(-1+ 1/self.inj_ratio ))
+    #self.inj_nElements=math.floor((self.bkg_events-self.sig_events)*.90*self.inj_ratio)
+    #print(f'{self.inj_nElements=}=rounded down of ({self.bkg_events}-{self.sig_events})*.9*{self.inj_ratio}')
+    print(f'{self.inj_nElements=}=rounded down of ({self.bkg_events}-{self.sig_events})*19/20*{-1+1/self.inj_ratio}')
+    self.bool_inj=bool_inj
+    if self.bool_inj and self.inj_nElements<=0: 
+      print(f'Error: self.bool_inj and self.inj_nElements<=0')
+      sys.exit()
+    self.inj_dsid=inj_dsid
 
     self.arch_dir_pfn=arch_dir_pfn
     self.arch_dir_vae=arch_dir_vae
@@ -393,7 +409,7 @@ class Param_ANTELOPE(Param):
 
 
   def prepare_pfn(self, graph,scaler,  bool_float64):
-    print('AE not VAE')
+    #    print('AE not VAE')
     # phi_bkg -> (phi_evalb and phi_testb) ; phi_sig 
     # scale values
     track_array0 = ["jet0_GhostTrack_pt", "jet0_GhostTrack_eta", "jet0_GhostTrack_phi", "jet0_GhostTrack_e","jet0_GhostTrack_z0", "jet0_GhostTrack_d0", "jet0_GhostTrack_qOverP"]
@@ -402,23 +418,97 @@ class Param_ANTELOPE(Param):
 
     bool_weight_sig=False
     #sig, mT_sig, sig_sel, jet_sig, sig_in0, sig_in1 = getTwoJetSystem(nevents=self.sig_events,input_file=self.sig_file,
-    sig, mT_sig, _, _, _, _ = getTwoJetSystem(nevents=self.sig_events,input_file=self.sig_file,
-      track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
-      bool_weight=bool_weight_sig,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed,max_track=self.max_track, bool_pt=self.bool_pt,h5_dir=self.h5_dir,       read_dir='/data/users/ebusch/SVJ/autoencoder/v8.1/')    
+
+    ''' change from here'''
+
+    ''' call all files with dsid'''
+    if self.bool_inj:
+ #     dsids=list(range(515502,515504))
+#      cprint('-----------------testing with limited number of dsids', 'red')
+      dsids=list(range(515487,515527))
+      corrupt_files=[515508, 515511,515493]
+      dsids=[x for x in dsids if x not in corrupt_files ]
+      file_ls=[]
+      for dsid in dsids:
+        file_ls.append("user.ebusch."+str(dsid)+".root")
+
+
+      ''' make a dictionary with its dsid'''
+      '''concatenate them all to select desired number'''
+      '''also select signal injected number'''
+
+      for fl, dsid in zip(file_ls, dsids):
+        
+        # selecting all events
+        sig_each, mT_sig_each, _, _, _, _ = getTwoJetSystem(nevents=self.sig_events,input_file=fl,
+    #sig, mT_sig, _, _, _, _ = getTwoJetSystem(nevents=self.sig_events+self.sig_inj_events,input_file=self.sig_file,
+          track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
+          bool_weight=bool_weight_sig,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed,max_track=self.max_track, bool_pt=self.bool_pt,h5_dir=self.h5_dir,       read_dir='/data/users/ebusch/SVJ/autoencoder/v9.2/', bool_select_all=True)   # not v8.1
+        
+        # from all events select randomly 
+        '''
+        add the signal file label to this 
+        concatenate the previous array to the next
+        signal is always picked without weights 
+        '''
+        if fl ==file_ls[0]:
+          dsid_label_each=np.full((len(sig_each)),dsid )
+          sig_all, mT_sig_all, dsid_label_all= sig_each, mT_sig_each,dsid_label_each
+        else:
+          dsid_label_each=np.full((len(sig_each)),dsid ) 
+          sig_all= np.concatenate((sig_all, sig_each), axis=0)
+          mT_sig_all=np.concatenate((mT_sig_all, mT_sig_each), axis=0)
+          dsid_label_all=np.concatenate((dsid_label_all, dsid_label_each), axis=0)
+       
+      assert ( (len(dsid_label_all)==len(sig_all)) and (len(sig_all)== len(mT_sig_all))), f"ERROR: (len(dsid_label_all)==len(sig_all) and len(sig_all)== len(mT_sig_all) FALSE {len(dsid_label_all)=}, {len(sig_all)=}, {len(mT_sig_all)=}"  
+      idx = get_spaced_elements(len(sig_all),nElements=self.sig_events)
+      sig, mT_sig= sig_all[idx], mT_sig_all[idx]
+      ''' selected events and not selected events
+      from not selected events (sig_not), find signal injected point of choice e.g. 515503 from self.inj_dsid with inj_nElements
+      ''' 
+      sig_not, mT_sig_not, dsid_label_all_not=np.delete(sig_all,idx, axis=0), np.delete(mT_sig_all,idx, axis=0), np.delete(dsid_label_all, idx, axis=0)
+      idx_inj=np.where((dsid_label_all_not==self.inj_dsid))
+      
+      inj, mT_inj=sig_not[idx_inj], mT_sig_not[idx_inj]
+      if len(inj) < self.inj_nElements: 
+        print(f'ERROR: len(inj) < self.inj_nElements')
+        print(f'{len(inj)=}, {self.inj_nElements=}')  
+        sys.exit()
+      print(f'CHECKED:{len(inj)=}>= {self.inj_nElements=}')  
+      idx_inj_sel = get_spaced_elements(len(inj),nElements=self.inj_nElements)
+      inj, mT_inj=inj[idx_inj_sel],mT_inj[idx_inj_sel]
+      print(f'{inj.shape=}, {mT_inj.shape=}')  
+      
+    else:
+      sig, mT_sig, _, _, _, _ = getTwoJetSystem(nevents=self.sig_events,input_file=self.sig_file,
+    #sig, mT_sig, _, _, _, _ = getTwoJetSystem(nevents=self.sig_events+self.sig_inj_events,input_file=self.sig_file,
+        track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
+        bool_weight=bool_weight_sig,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed,max_track=self.max_track, bool_pt=self.bool_pt,h5_dir=self.h5_dir,       read_dir='/data/users/ebusch/SVJ/autoencoder/v9.2/')   # not v8.1
+
+ 
     #bkg, mT_bkg, bkg_sel, jet_bkg,bkg_in0, bkg_in1 = getTwoJetSystem(nevents=self.bkg_events,input_file=self.bkg_file,
     bkg, mT_bkg, _, _, _, _ = getTwoJetSystem(nevents=self.bkg_events,input_file=self.bkg_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
       bool_weight=self.bool_weight,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed, max_track=self.max_track,bool_pt=self.bool_pt,h5_dir=self.h5_dir,
       read_dir='/data/users/kpark/SVJ/MicroNTuples/v9.2/') 
       #read_dir='/data/users/ebusch/SVJ/autoencoder/v9.1/') 
-    print('hola') 
+
+    '''
+    should bkg and inj be scaled separately? yes, because when there is really signal in data, we don't know if this is signal 
+    so concatenate inj and bkg ; mT_inj and mT_bkg here 
+    no need to shuffle here b/c PFN model is already trained, and before samples get trained for VAE, train_test_split shuffles automatically as default is shuffle=True
+    '''
     bkg2,_ = apply_StandardScaling(bkg,scaler,False) # change
     sig2,_ = apply_StandardScaling(sig,scaler,False) # change
-    plot_vectors(bkg2,sig2,tag_file="ANTELOPE", tag_title=" (ANTELOPE)", plot_dir=self.plot_dir)# change
-    
+    plot_vectors(bkg2,sig2,tag_file="ANTELOPE", tag_title=" (ANTELOPE)", plot_dir=self.plot_dir, labels=['data', 'sig'])# change
     phi_bkg = graph.predict(bkg2)
     phi_sig = graph.predict(sig2)
 
+    inj2,_ = apply_StandardScaling(inj,scaler,False) # change
+    phi_inj = graph.predict(inj2)
+    mass=Label(str(self.inj_dsid)).get_m(bool_num=True)
+    rinv=Label(str(self.inj_dsid)).get_rinv(bool_num=True)
+    plot_vectors(inj2,bkg2,tag_file="ANTELOPE_sig_inj", tag_title=" (ANTELOPE)", plot_dir=self.plot_dir, bool_sig_on=False, labels=[f'inj sig({mass}, {rinv})'])# change
 #    """
     if bool_float64: 
       phi_bkg = phi_bkg.astype('float64')
@@ -438,18 +528,27 @@ class Param_ANTELOPE(Param):
     print('idx',phi_evalb_idx, phi_testb_idx)
     print('after',phi_evalb.shape, phi_testb.shape,  mT_evalb.shape, mT_testb.shape)
 
-    plot_single_variable([mT_evalb[:,2], mT_testb[:,2]],h_names= ['training and validation', 'test'],weights_ls=[mT_evalb[:,1], mT_testb[:,1]], tag_title= 'leading jet pT (QCD)', plot_dir=self.plot_dir,logy=True, tag_file='jet1_pt', bool_weight=self.bool_weight)
-    plot_single_variable([mT_evalb[:,3], mT_testb[:,3]],h_names= ['training and validation', 'test'],weights_ls=[mT_evalb[:,1], mT_testb[:,1]], tag_title= 'subleading jet pT (QCD)', plot_dir=self.plot_dir, logy=True, tag_file='jet2_pt',bool_weight=self.bool_weight)
+    if self.bool_inj:
+      print(f'before concatenating phi_evalb and inj: {phi_evalb.shape=}, {mT_evalb.shape=}') 
+      phi_evalb=np.concatenate((phi_evalb,phi_inj), axis=0)
+      mT_evalb=np.concatenate((mT_evalb,mT_inj), axis=0)
+      print(f'after concatenating phi_evalb and inj: {phi_evalb.shape=}, {mT_evalb.shape=}') 
+       
+    plot_single_variable([mT_evalb[:,2], mT_testb[:,2]],h_names= ['training and validation', 'sig - test'],weights_ls=[mT_evalb[:,1], mT_testb[:,1]], tag_title= 'leading jet pT (Data)', plot_dir=self.plot_dir,logy=True, tag_file='jet1_pt', bool_weight=self.bool_weight)
+    plot_single_variable([mT_evalb[:,3], mT_testb[:,3]],h_names= ['training and validation', 'test'],weights_ls=[mT_evalb[:,1], mT_testb[:,1]], tag_title= 'subleading jet pT (Data)', plot_dir=self.plot_dir, logy=True, tag_file='jet2_pt',bool_weight=self.bool_weight)
 
     #plot_phi(phi_evalb,tag_file="PFN_phi_train_raw",tag_title="Train",plot_dir=self.plot_dir) # change
     #plot_phi(phi_testb,tag_file="PFN_phi_test_raw",tag_title="Test", plot_dir=self.plot_dir)
     plot_phi(phi_sig,tag_file="PFN_phi_sig_raw", tag_title="Signal", plot_dir=self.plot_dir)
-    plot_phi(phi_bkg,tag_file="PFN_phi_bkg_raw",tag_title="QCD",plot_dir=self.plot_dir) # change
+    plot_phi(phi_bkg,tag_file="PFN_phi_bkg_raw",tag_title="Data",plot_dir=self.plot_dir) # change
      
     if self.bool_no_scaling:
-      plot_1D_phi(phi_bkg, phi_sig,labels=['QCD', 'sig'], plot_dir=self.plot_dir, tag_file=self.pfn_model+'_input', tag_title=self.pfn_model+' Input')
+      plot_1D_phi(phi_bkg, phi_sig,labels=['bkg', 'sig'], plot_dir=self.plot_dir, tag_file=self.pfn_model+'_input', tag_title=self.pfn_model+' Input')
       plot_phi(phi_sig,tag_file="PFN_phi_sig_input", tag_title="Signal Input", plot_dir=self.plot_dir)
-      plot_phi(phi_bkg,tag_file="PFN_phi_bkg_input", tag_title="QCD Input", plot_dir=self.plot_dir)
+      plot_phi(phi_bkg,tag_file="PFN_phi_bkg_input", tag_title="Data Input", plot_dir=self.plot_dir)
+      if self.bool_inj: 
+        plot_phi(phi_inj,tag_file="PFN_phi_inj_input", tag_title="Data Input", plot_dir=self.plot_dir)
+
       print('---no scaling or shifting for phis---')
       return  phi_bkg, phi_testb, phi_evalb, phi_sig
 
@@ -504,8 +603,8 @@ class Param_ANTELOPE(Param):
 
     if not(self.bool_shift): phi_bkg, phi_testb, phi_evalb, phi_sig = phi_bkg_pre, phi_testb_pre, phi_evalb_pre, phi_sig_pre
     plot_phi(phi_sig,tag_file="PFN_phi_sig_input", tag_title="Signal Input", plot_dir=self.plot_dir)
-    plot_phi(phi_bkg,tag_file="PFN_phi_bkg_input", tag_title="QCD Input", plot_dir=self.plot_dir)
-    plot_1D_phi(phi_bkg, phi_sig,labels=['QCD', 'sig'], plot_dir=self.plot_dir, tag_file=self.pfn_model+'_input', tag_title=self.pfn_model+' Input')
+    plot_phi(phi_bkg,tag_file="PFN_phi_bkg_input", tag_title="Background Input", plot_dir=self.plot_dir)
+    plot_1D_phi(phi_bkg, phi_sig,labels=['bkg', 'sig'], plot_dir=self.plot_dir, tag_file=self.pfn_model+'_input', tag_title=self.pfn_model+' Input')
     return  phi_bkg, phi_testb, phi_evalb, phi_sig
  
 
@@ -569,8 +668,8 @@ class Param_ANTELOPE(Param):
         new_method=f'{method}_transformed'
         print(f'{method=}, {new_method=}')
         loss_dict[new_method+'_log10_sig']={}
-        loss_dict[new_method+'_log10']={}
-        loss_dict[new_method+'_negx']={}
+#        loss_dict[new_method+'_log10']={}
+#        loss_dict[new_method+'_negx']={}
         loss_bkg=np.log10(loss_dict[method]['bkg'])
       
         if len(sig)!=0:
@@ -585,24 +684,24 @@ class Param_ANTELOPE(Param):
         loss_transformed_bkg = (loss_bkg - min_loss)/(max_loss -min_loss) 
 
           """
-        loss_dict[new_method+'_log10']['bkg'] =loss_bkg 
+#        loss_dict[new_method+'_log10']['bkg'] =loss_bkg 
         loss_transformed_bkg = 1/(1 + np.exp(-loss_bkg)) 
         loss_dict[new_method+'_log10_sig']['bkg'] =loss_transformed_bkg 
         loss_transformed_bkg = 1/(1 + np.exp(loss_bkg)) 
-        loss_dict[new_method+'_negx']['bkg'] =loss_transformed_bkg 
+#        loss_dict[new_method+'_negx']['bkg'] =loss_transformed_bkg 
         if len(sig)!=0:
           """
           loss_transformed_sig = (loss_sig - min_loss)/(max_loss -min_loss) 
           """
-          loss_dict[new_method+'_log10']['sig'] =loss_sig 
+#          loss_dict[new_method+'_log10']['sig'] =loss_sig 
           loss_transformed_sig = 1/(1 + np.exp(-loss_sig)) 
           loss_dict[new_method+'_log10_sig']['sig'] =loss_transformed_sig 
           loss_transformed_sig = 1/(1 + np.exp(loss_sig)) 
-          loss_dict[new_method+'_negx']['sig'] =loss_transformed_sig 
+#          loss_dict[new_method+'_negx']['sig'] =loss_transformed_sig 
   
         methods.append(new_method+'_log10_sig')
-        methods.append(new_method+'_log10')
-        methods.append(new_method+'_negx')
+#        methods.append(new_method+'_log10')
+#        methods.append(new_method+'_negx')
 
     return loss_dict, methods, y
 
@@ -753,7 +852,7 @@ class Param_ANTELOPE(Param):
     print(f'{sig_latent_test_recon.shape=}')
    
     bkg_latent_test_sigma, sig_latent_test_sigma = self.transform_sigma(bkg_latent_test[1,:,:]), self.transform_sigma(sig_latent_test[1, :,:])
-    labels=['test QCD', 'SIG']
+    labels=['test (bkg)', 'test (sig)']
     #"""
     plot_1D_phi(bkg_latent_test[0,:,:],sig_latent_test[0,:,:] , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_mu', tag_title=self.vae_model +r" $\mu$", ylog=True)
     plot_1D_phi(bkg_latent_test_sigma,sig_latent_test_sigma , labels=labels, plot_dir=self.plot_dir, tag_file=self.vae_model+f'test_sigma', tag_title=self.vae_model +r" $\sigma$", ylog=True)
@@ -781,6 +880,7 @@ class Param_ANTELOPE(Param):
     loss_dict_test, methods,y  = self.calculate_loss(model = vae, bkg = x_testb, sig = x_sig, y_bkg = y_bkg_test, y_sig = y_sig_test)
     loss_dict_all['test'] = self.calculate_metric(loss_dict_test, methods,y)
     sic_vals_dict = self.plot_loss_dict(loss_dict_all)
+    
     bkg_events_num,sig_events_num=np.nan, np.nan 
     
     return self.all_dir, sic_vals_dict, bkg_events_num,sig_events_num
@@ -797,20 +897,24 @@ if __name__=="__main__":
   ls_bkg=[500000]
   """
   ls_sig=[20000]
-  ls_bkg=[200000]
+  ls_bkg=[170000]
+  #ls_bkg=[200000]
   for  kl_loss_scalar in [1]:
-    param1=Param_ANTELOPE(pfn_model=pfn_model,  h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
+    #param1=Param_ANTELOPE(pfn_model=pfn_model,  h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/', # nov 2023
+    param1=Param_ANTELOPE(pfn_model=pfn_model,  h5_dir='h5dir/antelope/v9p2/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/', # nov 2023
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, arch_dir_vae='/data/users/kpark/svj-vae/results/grid_sept26/09_26_23_10_38/architectures_saved/', step_size=1)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, arch_dir_vae='/data/users/kpark/svj-vae/results/grid_sept26/09_27_23_01_32/architectures_saved/', step_size=1, bool_no_scaling=True)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=False, bool_shift=True)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=True, bool_shift=True)
-      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1, bool_no_scaling=True, decoder_activation='relu', bool_float64=False, bool_weight=False)
+  
+#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1, bool_no_scaling=True, decoder_activation='relu', bool_float64=False, bool_weight=False)# nov 2023
+      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1, bool_no_scaling=True, decoder_activation='relu', bool_float64=False, bool_weight=False, bool_inj=True, inj_ratio=.1, bkg_events=184000)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1) # MAKE SURE TO CHECK RELU VS SIGMOID 
       #extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],  step_size=1, bool_no_scaling=True, kl_loss_scalar=1000)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8, scalar_ecg=10)
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim= 784, encoding_dim=196, latent_dim=49)# if flattening
-    
+    start= time.time() 
     stdoutOrigin=param1.open_print()
 #    all_dir, sic_vals_dict,bkg_events_num,sig_events_num=param1.evaluate_test_ECG()
     print('using relu as activation function in decoder instead of sigmoid')
@@ -819,6 +923,8 @@ if __name__=="__main__":
     setattr(param1, 'sic_vals_dict',sic_vals_dict )
     setattr(param1, 'sig_events_num',sig_events_num )
     setattr(param1, 'bkg_events_num',bkg_events_num )
+    end= time.time()
+    print('time elapsed:', f' {round(end-start, 2)}s or  {round((end-start)/3600,2)}h')
     print(param1.close_print(stdoutOrigin))
     print(param1.save_info())
 """

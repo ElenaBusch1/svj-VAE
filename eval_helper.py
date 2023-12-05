@@ -405,7 +405,7 @@ def transform_loss(bkg_loss, sig_loss, make_plot=False, tag_file="", tag_title="
     bkg_size= len(bkg_loss)
     assert sig_size == bkg_size, "signal and background size for calculating AUC have to be the same: transform_loss function" 
     nevents = len(sig_loss)
-    
+    print(bkg_loss.shape, sig_loss.shape) 
     truth_sig = np.ones(nevents)
     truth_bkg = np.zeros(nevents)
     truth_labels = np.concatenate((truth_bkg, truth_sig))
@@ -462,7 +462,6 @@ def do_grid_plots(sic_vals, tag_title,tag_file, plot_dir=''):
     with open("dsids_grid_locations.json", "r") as f:
       dsid_coords = json.load(f)
     dsids = list(sic_vals.keys())
-
     vals = list(sic_vals[dsids[0]].keys())
     for val in vals:
         values = np.zeros([4,10])

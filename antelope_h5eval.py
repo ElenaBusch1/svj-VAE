@@ -33,6 +33,61 @@ def get_weighted_elements_h5(my_weight_array, nEvents):
     idx = np.random.choice( my_weight_array.size,size= nEvents, p=my_weight_array/float(my_weight_array.sum()),replace=False) # IMPT that replace=False so that event is picked only once
     return idx
 
+def check_yield(title, all_dir, file_prefix, filename,  key):
+  h5dir=all_dir+'applydir/'
+  plot_dir=h5dir+'/plots/'
+  if not os.path.exists(plot_dir):os.mkdir(plot_dir)
+  path=h5dir+'/'+'hdf5_jet2_width'+'/'+f"{file_prefix}{filename}"
+  with h5py.File(path,"r") as f:
+#  with h5py.File("../v8.1/v8p1_PFNv6_allSignal.hdf5","r") as f:
+    data_var = f.get('data')[:]
+  text=''
+  hists=[data_var['mT_jj'], data_var['mT_jj'], data_var['mT_jj'], data_var['mT_jj']]
+  h_names=['(All)','(CR)', '(VR)', ' (SR)']
+  weights_ls_each=[]
+  if data_var['weight'].any(): # if array contains some element other than 0 
+    weights_ls_each.append(data_var['weight'])
+    print('weights does not already contain only zeros')
+  else:#if array contains only zeros
+    print(np.ones(data_var['weight'].shape).shape)
+    print(data_var['weight'].shape)
+    weights_ls_each.append(np.ones(data_var['weight'].shape))
+    print('weights does  already contain only zeros -> made array of 1s' )
+
+  method=key
+  weights_ls=[weights_ls_each[0],weights_ls_each[0], weights_ls_each[0], weights_ls_each[0]]
+  hists_cut=[[data_var['jet2_Width'], data_var[method]],[data_var['jet2_Width'], data_var[method]],[ data_var['jet2_Width'], data_var[method]],[ data_var['jet2_Width'], data_var[method]]]
+  cut_ls=[[0,0],[0.05, 0], [0.05, 0.7],[0.05, 0.7]]
+  cut_operator = [[True, True],[False,True], [True,  False],[True, True]]
+  method_cut=[['jet2_Width', method],['jet2_Width', method], ['jet2_Width', method], ['jet2_Width', method]]  
+
+  '''
+  bool_ratio has to be False for the  
+  '''
+  text=plot_single_variable_ratio(hists=hists, h_names=h_names, weights_ls=weights_ls, title=title,hists_cut=hists_cut, cut_ls=cut_ls, cut_operator=cut_operator, method_cut=method_cut, bool_ratio=True, bool_plot=False, bin_min=1000, bin_max= 5000, logy=True)
+  with open(all_dir+f'yield_{file_prefix}{filename.split(".hdf5")[-2]}.txt', 'w') as fw:
+    fw.write(text) 
+
+def correlation_plots(title, all_dir, file_prefix, filename,  key):
+  h5dir=all_dir+'applydir/'
+  plot_dir=h5dir+'/plots/'
+  if not os.path.exists(plot_dir):os.mkdir(plot_dir)
+  path=h5dir+'/'+'hdf5_jet2_width'+'/'+f"{file_prefix}{filename}"
+  with h5py.File(path,"r") as f:
+#  with h5py.File("../v8.1/v8p1_PFNv6_allSignal.hdf5","r") as f:
+    qcd = f.get('data')[:]
+  selection = qcd[key]>-1
+  score = qcd[key][selection]
+  mT_jj = qcd["mT_jj"][selection]
+  jet2_Width = qcd["jet2_Width"][selection]
+
+  bin_dict = {"mT_jj": np.arange(1000,6000,100), key: np.arange(0.62,0.96,0.01), "jet2_Width": np.arange(0,0.3, 0.006)}
+  #bin_dict = {"mT_jj": np.arange(1000,6000,100), key: np.arange(0,1.0,0.02), "jet2_Width": np.arange(0,0.3, 0.006)}
+  tag_file=file_prefix+filename.split('.hdf5')[-2]
+  correlation_plot(score, mT_jj, key, "mT_jj", bin_dict, title, tag_file=tag_file, plot_dir=plot_dir)
+  correlation_plot(score, jet2_Width, key, "jet2_Width", bin_dict, title, tag_file=tag_file, plot_dir=plot_dir)
+  correlation_plot(mT_jj, jet2_Width, "mT_jj", "jet2_Width", bin_dict, title, tag_file=tag_file, plot_dir=plot_dir)
+
 def mT_shape_compare(key):
   with h5py.File("../v8.1/v8p1_PFNv1_QCDskim.hdf5","r") as f:
     bkg_datav1 = f.get('data')[:]
@@ -166,7 +221,8 @@ def grid_scan(title, all_dir, sig_file_prefix, bkg_file_prefix,bkg_file, key='mu
   #with h5py.File("../v8.1/v8p1_PFNv1_QCDskim.hdf5","r") as f:
   #  bkg_data = f.get('data')[:]
 #  all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/07_12_23_08_47/' # change
-  h5dir=all_dir+'applydir/'
+  h5dir=all_dir+'applydir/hdf5_orig/'
+  #h5dir=all_dir+'applydir/'
   plot_dir=h5dir+'/plots/'
   if not os.path.exists(plot_dir):os.mkdir(plot_dir)
   #bkgpath=h5dir+"v8p1_QCDskim.hdf5"
@@ -200,6 +256,7 @@ def grid_scan(title, all_dir, sig_file_prefix, bkg_file_prefix,bkg_file, key='mu
   for dsid in dsids:
     #sigpath=h5dir+"v8p1_"+str(dsid)+".hdf5"
     sigpath=h5dir+f"{sig_file_prefix}{dsid}_log10"+".hdf5"
+   
     try:
       with h5py.File(sigpath,"r") as f:
       #with h5py.File("../v8.1/v8p1_PFNv3_"+str(dsid)+".hdf5","r") as f:
@@ -210,6 +267,7 @@ def grid_scan(title, all_dir, sig_file_prefix, bkg_file_prefix,bkg_file, key='mu
       bkg1_loss = bkg_loss[bkg_idx]
       #plot_single_variable([bkg1_loss,sig1_loss],[np.ones(len(bkg1_loss)),np.ones(len(sig1_loss))],["bkg","sig"], key+str(dsid), logy=True) 
       sic_vals = do_roc(bkg1_loss, sig1_loss, tag_file=f'{key}_'+str(dsid), tag_title=f'{key} '+str(dsid), make_transformed_plot=False,plot_dir=plot_dir )
+      sys.exit()
       sic_values[dsid] = sic_vals
       cprint(f"{dsid}, sig events, {len(sig1_loss)}", )
     except Exception as e:
@@ -224,7 +282,8 @@ def grid_scan(title, all_dir, sig_file_prefix, bkg_file_prefix,bkg_file, key='mu
 
 def grid_s_sqrt_b(score_cut, bkg_scale, sig_file_prefix, bkg_file_prefix,bkg_file,title, all_dir,cms=False, key="multi_reco"): #all_dir # bkg_scale = 5
   # if can't read the file try changing sigpath or h5dir
-  h5dir=all_dir+'applydir/'
+  #h5dir=all_dir+'applydir/'
+  h5dir=all_dir+'applydir/hdf5_orig/'
   plot_dir=h5dir+'/plots/'
   if not os.path.exists(plot_dir):os.mkdir(plot_dir)
   bkgpath=h5dir+f"{bkg_file_prefix}{bkg_file}"

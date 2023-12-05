@@ -62,8 +62,6 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
 
 #change here -> file and other changes
 
- 
-  
   plot_dir=applydir+'/plots_dsid/'
   if not os.path.exists(plot_dir):
       
@@ -90,17 +88,6 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
 # plot_vectors(bkg2,sig2,"PFN")
   phi_bkg = graph.predict(bkg2)
   vae_min_dict, vae_max_dict, pfn_min_dict,pfn_max_dict={},{},{},{}
-  """
-  # technically these are loss transformed!
-  vae_min_dict['09_26_23_10_38']= {'mse': -12.634254306189314, 'multi_reco':-12.545995242335483, 'multi_kl': -20.211301490367624 , 'multi_mse': -12.542977457162644}
-  vae_max_dict['09_26_23_10_38']= {'mse': -3.456886217152505, 'multi_reco':-3.4590470421545785, 'multi_kl':-9.330598758710815, 'multi_mse': -3.458533554054478}
-  vae_max_dict['09_27_23_01_32']= {'mse': 4.051665855814887 ,'multi_reco': 4.14657246457546, 'multi_kl':6.57444001122076, 'multi_mse':6.6017456361377675 }
-  vae_max_dict['09_27_23_01_32']= {'mse': 4.051665855814887 ,'multi_reco': 2.986, 'multi_kl':6.57444001122076, 'multi_mse':6.35 }
-  vae_min_dict['09_27_23_01_32']= {'mse': -3.2118662852702515,'multi_reco':-3.166914871440587, 'multi_kl':0.9695256492112576, 'multi_mse':1.0634667425682687 }
-  vae_min_dict['09_27_23_01_32']= {'mse': -3.2118662852702515,'multi_reco':-3.41, 'multi_kl':0.9695256492112576, 'multi_mse':0.9376 }
-  #wrong
-#  vae_min_dict['09_27_23_01_32']= {'mse': -3.2118662852702515,'multi_reco':-3.166914871440587, 'multi_kl':0.9695256492112576, 'multi_mse':-3.166914871440587 }
-  """
 
   # manual 
   pfn_min_dict['09_26_23_10_38']= 0
@@ -129,7 +116,7 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
 
   return phi_bkg, pred_phi_bkg, mT_bkg, extraVars,dsid, h5path, vae_model, bool_transformed, vae, plot_dir, file_dir
  
-def write_hdf5(phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model, bool_transformed, vae, plot_dir, file_dir, subset=0, n_events=0, bool_split=True):
+def write_hdf5(phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model, bool_transformed, vae, plot_dir, file_dir, subset=0, n_events=0, bool_split=False):
   if vae_model =='':
     print('not writing hdf5 in write_hdf5 function because using VAE')
   else:
@@ -138,12 +125,15 @@ def write_hdf5(phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model
     if bool_split:
       phi_bkg, pred_phi_bkg, mT_bkg= phi_bkg[subset*n_events: (subset+1)*n_events, :]  , pred_phi_bkg[subset*n_events: (subset+1)*n_events, :],   mT_bkg[subset*n_events: (subset+1)*n_events, :]
       print('after split',phi_bkg.shape, pred_phi_bkg.shape, mT_bkg.shape)
-#    phi_bkg, pred_phi_bkg, mT_bkg = 
+     
     bkg_loss={}
     # ## AE loss
     bkg_loss['mse'] = np.array(keras.losses.mse(phi_bkg, pred_phi_bkg))
-    bkg_loss['multi_reco'], bkg_loss['multi_kl'],  bkg_loss['multi_mse']=get_multi_loss_each(vae, phi_bkg)
-    
+    bkg_loss['multi_reco'], bkg_loss['multi_kl'],  bkg_loss['multi_mse']=get_multi_loss_each(vae, phi_bkg, step_size=100)
+    print('get multi loss each')
+    print(bkg_loss['multi_reco']) 
+    print(bkg_loss['multi_reco'].shape) 
+    sys.exit()
     methods=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
     new_methods=[]
     if bool_transformed:
@@ -153,14 +143,6 @@ def write_hdf5(phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model
         #new_method=f'{method}_transformed'
         print(f'{method=}, {new_method=}')
         loss=np.log10(bkg_loss[method])
-#        max_loss=np.max(loss)
-#        min_loss=np.min(loss)
-        """
-        min_loss = vae_min_dict[file_dir][method]
-        max_loss = vae_max_dict[file_dir][method]
-        print(f'{max_loss=}, {min_loss=}, {loss[:5]}')
-        loss_transformed_bkg = (loss - min_loss)/(max_loss -min_loss)
-        """
         loss_transformed_bkg = 1/(1 + np.exp(-loss))
         bkg_loss[new_method] =loss_transformed_bkg
         new_methods.append(new_method)
@@ -185,7 +167,6 @@ def write_hdf5(phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model
    bkg_loss['multi_kl'][:,None],
    bkg_loss['multi_mse'][:,None],
 
-
    bkg_loss['mse_transformed_log10_sig'][:,None],
    bkg_loss['multi_reco_transformed_log10_sig'][:,None],
    bkg_loss['multi_kl_transformed_log10_sig'][:,None],
@@ -195,17 +176,25 @@ def write_hdf5(phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model
 
   ds_dt = np.dtype({'names':newVars,'formats':[(float)]*len(newVars)})
   rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
- 
-
-  with h5py.File(f"{h5path.split('.hdf5')[-2]}_{subset}.hdf5","w") as f:
+  last_substring=f"{h5path.split('/')[-1]}"
+  new_dir=h5path.replace(last_substring, '')
+  if not os.path.exists(new_dir):
+    os.mkdir(new_dir)
+    print('made ', new_dir)
+  
+  if any(el  in h5path for el in ['data', 'Data', 'DATA', 'BKG', 'Bkg', 'bkg']) : 
+    cprint(h5path, 'green')
+    dset_path=f"{h5path.split('.hdf5')[-2]}.hdf5"
+  #if any(el  in h5path for el in ['data', 'Data', 'DATA', 'BKG', 'Bkg', 'bkg']) : dset_path=f"{h5path.split('.hdf5')[-2]}_{subset}.hdf5"
+  else:  dset_path=f"{h5path.split('.hdf5')[-2]}.hdf5"
+  cprint(dset_path, 'green')
+  with h5py.File(dset_path,"w") as f:
     dset = f.create_dataset("data",data=rec_bkg)
   return rec_bkg
-  #return rec_bkg, rec_sig
 def add_column(input_h5path, output_h5path, vae_model, dsid, columns, 
      bkg_events, bkg_file, bool_weight, extraVars, applydir, max_track, bool_pt, h5_dir, read_dir):
   plot_dir=applydir+'/plots_dsid/'
   bkg2, mT_bkg, _, _, _, _ = getTwoJetSystem(nevents=bkg_events,input_file=bkg_file,
-  #bkg2, mT_bkg, bkg_sel, jet_bkg, _, _ = getTwoJetSystem(nevents=bkg_events,input_file=bkg_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
       bool_weight=bool_weight,  extraVars=extraVars+columns, plot_dir=plot_dir,seed=seed,max_track=max_track, bool_pt=bool_pt, h5_dir=h5_dir, bool_select_all=True, read_dir=read_dir)
  
@@ -220,24 +209,6 @@ def add_column(input_h5path, output_h5path, vae_model, dsid, columns,
 
   cprint(f"{(bkg_loss['mT_jj'].flatten()==mT_bkg[:,0])=}", 'red')
   print(f"{bkg_loss['mT_jj'].flatten()},{mT_bkg[:,0]=}")
-  ''' 
-  methods=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
-  new_methods=[]
-  bkg_loss_new={}
-  for method in methods:
-    new_method=f'{method}_transformed_log10_sig'
-    print(f'{method=}, {new_method=}')
-    loss=np.log10(bkg_loss[method]).flatten()
-#    print(loss.shape)
-    loss_transformed_bkg = 1/(1 + np.exp(-loss))
-    bkg_loss_new[new_method] =loss_transformed_bkg
-    new_methods.append(new_method)
-  # reevaluate from the columns from old methods
-
-  print(bkg_loss['mse'].shape,bkg_loss_new['mse_transformed_log10_sig'].shape) 
-  print(bkg_loss['mse'][:,None].shape,bkg_loss_new['mse_transformed_log10_sig'][:,None].shape) 
-  print(bkg_loss_new[new_method].shape)
-  ''' 
   print(f'{mT_bkg[:,0][:,None].shape=}, {bkg_loss.shape=}')
   bkg_loss_names=list(bkg_loss.dtype.names)
   for i, key in enumerate(bkg_loss_names):
@@ -263,14 +234,6 @@ def add_column(input_h5path, output_h5path, vae_model, dsid, columns,
     dset = f.create_dataset("data",data=rec_bkg)
   print(output_h5path, 'make sure this is jet2_Width', extraVars[-1])
   plot_single_variable([mT_bkg[:,-1]],h_names= [bkg_file],weights_ls=[mT_bkg[:,1]], tag_title= f'{extraVars[-1]} {str(dsid)} (weighted)', plot_dir=plot_dir,logy=True, tag_file=f'{extraVars[-1]}_'+str(dsid), bool_weight=bool_weight)
-  """
-  for method in new_methods: # transformed
-    plot_score(rec_bkg[method], np.array([]), False, xlog=False, tag_file=vae_model+f'_{method}_{str(dsid)}', tag_title=vae_model+f' {method} {str(dsid)}', plot_dir=plot_dir, bool_pfn=False, labels=[str(dsid)]) # anomaly score 
-
-  for method in methods:
-    plot_score(rec_bkg[method][bkg_loss[method]>0], np.array([]),False, xlog=True, tag_file=vae_model+'_pos'+f'_{method}_{str(dsid)}', tag_title=vae_model + ' (score > 0)'+f' {method} {str(dsid)}', plot_dir=plot_dir, bool_pfn=False, labels=[str(dsid)]) # anomaly score
-  # write to the file
-  """
   return rec_bkg
 
 def transform_dir_txt(file_dir):
@@ -281,7 +244,8 @@ def transform_dir_txt(file_dir):
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-myVars= ["mT_jj", "weight", "jet1_pt"]# if this is empty
+#myVars= ["mT_jj", "weight", "jet1_pt"]# if this is empty
+myVars= ["mT_jj", "weight", "jet1_pt", "jet2_Width"]# if this is empty
 #myVars= ["mT_jj", "weight"]# if this is empty
 pfn_model = 'PFNv6'
 #vae_model = 'ANTELOPE'
@@ -290,7 +254,8 @@ vae_model = 'vANTELOPE'
 ## Load testing data
 sig_events =-1
 #bkg_events =10
-bkg_events = -1
+bkg_events =100000 
+#bkg_events = -1
 bool_weight=False
 if bool_weight:weight_tag='ws'
 else:weight_tag='nws'
@@ -312,7 +277,8 @@ track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_ph
 jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"] # order is important in apply_JetScalingRotation
 
 # change
-file_dir='10_08_23_04_08'
+file_dir='12_02_23_09_19' # trained with data and signal injection (515503)
+#file_dir='10_08_23_04_08' # trained with data
 #file_dir='09_26_23_10_38'
 bkg_file_dir='v9p2'
 sig_file_dir='v9p2'
@@ -338,6 +304,9 @@ dsids=list(range(515487,515527))
 corrupt_files=[515508, 515511,515493]
 dsids=[x for x in dsids if x not in corrupt_files ]
 file_ls=[]
+
+#dsids=[515503]
+
 for dsid in dsids:
   file_ls.append("user.ebusch."+str(dsid)+".root")
   #file_ls.append("skim3.user.ebusch."+str(dsid)+".root")
@@ -360,13 +329,11 @@ bkg_read_dir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt(bkg_file_di
 Here we evaluate on signal files 
 """
 '''
+'''
 for dsid in dsids:
   mass=Label(str(dsid)).get_m(bool_num=True)
   rinv=Label(str(dsid)).get_rinv(bool_num=True)
   print(dsid, mass, rinv)
-sys.exit()
-'''
-'''
 for fl in file_ls:
   dsid=fl.split('.')[-2]
   print('*'*30)
@@ -381,7 +348,8 @@ for fl in file_ls:
   if  os.path.exists(h5path): # and (dsid !=515429):
     with h5py.File(h5path,"r") as f:
       dset = f.get('data')[:]
-  else:    
+  else:   
+    print(dsid, 'here')
     phi_bkg, pred_phi_bkg, mT_bkg,extraVars, dsid, h5path, vae_model, bool_transformed, vae, plot_dir, file_dir =  call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=fl,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path,bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir=sig_read_dir, file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
     rec_bkg_each=write_hdf5(phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg, extraVars=extraVars, dsid=dsid, h5path= h5path, vae_model=vae_model, bool_transformed=bool_transformed, vae=vae, plot_dir=plot_dir, file_dir=file_dir)
   #Here you can add a column to a hdf5 file that was already processed and has new columns  
@@ -390,26 +358,30 @@ for fl in file_ls:
 """
 Here we evaluate on background files 
 """
-'''
+sys.exit() 
 def list_files(ls):
   ls=sorted(ls)
   min_ls=min(ls)
   max_ls=max(ls)
   assert ls== list(set(range(min_ls, max_ls+1))), "a missing integer between the minimum and the maximum element"
   return f'{min_ls}-{max_ls}' 
-#bkg_file="user.ebusch.dataAll.root"
-bkg_file="skim0.user.ebusch.bkgAll.root"
-#bkg_file="user.ebusch.515487.root"
+#bkg_file="user.ebusch.515503.root"
+bkg_file="user.ebusch.dataAll.root"
+#bkg_file="skim0.user.ebusch.bkgAll.root"
+#bkg_file=`"user.ebusch.515487.root"
 #bkg_file="skim0.user.ebusch.QCDskim.root"
 tag= f'{pfn_model}_2jAvg_MM_{weight_tag}'
 dsid=bkg_file.split('.')[-2]
-#h5path=applydir+'/'+'hdf5_orig'+'/'+f'{bkg_file_prefix}{dsid}_log10'+".hdf5" 
-h5path=applydir+'/'+'hdf5_orig'+'/'+f'{bkg_file_prefix}{dsid}_log10_0-67'+".hdf5" 
+h5path=applydir+'/'+'hdf5_orig'+'/'+f'{bkg_file_prefix}{dsid}_log10'+".hdf5" 
+#h5path=applydir+'/'+'hdf5_orig'+'/'+f'{bkg_file_prefix}{dsid}_log10_0-67'+".hdf5" 
 #h5path=applydir+'/'+f'{bkg_file_prefix}{dsid}_log10'+".hdf5" 
-output_h5path=applydir+'/'+'hdf5_jet2_width'+'/'+f'{bkg_file_prefix}{dsid}_log10_0-67_jet2_width'+".hdf5" 
+output_h5path=applydir+'/'+'hdf5_jet2_width'+'/'+f'{bkg_file_prefix}{dsid}_log10_jet2_width'+".hdf5" 
+#output_h5path=applydir+'/'+'hdf5_jet2_width'+'/'+f'{bkg_file_prefix}{dsid}_log10_0-67_jet2_width'+".hdf5" 
 #h5path=applydir+'/'+"v8p1_"+str(dsid)+".hdf5"
 cprint(h5path, 'magenta')
-"""
+
+bool_select_all=False
+#'''
 if  os.path.exists(h5path):
   with h5py.File(h5path,"r") as f:
     dset = f.get('data')[:]
@@ -418,14 +390,15 @@ if  os.path.exists(h5path):
   new_weight=dset['weight'] 
   plot_single_variable([new_pt],h_names= [bkg_file],weights_ls=[new_pt], tag_title= f'leading jet pT  {str(dsid)}', plot_dir=applydir+'/plots_dsid/',logy=True, tag_file='new_jet1_pt_'+str(dsid), bool_weight=bool_weight)
 else:
-  #phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model, bool_transformed, vae, plot_dir, file_dir =  call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir=bkg_read_dir,file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn)
+  phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model, bool_transformed, vae, plot_dir, file_dir =  call_functions(bkg_events=bkg_events, tag=tag, bool_weight=bool_weight, bkg_file=bkg_file,extraVars=myVars, dsid=dsid,applydir=applydir, h5path=h5path, bool_pt=bool_pt, max_track=max_track, h5_dir=h5_dir, read_dir=bkg_read_dir,file_dir=file_dir,pfn_model=pfn_model, vae_model=vae_model, bool_no_scaling=bool_no_scaling, bool_transformed=bool_transformed, arch_dir_pfn=arch_dir_pfn, bool_select_all=bool_select_all)
   # initialize rec_bkg
   # decide how many loops
   # loop thru different QCD files
   n_events=100000
 #  n_file = phi_bkg.shape[0]//n_events +1
 #  n_file=47
-  n_file=68
+  n_file=13
+  #n_file=68
   ls_files=[]
   for subset in range(0,n_file):
   #for i in range(0,73):
@@ -435,7 +408,6 @@ else:
       with h5py.File(h5path_subset,"r") as f:
         rec_bkg_each = f.get('data')[:]
 
-      ls_files.append(subset)
 #    else: break # if the subset hdf5 doesn't exist, then break right away 
     
     else:
@@ -448,6 +420,7 @@ else:
     else:
       rec_bkg= np.append(rec_bkg, np.array(rec_bkg_each , dtype=rec_bkg_each.dtype))
 
+    ls_files.append(subset)
   #ds_dt = np.dtype({'names':newVars,'formats':[(float)]*len(newVars)})
   #rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
   ls_files=list_files(ls_files)
@@ -455,15 +428,13 @@ else:
   combined_h5path=f"{h5path.split('.hdf5')[-2]}_{ls_files}.hdf5"
   with h5py.File(combined_h5path,"w") as f:
     dset = f.create_dataset("data",data=rec_bkg[:,None]) # has to have [:, None] to be compatible with the original hdf5 format
-"""
-"""
-Here you can add a column to a hdf5 file that was already processed and has new columns  
-""" 
+
 '''
+Here you can add a column to a hdf5 file that was already processed and has new columns  
 add_column(input_h5path=h5path, output_h5path=output_h5path, vae_model=vae_model, dsid=dsid, columns=['jet2_Width'], 
      bkg_events=bkg_events, bkg_file=bkg_file,bool_weight=bool_weight, extraVars=myVars, applydir=applydir, max_track=max_track, bool_pt=bool_pt, h5_dir=h5_dir, read_dir=bkg_read_dir)
+sys.exit()
 '''
-
 title=f'track={max_track}'
 key='multi_kl_transformed_log10_sig'
 keys=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
@@ -474,24 +445,30 @@ score_cut_dict={}
 #score_cut_dict['09_27_23_01_32']={'multi_kl_transformed_log10_sig':9.37e-1, 'multi_mse_transformed_log10_sig':6.54e-1, 'multi_reco_transformed_log10_sig': 9.45e-1}
 score_cut_dict['09_26_23_10_38']={'multi_kl_transformed_log10_sig':1.06e-3, 'multi_mse_transformed_log10_sig':3.45e-2}
 score_cut_dict['09_27_23_01_32']={'multi_kl_transformed_log10_sig':0.72, 'multi_mse_transformed_log10_sig':0.573}
-score_cut_dict['10_08_23_04_08']={'multi_kl_transformed_log10_sig':0.72, 'multi_mse_transformed_log10_sig':0.573, 'multi_reco_transformed_log10_sig':0.73}
+score_cut_dict['10_08_23_04_08']={'multi_kl_transformed_log10_sig':0.72, 'multi_mse_transformed_log10_sig':0.573, 'multi_reco_transformed_log10_sig':0.7}
+score_cut_dict['12_02_23_09_19']={'multi_kl_transformed_log10_sig':0.72, 'multi_mse_transformed_log10_sig':0.573, 'multi_reco_transformed_log10_sig':0.7}
 
 
-keys=list(score_cut_dict['10_08_23_04_08'].keys())
+keys=list(score_cut_dict[file_dir].keys())
 cprint(keys, 'red')
 #key='multi_kl_transformed'
 #score=getSignalSensitivityScore(bkg_loss, sig_loss)
 #print("95 percentile score = ",score)
 #grid_s_sqrt_b( bkg_scale=5, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix, title=title, all_dir=all_dir,cms=False, key=key)
-'''
-bkg_file='dataALL_log10_0-44.hdf5'
+#bkg_file='bkgAll_log10_0-67_jet2_width.hdf5'
+#bkg_file='dataAll_log10_jet2_width.hdf5'
+bkg_file='dataAll_log10_0-12.hdf5'
+
+keys=['multi_reco_transformed_log10_sig']
 for key in keys:
   print(file_dir,key)
+  #check_yield( title='Background', all_dir=all_dir, file_prefix=bkg_file_prefix, filename=bkg_file,key=key)
+#  correlation_plots( title='Background', all_dir=all_dir, file_prefix=bkg_file_prefix, filename=bkg_file,key=key)
   grid_scan(title, all_dir=all_dir, sig_file_prefix=sig_file_prefix,bkg_file_prefix=sig_file_prefix, bkg_file=bkg_file,key=key)
   grid_s_sqrt_b(score_cut_dict[file_dir][key], bkg_scale=5, sig_file_prefix=sig_file_prefix,bkg_file_prefix=bkg_file_prefix,bkg_file=bkg_file, title=title, all_dir=all_dir,cms=False, key=key)
 #sys.stdout =stdoutOrigin
+print('finished correlation plots')
 sys.exit()
-'''
 vae_min_dict, vae_max_dict, pfn_min_dict,pfn_max_dict={},{},{},{}
 vae_min_dict['09_26_23_10_38']= {'mse': -12.634254306189314, 'multi_reco':-12.545995242335483, 'multi_kl': -20.211301490367624 , 'multi_mse': -12.542977457162644}
 vae_max_dict['09_26_23_10_38']= {'mse': -3.456886217152505, 'multi_reco':-3.4590470421545785, 'multi_kl':-9.330598758710815, 'multi_mse': -3.458533554054478}
@@ -500,9 +477,6 @@ vae_max_dict['09_27_23_01_32']= {'mse': 4.051665855814887 ,'multi_reco': 4.14657
 vae_min_dict['09_27_23_01_32']= {'mse': -3.2118662852702515,'multi_reco':-3.166914871440587, 'multi_kl':0.9695256492112576, 'multi_mse':1.0634667425682687 }
 dsids= ['515502']
 
-"""
-
-#"""
 
 #dsids= ['515502', '515499']
 dsids= [ '515499', '515502', '515515', '515518']

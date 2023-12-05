@@ -11,6 +11,7 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 import pandas as pd
 import sys
+from scipy.stats import pearsonr
 # tag = "pfnEvalTest"      
 #tag = "PFN_2jAvg_MM"
 #plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
@@ -216,6 +217,8 @@ def make_roc(fpr,tpr,auc, tag_file="", tag_title="", plot_dir="", nevents=np.nan
   plt.title("SVJ "+" ROC" +f' {tag_title}')
   plt.legend(loc='upper right')
   plt.tight_layout()
+  plt.show()
+  
   plt.savefig(plot_dir+'roc_'+tag_file+'.png')
   plt.clf()
   print("Saved ROC curve for ", tag_file)
@@ -371,6 +374,23 @@ def plot_score(bkg_score, sig_score, remove_outliers=True, xlog=True, tag_file="
   plt.clf()
   print("Saved score distribution for", tag_file)
 
+def correlation_plot(data1, data2, data1_name, data2_name, bin_dict, title, tag_file, plot_dir):
+  corr, _ = pearsonr(data1, data2)
+  print("Pearson correlation coeff: ", corr)
+
+  fig, ax = plt.subplots()
+  binsx = bin_dict[data1_name]
+  binsy = bin_dict[data2_name]
+  h = ax.hist2d(data1,data2,bins=[binsx,binsy],norm=colors.LogNorm())
+  fig.colorbar(h[3], ax=ax)
+  ax.set_xlabel(data1_name)
+  ax.set_ylabel(data2_name)
+  ax.set_title(f'{title}: Corr = {corr:.2f}')
+  plot_title=plot_dir+'corr_'+data1_name+'_'+data2_name+'_'+tag_file+'.png'
+  plt.savefig(plot_title)
+  plt.clf()
+  print("Saved 2D plot of", data1_name, data2_name, 'in ', plot_title)
+
 def plot_phi(phis, tag_file="", tag_title="",  plot_dir=""):
 #def plot_phi(phis,name,extra_tag, tag_file="", tag_title="",  plot_dir=""):
   nphis = phis.shape[1]
@@ -457,7 +477,7 @@ def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, 
   print("Saved plot",tag_title, tag_file)
 
 
-def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir="", bool_ratio=True, hists_cut=[], cut_ls=[], cut_operator=[], method_cut=[], bin_min=-999,bin_max=-999):
+def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir="", bool_ratio=True, hists_cut=[], cut_ls=[], cut_operator=[], method_cut=[], bin_min=-999,bin_max=-999, bool_plot=True):
 #def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir="", bool_ratio=True, hists_cut=[], cut_ls=[], cut_operator=[], method_cut='', bin_min=-999,bin_max=-999):
   hists_cut, cut_ls, cut_operator, method_cut= np.array(hists_cut), np.array(cut_ls), np.array(cut_operator), np.array(method_cut) 
   if bool_ratio:
@@ -483,6 +503,7 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
   cut0_idx=0
   len0=len(hists[cut0_idx])
   ratio_all=np.array([]) 
+  text=''
   for data,name,weights,i in zip(hists,h_names,weights_ls, range(len(hists))):
     label=''
     cut_arr_all=[]
@@ -504,7 +525,7 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
         else: label+=f' {method_cut[i,j]}{cut_operator_str}{cut_ls[i,j]}'
 
       cut_arr_all=np.array(cut_arr_all)
-      cut_arr=np.all(cut_arr_all, axis = 0)
+      cut_arr=np.all(cut_arr_all, axis = 0) # if cut_arr_all= [[True, False, True],[True, True, False]] -> cut_arr = [True, False, False]
       '''
       cprint(cut_arr, 'red')
       cprint(cut_arr.shape,'red')
@@ -520,11 +541,20 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
     #y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len_ls[i],1)*100}% left, cut={name}')
 
 
+    y_np,_=np.histogram(data,weights=weights)
+    # weighted sum
+    if cut_ls ==[]:label=f'{name} (NE={round(np.sum(y_np),2)})'
+    else: label+=f' {name} (NE={round(np.sum(y_np),2)})'
+    '''
     if cut_ls ==[]:label=f'{name} (NE={len(data)})'
     else: label+=f' {name} (NE={len(data)})'
+    '''
     #if cut_ls!=[]: label+=f', {method_cut}{cut_operator_str[i]}{cut_ls[i]}'
     if bool_ratio:y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=label)
     else: y,_, _=axs.hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=label)
+    text_each=f'weighted NE={np.sum(y_np)}, unweighted NE={len(data)}, {label}' # notice using y_np instead of y b/c otherwise bool_ratio makes numbers look like ratios
+    text+=f'{text_each}\n'
+
     #y,_, _=axs[0].hist(data, bins=bins, weights=weights,density=density_top,histtype='step', alpha=0.7, label=f'NE={len(data)}, {round(len(data)/len0*100,1)}% left, cut={name}')
 #    y_unnorm,_, _=axs[0].hist(data, bins=bins, density=False,histtype='step', alpha=0)
 #    print(i, len(bins), len(y), bins, y) 
@@ -555,12 +585,12 @@ def plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True
     axs.set_title(title)
   plt.tick_params(axis='y', which='minor') 
   plt.grid()
-#  plt.show()
-  if bool_ratio:  plt.savefig(plot_dir+'hist_ratio_'+title.replace(" ","")+'.png')
-  else:  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
+  if bool_plot:
+    if bool_ratio:  plt.savefig(plot_dir+'hist_ratio_'+title.replace(" ","")+'.png')
+    else:  plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'.png')
   plt.clf()
   print("Saved plot",title, plot_dir)
-
+  return text
 def plot_ratio(hists, weights, h_names, title, logy=False):
   colors = ['black', 'darkblue', 'deepskyblue', 'firebrick', 'orange']
 
