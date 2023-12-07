@@ -217,7 +217,6 @@ def make_roc(fpr,tpr,auc, tag_file="", tag_title="", plot_dir="", nevents=np.nan
   plt.title("SVJ "+" ROC" +f' {tag_title}')
   plt.legend(loc='upper right')
   plt.tight_layout()
-  plt.show()
   
   plt.savefig(plot_dir+'roc_'+tag_file+'.png')
   plt.clf()

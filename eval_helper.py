@@ -357,7 +357,6 @@ def get_multi_loss_each(model_svj, x_test, step_size=1):
 #    step_size = 1
     for i in range(0,nevents, step_size):
         xt = x_test[i:i+step_size]
-      
         # NOTE - unclear why they are printed in this order, but it seems to be the case
         x_loss,x_reco,x_kl = model_svj.evaluate(xt, batch_size = step_size, verbose=0)
       

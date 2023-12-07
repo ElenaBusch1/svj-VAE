@@ -29,7 +29,7 @@ def extract_tag(filename):
   return tag
 #h5_dir, max_track
 # ---------- Load graph model ----------
-def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, applydir,h5path, bool_pt, max_track, h5_dir,read_dir,pfn_model,file_dir,vae_model='', bool_no_scaling=False, bool_transformed=True, arch_dir_pfn='', bool_float64=False):
+def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, applydir,h5path, bool_pt, max_track, h5_dir,read_dir,pfn_model,file_dir,vae_model='', bool_no_scaling=False, bool_transformed=True, arch_dir_pfn='', bool_float64=False, bool_select_all=True):
   cprint(f'{extraVars=}, {pfn_model=}, {vae_model=}', 'red')
   print(arch_dir_pfn+pfn_model+'_graph_arch')
   graph = keras.models.load_model(arch_dir_pfn+pfn_model+'_graph_arch')
@@ -71,7 +71,7 @@ def call_functions(bkg_events, tag, bool_weight, bkg_file,extraVars, dsid, apply
   bkg2, mT_bkg, _, _, _, _ = getTwoJetSystem(nevents=bkg_events,input_file=bkg_file,
   #bkg2, mT_bkg, bkg_sel, jet_bkg, _, _ = getTwoJetSystem(nevents=bkg_events,input_file=bkg_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
-      bool_weight=bool_weight,  extraVars=extraVars, plot_dir=plot_dir,seed=seed,max_track=max_track, bool_pt=bool_pt, h5_dir=h5_dir, bool_select_all=True, read_dir=read_dir)
+      bool_weight=bool_weight,  extraVars=extraVars, plot_dir=plot_dir,seed=seed,max_track=max_track, bool_pt=bool_pt, h5_dir=h5_dir, bool_select_all=bool_select_all, read_dir=read_dir)
 
   print(mT_bkg.shape)
   scaler = load(arch_dir_pfn+pfn_model+'_scaler.bin')
@@ -129,11 +129,8 @@ def write_hdf5(phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model
     bkg_loss={}
     # ## AE loss
     bkg_loss['mse'] = np.array(keras.losses.mse(phi_bkg, pred_phi_bkg))
-    bkg_loss['multi_reco'], bkg_loss['multi_kl'],  bkg_loss['multi_mse']=get_multi_loss_each(vae, phi_bkg, step_size=100)
-    print('get multi loss each')
-    print(bkg_loss['multi_reco']) 
-    print(bkg_loss['multi_reco'].shape) 
-    sys.exit()
+    bkg_loss['multi_reco'], bkg_loss['multi_kl'],  bkg_loss['multi_mse']=get_multi_loss_each(vae, phi_bkg)
+    print(bkg_loss['multi_reco'], bkg_loss['multi_reco'].shape) 
     methods=['mse', 'multi_reco', 'multi_kl', 'multi_mse']
     new_methods=[]
     if bool_transformed:
@@ -254,8 +251,8 @@ vae_model = 'vANTELOPE'
 ## Load testing data
 sig_events =-1
 #bkg_events =10
-bkg_events =100000 
-#bkg_events = -1
+#bkg_events =100000 
+bkg_events = -1
 bool_weight=False
 if bool_weight:weight_tag='ws'
 else:weight_tag='nws'
@@ -277,7 +274,8 @@ track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_ph
 jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"] # order is important in apply_JetScalingRotation
 
 # change
-file_dir='12_02_23_09_19' # trained with data and signal injection (515503)
+file_dir='12_05_23_13_05' # trained with data and signal injection (515503) 10%
+#file_dir='12_02_23_09_19' # trained with data and signal injection (515503) 1%
 #file_dir='10_08_23_04_08' # trained with data
 #file_dir='09_26_23_10_38'
 bkg_file_dir='v9p2'
@@ -329,7 +327,6 @@ bkg_read_dir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt(bkg_file_di
 Here we evaluate on signal files 
 """
 '''
-'''
 for dsid in dsids:
   mass=Label(str(dsid)).get_m(bool_num=True)
   rinv=Label(str(dsid)).get_rinv(bool_num=True)
@@ -355,10 +352,10 @@ for fl in file_ls:
   #Here you can add a column to a hdf5 file that was already processed and has new columns  
 #  add_column(input_h5path=h5path, output_h5path=output_h5path, vae_model=vae_model, dsid=dsid) 
   #""" 
+'''
 """
 Here we evaluate on background files 
 """
-sys.exit() 
 def list_files(ls):
   ls=sorted(ls)
   min_ls=min(ls)
@@ -380,8 +377,11 @@ output_h5path=applydir+'/'+'hdf5_jet2_width'+'/'+f'{bkg_file_prefix}{dsid}_log10
 #h5path=applydir+'/'+"v8p1_"+str(dsid)+".hdf5"
 cprint(h5path, 'magenta')
 
-bool_select_all=False
+#bool_select_all=False
+bool_select_all=True
 #'''
+'''
+'''
 if  os.path.exists(h5path):
   with h5py.File(h5path,"r") as f:
     dset = f.get('data')[:]
@@ -397,6 +397,7 @@ else:
   n_events=100000
 #  n_file = phi_bkg.shape[0]//n_events +1
 #  n_file=47
+  #n_file=1
   n_file=13
   #n_file=68
   ls_files=[]
@@ -447,6 +448,7 @@ score_cut_dict['09_26_23_10_38']={'multi_kl_transformed_log10_sig':1.06e-3, 'mul
 score_cut_dict['09_27_23_01_32']={'multi_kl_transformed_log10_sig':0.72, 'multi_mse_transformed_log10_sig':0.573}
 score_cut_dict['10_08_23_04_08']={'multi_kl_transformed_log10_sig':0.72, 'multi_mse_transformed_log10_sig':0.573, 'multi_reco_transformed_log10_sig':0.7}
 score_cut_dict['12_02_23_09_19']={'multi_kl_transformed_log10_sig':0.72, 'multi_mse_transformed_log10_sig':0.573, 'multi_reco_transformed_log10_sig':0.7}
+score_cut_dict[file_dir]={'multi_kl_transformed_log10_sig':0.72, 'multi_mse_transformed_log10_sig':0.573, 'multi_reco_transformed_log10_sig':0.7}
 
 
 keys=list(score_cut_dict[file_dir].keys())
@@ -458,6 +460,7 @@ cprint(keys, 'red')
 #bkg_file='bkgAll_log10_0-67_jet2_width.hdf5'
 #bkg_file='dataAll_log10_jet2_width.hdf5'
 bkg_file='dataAll_log10_0-12.hdf5'
+#bkg_file='dataAll_log10_0-12.hdf5'
 
 keys=['multi_reco_transformed_log10_sig']
 for key in keys:
