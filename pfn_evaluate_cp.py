@@ -149,20 +149,15 @@ class Param_evaluate(Param):
       encoder = keras.models.load_model(arch_dir+self.vae_model+'_encoder_arch')
       decoder = keras.models.load_model(arch_dir+self.vae_model+'_decoder_arch')
       vae = VAE(encoder,decoder, kl_loss_scalar=1)
-      
       vae.get_layer('encoder').load_weights(arch_dir+self.vae_model+'_encoder_weights.h5')
       vae.get_layer('decoder').load_weights(arch_dir+self.vae_model+'_decoder_weights.h5')
-      
       vae.compile(optimizer=keras.optimizers.Adam())
    
-  ## Load history
-  # with open(arch_dir+ae_model+'_history.json', 'r') as f:
-  #     h = json.load(f)
-  # print(h, type(h))
-  
+    ## Load history
+    # with open(arch_dir+ae_model+'_history.json', 'r') as f:
+    #     h = json.load(f)
+    # print(h, type(h))
     print ('Loaded model')
-    
-  
     cprint(f'{self.extraVars=}', 'magenta')
     bkg2, mT_bkg, _, _, _, _ = getTwoJetSystem(nevents=nevents,input_file=input_file,
         track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
@@ -185,8 +180,8 @@ class Param_evaluate(Param):
   
     pfn_min_dict['09_26_23_10_38']= 0
     pfn_max_dict['09_26_23_10_38']= 204.44198608398438  # got from Final Max in /nevis/katya01/data/users/kpark/svj-vae/results/grid_sept26/09_26_23_10_38/stdout.txt
-  # each event has a pfn score
-  ## Classifier loss
+    # each event has a pfn score
+    ## Classifier loss
     if self.vae_model =='': # if PFN 
       pred_phi_bkg = classifier.predict(phi_bkg)
       bkg_loss = pred_phi_bkg[:,1]
@@ -279,7 +274,7 @@ class Param_evaluate(Param):
       dset = f.create_dataset('data',data=rec_bkg)
     return rec_bkg
 
-  def add_column(self,dsid,outputfolder, newfolder, columns, nevents, input_file, bool_weight, readdir, bool_split, filetag,prefix):
+  def add_column(self,dsid,outputfolder, newfolder, columns, nevents, input_file, bool_weight, readdir, bool_split, filetag,prefix, bool_select_all):
     if filetag!='':
        if filetag[0]!='_': filetag='_'+filetag # if filetag is not an empty string and doesn't contain '_' in the beginning, add it
     if bool_split:
@@ -291,45 +286,43 @@ class Param_evaluate(Param):
 
     bkg2, mT_bkg, _, _, _, _ = getTwoJetSystem(nevents=nevents,input_file=input_file,
         track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
-        bool_weight=bool_weight,  extraVars=self.extraVars+columns, plot_dir=self.plot_dir,seed=seed,max_track=self.max_track, bool_pt=self.bool_pt, h5_dir=self.h5_dir, bool_select_all=True, readdir=readdir)
+        bool_weight=bool_weight,  extraVars=self.extraVars+columns, plot_dir=self.plot_dir,seed=seed,max_track=self.max_track, bool_pt=self.bool_pt, h5_dir=self.h5_dir, bool_select_all=bool_select_all, readdir=readdir)
    
     cprint(mT_bkg.shape, 'yellow') 
     with h5py.File(inputpath,'r') as f:
       bkg_loss = f.get('data')[:]
 
     # check if the jet1_pt from this hdf5 and the jet1_pt from inputpath are the same
-    cprint(f'{(bkg_loss['mT_jj'].flatten()==mT_bkg[:,0])=}', 'red')
-    print(f'{bkg_loss['mT_jj'].flatten()},{mT_bkg[:,0]=}')
+    cprint(f'{(bkg_loss["mT_jj"].flatten()==mT_bkg[:,0])=}, {bkg_loss["mT_jj"].flatten()}, {mT_bkg[:,0]=}', 'red')
     print(f'{mT_bkg[:,0][:,None].shape=}, {bkg_loss.shape=}')
     bkg_loss_names=list(bkg_loss.dtype.names)
     for i, key in enumerate(bkg_loss_names):
       if i==0:
         new_bkg=bkg_loss[key]
       else:  new_bkg=np.concatenate((new_bkg,bkg_loss[key]), axis=1)
-    print(f'{new_bkg.shape=},{mT_bkg.shape=},{mT_bkg[:,0].shape=}, {mT_bkg[:,0][:,None].shape=},{bkg_loss_names}, {columns}')
-    print(new_bkg[:,-2])
+    print(f'{new_bkg.shape=},{mT_bkg.shape=},{mT_bkg[:,0].shape=}, {mT_bkg[:,0][:,None].shape=},{bkg_loss_names}, {columns}, {new_bkg[:,-2]=}')
     for i, col in enumerate(columns): # i was adding mT_jj as jet2_Width
       new_bkg=np.concatenate((new_bkg,mT_bkg[:,i+len(self.extraVars)][:,None]), axis=1) 
    # plot_single_variable_ratio([new_bkg[:,-1]],h_names= [input_file],weights_ls=[new_bkg[:,-3]], title= f'{self.extraVars[-1]} {str(dsid)} (weighted)', plot_dir=self.plot_dir,logy=True, bool_ratio=False)
     all_keys=bkg_loss_names+columns
-    print(all_keys)
     ds_dt = np.dtype({'names':all_keys,'formats':[(float)]*len(all_keys)})
     save_bkg = np.rec.array(new_bkg, dtype=ds_dt)
     rec_bkg= save_bkg
       # it is important that the data from the hdf5 file doesn't get expanded to a new shape ( no calling with [:, None] to be compatible with the new column datashapes)
-   
-    print(f'{new_bkg.shape=}, {save_bkg.shape=}, {rec_bkg.shape=}', 'yellow')
-    print(rec_bkg.dtype.itemsize)
+    print(f'{all_keys},{new_bkg.shape=}, {save_bkg.shape=}, {rec_bkg.shape=}, {rec_bkg.dtype.itemsize=}', 'yellow')
     with h5py.File(outputpath,'w') as f:
       dset = f.create_dataset('data',data=rec_bkg)
-    print(outputpath, 'make sure this is jet2_Width', self.extraVars[-1])
-    plot_single_variable([mT_bkg[:,-1]],h_names= [input_file],weights_ls=[mT_bkg[:,1]], tag_title= f'{self.extraVars[-1]} {str(dsid)} (weighted)', plot_dir=self.plot_dir,logy=True, tag_file=f'{self.extraVars[-1]}_'+str(dsid), bool_weight=bool_weight)
+    print(f'{outputpath=}', 'make sure this is jet2_Width', f'{self.extraVars[-1]}')
+    plot_single_variable([rec_bkg['mT_jj']],h_names= [bkg_file],weights_ls=[np.ones(rec_bkg['mT_jj'].shape)], tag_title= f'mT_jj {str(dsid)} (weighted)', plot_dir=plot_dir,logy=True, tag_file=f'mT_jj_'+str(dsid), bool_weight=bool_weight, bool_show=True) 
+    plot_single_variable([rec_bkg['jet1_pt']],h_names= [bkg_file],weights_ls=[np.ones(rec_bkg['jet1_pt'].shape)], tag_title= f'jet1_pt {str(dsid)} (weighted)', plot_dir=plot_dir,logy=True, tag_file=f'jet1_pt_'+str(dsid), bool_weight=bool_weight, bool_show=True) 
+#    plot_single_variable([mT_bkg[:,-1]],h_names= [input_file],weights_ls=[mT_bkg[:,1]], tag_title= f'{self.extraVars[-1]} {str(dsid)} (weighted)', plot_dir=self.plot_dir,logy=True, tag_file=f'{self.extraVars[-1]}_'+str(dsid), bool_weight=bool_weight)
     return rec_bkg
 
   """
   Here we evaluate on signal files 
   """
   def eval_sig(self, bool_split=False, columns= ['jet2_Width'], outputfolder='/hdf5_orig/'):
+    #bool_select_all= True for most of the times
     for fl in file_ls:
       dsid=fl.split('.')[-2]
       print('*'*30)
@@ -340,14 +333,14 @@ class Param_evaluate(Param):
           dset = f.get('data')[:]
       else:   
         phi_bkg, pred_phi_bkg, mT_bkg, vae =  call_functions(nevents=self.sig_nevents,  bool_weight=self.bool_weight, input_file=fl,readdir=self.sig_readdir, bool_select_all=self.bool_select_all)
-        rec_bkg_each=write_hdf5(dsid=dsid, phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,  vae=vae, plot_dir=plot_dir, bool_split=bool_split, prefix=self.sig_prefix)
+        rec_bkg_each=write_hdf5(dsid=dsid, phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,  vae=vae, prefix=self.sig_prefix, bool_split=bool_split, outputfolder=outputfolder)
        """
        Here you can add a column to a hdf5 file that was already processed and has new columns  
        """ 
        '''
         newfolder='/hdf5_jet2_width/'
         filetag='_jet2_width'
-        add_column(dsid=dsid,newfolder=newfolder, columns=columns, nevents=sig_nevents, input_file=input_file, bool_weight=self.bool_weight, readdir=self.sig_readdir, filetag=filetag, prefix=self.sig_prefix) 
+        add_column(dsid=dsid,newfolder=newfolder, columns=columns, nevents=self.sig_nevents, input_file=fl, bool_weight=self.bool_weight, readdir=self.sig_readdir,bool_split=bool_split, filetag=filetag, prefix=self.sig_prefix, bool_select_all=self.bool_select_all) 
        '''
   """
   Here we evaluate on background files 
@@ -416,14 +409,49 @@ class Param_evaluate(Param):
       outputdir=self.applydir+self.outputfolder # or choose newfolder if used add_columns()
 
       grid_scan(title, outputdir=outputdir, sig_prefix=self.sig_prefix,bkg_prefix=self.bkg_prefix, bkg_file=bkg_file,key=key)
-      grid_s_sqrt_b(score_cut_dict[self.filedir][key], outputdir=outputdir,bkg_scale=5, sig_prefix=self.sig_prefix,bkg_prefix=self.bkg_prefix,bkg_file=bkg_file, title=title, all_dir=all_dir,cms=False, key=key)
+      grid_s_sqrt_b(score_cut_dict[self.filedir][key], outputdir=outputdir,bkg_scale=5, sig_prefix=self.sig_prefix,bkg_prefix=self.bkg_prefix,bkg_file=bkg_file, title=title,cms=False, key=key)
 
 
       #score=getSignalSensitivityScore(bkg_loss, sig_loss)
       #print('95 percentile score = ',score)
 
     return
+  
+  def (method):
+    '''
+    filedir_ls=[]
+    read bkg files from filedir_ls
+    bkgpath for each
+    '''
+    hists_var={}
+    var_ls=[method, 'weight']
+    #var_ls=[method, 'mT_jj', 'jet2_Width', 'weight']
+    for filedir in filedir_ls:
+i#applydir
+# bkg_file_prefix
+      for dsid in dsids:
+        path=applydir+'/'+'hdf5_jet2_width'+'/'+f"{bkg_file_prefix}bkgAll_log10_0-67_jet2_width.hdf5"
+        with h5py.File(path,"r") as f:
+          data = f.get('data')[:]
 
+        # concatenate here
+      for var in var_ls:     
+        if var =='weight' and not( data['weight'].any()): # if it's weight,  
+          h=bkg_data['weight']
+          else: #if array contains only zeros
+            h=np.ones(bkg_data['weight'].shape)) 
+             
+        hists_var[var].append(h)
+
+    #plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir="", bool_ratio=True, hists_cut=[], cut_ls=[], cut_operator=[], method_cut=[], bin_min=-999,bin_max=-999, bool_plot=True)
+weight_ls?
+plot_dir?
+    var='multi_reco_transformed_log10_sig'
+    plot_single_variable_ratio([hs[var][0],hs[var][1],hs[var][2]],h_names=['(0%)', '(1%)', '(10%)'], weights_ls=[hs['weight'][0],hs['weight'][-1], hs['weight'][2]],plot_dir=plot_dir,logy=True, title= f'mT_jj_{method}_signal_injection', bool_ratio=True, bin_min=0.6, bin_max= 1)
+    '''
+    plot mT_jj for all/ CR/VR/SR 
+    plot_single_variable_ratio([hists_var['mT_jj'][-1],hists_var['mT_jj'][-1],hists_var['mT_jj'][-1], hists_var['mT_jj'][-1]],h_names=['(All)','(CR)', '(VR)', '(SR)'],weights_ls=[weight_ls[-1],weight_ls[-1], weight_ls[-1], weight_ls[-1]],plot_dir=plot_dir,logy=True, title= f'mT_jj_{method}_comparison_region', bool_ratio=True, hists_cut=[[hists_var['jet2_Width'][-1], hists_var[method][-1]],[hists_var['jet2_Width'][-1], hists_var[method][-1]],[ hists_var['jet2_Width'][-1], hists_var[method][-1]],[ hists_var['jet2_Width'][-1], hists_var[method][-1]]],cut_ls=[[0,0],[0.05, 0], [0.05, 0.7],[0.05, 0.7]], cut_operator = [[True, True],[False,True], [True,  False],[True, True]] , method_cut=[['jet2_Width', method],['jet2_Width', method], ['jet2_Width', method], ['jet2_Width', method]], bin_min=1000, bin_max= 5000) 
+    '''
 if __name__=="__main__":
  # change
 filedir='12_05_23_13_05' # trained with data and signal injection (515503) 10%

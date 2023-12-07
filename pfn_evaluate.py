@@ -236,7 +236,10 @@ def add_column(input_h5path, output_h5path, vae_model, dsid, columns,
   with h5py.File(output_h5path,"w") as f:
     dset = f.create_dataset("data",data=rec_bkg)
   print(output_h5path, 'make sure this is jet2_Width', extraVars[-1])
-  plot_single_variable([mT_bkg[:,-1]],h_names= [bkg_file],weights_ls=[mT_bkg[:,1]], tag_title= f'{extraVars[-1]} {str(dsid)} (weighted)', plot_dir=plot_dir,logy=True, tag_file=f'{extraVars[-1]}_'+str(dsid), bool_weight=bool_weight)
+  plot_single_variable([rec_bkg['jet2_Width']],h_names= [bkg_file],weights_ls=[np.ones(rec_bkg['jet2_Width'].shape)], tag_title= f'jet2_Width {str(dsid)} (weighted)', plot_dir=plot_dir,logy=True, tag_file=f'jet2_Width_'+str(dsid), bool_weight=bool_weight, bool_show=True)
+  plot_single_variable([rec_bkg['mT_jj']],h_names= [bkg_file],weights_ls=[np.ones(rec_bkg['mT_jj'].shape)], tag_title= f'mT_jj {str(dsid)} (weighted)', plot_dir=plot_dir,logy=True, tag_file=f'mT_jj_'+str(dsid), bool_weight=bool_weight, bool_show=True)
+  plot_single_variable([rec_bkg['jet1_pt']],h_names= [bkg_file],weights_ls=[np.ones(rec_bkg['jet1_pt'].shape)], tag_title= f'jet1_pt {str(dsid)} (weighted)', plot_dir=plot_dir,logy=True, tag_file=f'jet1_pt_'+str(dsid), bool_weight=bool_weight, bool_show=True)
+#  plot_single_variable([mT_bkg[:,-1]],h_names= [bkg_file],weights_ls=[mT_bkg[:,1]], tag_title= f'{extraVars[-1]} {str(dsid)} (weighted)', plot_dir=plot_dir,logy=True, tag_file=f'{extraVars[-1]}_'+str(dsid), bool_weight=bool_weight, bool_show=True)
   return rec_bkg
 
 def transform_dir_txt(file_dir):
@@ -247,8 +250,8 @@ def transform_dir_txt(file_dir):
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-#myVars= ["mT_jj", "weight", "jet1_pt"]# if this is empty
-myVars= ["mT_jj", "weight", "jet1_pt", "jet2_Width"]# if this is empty
+myVars= ["mT_jj", "weight", "jet1_pt"]# if this is empty
+#myVars= ["mT_jj", "weight", "jet1_pt", "jet2_Width"]# if this is empty
 #myVars= ["mT_jj", "weight"]# if this is empty
 pfn_model = 'PFNv6'
 #vae_model = 'ANTELOPE'
@@ -280,9 +283,9 @@ track_array1 = ["jet1_GhostTrack_pt", "jet1_GhostTrack_eta", "jet1_GhostTrack_ph
 jet_array = ["jet1_eta", "jet1_phi", "jet2_eta", "jet2_phi"] # order is important in apply_JetScalingRotation
 
 # change
-file_dir='12_05_23_13_05' # trained with data and signal injection (515503) 10%
+#file_dir='12_05_23_13_05' # trained with data and signal injection (515503) 10%
 #file_dir='12_02_23_09_19' # trained with data and signal injection (515503) 1%
-#file_dir='10_08_23_04_08' # trained with data
+file_dir='10_08_23_04_08' # trained with data
 #file_dir='09_26_23_10_38'
 bkg_file_dir='v9p2'
 sig_file_dir='v9p2'
@@ -387,7 +390,6 @@ cprint(h5path, 'magenta')
 bool_select_all=True
 #'''
 '''
-'''
 if  os.path.exists(h5path):
   with h5py.File(h5path,"r") as f:
     dset = f.get('data')[:]
@@ -436,13 +438,14 @@ else:
   combined_h5path=f"{h5path.split('.hdf5')[-2]}_{ls_files}.hdf5"
   with h5py.File(combined_h5path,"w") as f:
     dset = f.create_dataset("data",data=rec_bkg[:,None]) # has to have [:, None] to be compatible with the original hdf5 format
+'''
 
 '''
 Here you can add a column to a hdf5 file that was already processed and has new columns  
+'''
 add_column(input_h5path=h5path, output_h5path=output_h5path, vae_model=vae_model, dsid=dsid, columns=['jet2_Width'], 
      bkg_events=bkg_events, bkg_file=bkg_file,bool_weight=bool_weight, extraVars=myVars, applydir=applydir, max_track=max_track, bool_pt=bool_pt, h5_dir=h5_dir, read_dir=bkg_read_dir)
 sys.exit()
-'''
 title=f'track={max_track}'
 key='multi_kl_transformed_log10_sig'
 keys=['mse', 'multi_reco', 'multi_kl', 'multi_mse']

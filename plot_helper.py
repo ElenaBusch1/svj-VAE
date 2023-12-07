@@ -435,7 +435,7 @@ def zero_div(a,b, bool_print=False): # this avoid zero division error
     #e.g. a= [2 2 4], b= [1 0 3], result [2 0 1.333]
     return np.divide(a, b, out=np.zeros_like(a), where=mask) 
 
-def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, logy=False, len_ls=[],  plot_dir="", tag_file='', bool_weight=True):
+def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, logy=False, len_ls=[],  plot_dir="", tag_file='', bool_weight=True, bool_show=False):
   nbins=100
   #nbins=50
   hists_flat=np.concatenate(hists)
@@ -467,7 +467,7 @@ def plot_single_variable(hists, h_names, weights_ls,tag_title,density_top=True, 
   plt.legend(loc='lower right')
   #plt.legend(loc='upper right')
   plt.title(tag_title)
-
+  if bool_show: plt.show()
   plt.tight_layout()
   #plt.show()
   plt.savefig(plot_dir+'hist_'+tag_file+'_weighted'+'.png')
