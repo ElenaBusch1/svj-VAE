@@ -178,15 +178,21 @@ def write_hdf5(phi_bkg, pred_phi_bkg, mT_bkg, extraVars, dsid, h5path, vae_model
   if not os.path.exists(new_dir):
     os.mkdir(new_dir)
     print('made ', new_dir)
-  
+  ''' 
   if any(el  in h5path for el in ['data', 'Data', 'DATA', 'BKG', 'Bkg', 'bkg']) : 
-    cprint(h5path, 'green')
+    cprint(f'case 1{h5path=}, {dset_path=} before change', 'green')
+    dset_path=f"{h5path.split('.hdf5')[-2]}_{subset}.hdf5"
+    cprint(f'{h5path=}, {dset_path=} after change', 'green')
+  else:  
+    cprint(f'case 2{h5path=}, {dset_path=} before change', 'green')
     dset_path=f"{h5path.split('.hdf5')[-2]}.hdf5"
-  #if any(el  in h5path for el in ['data', 'Data', 'DATA', 'BKG', 'Bkg', 'bkg']) : dset_path=f"{h5path.split('.hdf5')[-2]}_{subset}.hdf5"
-  else:  dset_path=f"{h5path.split('.hdf5')[-2]}.hdf5"
+    cprint(f'{h5path=}, {dset_path=} after change', 'green')
   cprint(dset_path, 'green')
-  with h5py.File(dset_path,"w") as f:
+  ''' 
+  #with h5py.File(dset_path,"w") as f:
+  with h5py.File(h5path,"w") as f:
     dset = f.create_dataset("data",data=rec_bkg)
+  cprint(h5path, 'blue')
   return rec_bkg
 def add_column(input_h5path, output_h5path, vae_model, dsid, columns, 
      bkg_events, bkg_file, bool_weight, extraVars, applydir, max_track, bool_pt, h5_dir, read_dir):
@@ -405,6 +411,7 @@ else:
   #for i in range(0,73):
   # check if the file exists; if so, read
     h5path_subset=f"{h5path.split('.hdf5')[-2]}_{subset}.hdf5"
+    cprint(h5path_subset, 'green')
     if os.path.exists(h5path_subset):
       with h5py.File(h5path_subset,"r") as f:
         rec_bkg_each = f.get('data')[:]
@@ -413,7 +420,7 @@ else:
     
     else:
     # else, evaluate + write
-      rec_bkg_each=write_hdf5(phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,extraVars=extraVars, dsid=dsid, h5path= h5path, vae_model=vae_model, bool_transformed=bool_transformed, vae=vae, plot_dir=plot_dir, file_dir=file_dir,  subset=subset, n_events=n_events, bool_split=True)
+      rec_bkg_each=write_hdf5(phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,extraVars=extraVars, dsid=dsid, h5path= h5path_subset, vae_model=vae_model, bool_transformed=bool_transformed, vae=vae, plot_dir=plot_dir, file_dir=file_dir,  subset=subset, n_events=n_events, bool_split=True)
     # concatenate and write
     
     if subset==0:
