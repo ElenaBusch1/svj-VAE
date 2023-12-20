@@ -16,7 +16,7 @@ import sys
 from termcolor import cprint
 from helper import Label
 from antelope_h5eval import *
-
+import time
 ###########functions
 def list_files(ls):
   ls=sorted(ls)
@@ -40,7 +40,6 @@ def extract_tag(filename):
     tag=''+filename[3]
   else: tag=''+filename[2]
   return tag
-
 def make_dsid(bool_print=False):
   dsids=list(range(515487,515527))
   corrupt_files=[515508, 515511,515493]
@@ -68,13 +67,13 @@ jet_array = ['jet1_eta', 'jet1_phi', 'jet2_eta', 'jet2_phi'] # order is importan
 # my_variables= ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "jet1_NumTrkPt1000PV", "jet2_NumTrkPt1000PV", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "dphi_12", "weight", "mcEventWeight"]
 #sigmoid function -> get_decoder in models.py or actually this might be remembered from the architecture 
 #scaling
-class Param_evaluate(Param):
+class Param_evaluate():
   def __init__(self,
       filedir, # e.g. '12_05_23_13_05'
       extraVars= ['mT_jj', 'weight', 'jet1_pt', 'jet2_Width'],# if this is empty
       seed=0,   max_track=80, 
       bkg_version= 'v9p2', sig_version= 'v9p2', #'v8p1'
-      bkg_nevents=-1, sig_nevents=-1 
+      bkg_nevents=-1, sig_nevents=-1,
       bool_pt=False, bool_transformed=True, bool_weight=False,bool_no_scaling=True,bool_float64=False, 
       pfn_model='PFNv6', 
       arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/',
@@ -104,8 +103,8 @@ class Param_evaluate(Param):
       else:self.weight_tag='nws'
 
       '''
-      sig_readdir: directory of the file the root file is read from 
-      h5_dir: from reading sig_readdir or bkg_readdir, it creates h5 files of np arrays
+      sig_read_dir: directory of the file the root file is read from 
+      h5_dir: from reading sig_read_dir or bkg_read_dir, it creates h5 files of np arrays
       all_dir: has PFN or VAE model and plots
       arch_dir: subfolder of all_dir; has PFN or VAE model 
       apply_dir: subfolder of all_dir; all the new files/plots from this class will be saved here
@@ -113,26 +112,26 @@ class Param_evaluate(Param):
       '''
       
       if self.vae_model=='': # if evaluating PFN
-        sig_prefix=f'{self.sig_version}_'
-        bkg_prefix=f'{self.bkg_version}_'
+        self.sig_prefix=f'{self.sig_version}_'
+        self.bkg_prefix=f'{self.bkg_version}_'
       else:
-        sig_prefix=f'{self.sig_version}_{self.vae_model}_' # if evaluating ANTELOPE
-        bkg_prefix=f'{self.bkg_version}_{self.vae_model}_' # if evaluating ANTELOPE
-      self.sig_readdir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt(self.sig_version)+'/'
-      self.bkg_readdir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt(self.bkg_version)+'/' # also could be in microntuples folder
+        self.sig_prefix=f'{self.sig_version}_{self.vae_model}_' # if evaluating ANTELOPE
+        self.bkg_prefix=f'{self.bkg_version}_{self.vae_model}_' # if evaluating ANTELOPE
+      self.sig_read_dir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt(self.sig_version)+'/'
+      self.bkg_read_dir='/data/users/ebusch/SVJ/autoencoder/'+transform_dir_txt(self.bkg_version)+'/' # also could be in microntuples folder
 #      self.tag= f'{self.pfn_model}_2jAvg_MM_{self.weight_tag}'
       self.all_dir=f'/nevis/katya01/data/users/kpark/svj-vae/results/grid_sept26/{self.filedir}/' # change
-      self.arch_dir=self.all_dir+'architectures_saved/'
+      self.arch_dir_vae=self.all_dir+'architectures_saved/'
       self.applydir=self.all_dir+'applydir/'
       self.plot_dir=self.applydir+'/plots_dsid/' # applydir/
-      dir_ls =[self.applydir, self.plot_dir] # h5_dir, arch_dir, sig_readdir, bkg_readdir should already exist
+      dir_ls =[self.applydir, self.plot_dir] # h5_dir, arch_dir, sig_read_dir, bkg_read_dir should already exist
       for d in dir_ls:
         if not os.path.exists(d):
           os.mkdir(d)
           print(f'made a directory: {d}')
 
   
-  def call_functions(self,nevents, bool_weight, input_file,readdir, bool_select_all=True):
+  def call_functions(self,nevents, bool_weight, input_file,read_dir, bool_select_all,dsid):
     cprint(f'{self.extraVars=}, {self.pfn_model=}, {self.vae_model=}', 'red')
     print(self.arch_dir_pfn+self.pfn_model+'_graph_arch')
     graph = keras.models.load_model(self.arch_dir_pfn+self.pfn_model+'_graph_arch')
@@ -146,11 +145,11 @@ class Param_evaluate(Param):
   
     # ---------- Load graph model ----------
     if self.vae_model !='':
-      encoder = keras.models.load_model(arch_dir+self.vae_model+'_encoder_arch')
-      decoder = keras.models.load_model(arch_dir+self.vae_model+'_decoder_arch')
+      encoder = keras.models.load_model(self.arch_dir_vae+self.vae_model+'_encoder_arch')
+      decoder = keras.models.load_model(self.arch_dir_vae+self.vae_model+'_decoder_arch')
       vae = VAE(encoder,decoder, kl_loss_scalar=1)
-      vae.get_layer('encoder').load_weights(arch_dir+self.vae_model+'_encoder_weights.h5')
-      vae.get_layer('decoder').load_weights(arch_dir+self.vae_model+'_decoder_weights.h5')
+      vae.get_layer('encoder').load_weights(self.arch_dir_vae+self.vae_model+'_encoder_weights.h5')
+      vae.get_layer('decoder').load_weights(self.arch_dir_vae+self.vae_model+'_decoder_weights.h5')
       vae.compile(optimizer=keras.optimizers.Adam())
    
     ## Load history
@@ -161,7 +160,7 @@ class Param_evaluate(Param):
     cprint(f'{self.extraVars=}', 'magenta')
     bkg2, mT_bkg, _, _, _, _ = getTwoJetSystem(nevents=nevents,input_file=input_file,
         track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
-        bool_weight=bool_weight,  extraVars=self.extraVars, plot_dir=self.plot_dir,seed=seed,max_track=max_track, .bool_pt=self.bool_pt, h5_dir=self.h5_dir, bool_select_all=bool_select_all, readdir=readdir)
+        bool_weight=bool_weight,  extraVars=self.extraVars, plot_dir=self.plot_dir,seed=self.seed,max_track=self.max_track, bool_pt=self.bool_pt, h5_dir=self.h5_dir, bool_select_all=bool_select_all, read_dir=read_dir)
   
     print(mT_bkg.shape)
     scaler = load(self.arch_dir_pfn+self.pfn_model+'_scaler.bin')
@@ -209,8 +208,8 @@ class Param_evaluate(Param):
     else: outputpath=self.applydir+outputfolder+f'{prefix}{dsid}_log10'+'.hdf5' 
 
     # check if the file exists; if so, read
-    if os.path.exists(self.outputpath):
-      with h5py.File(self.outputpath,'r') as f:
+    if os.path.exists(outputpath):
+      with h5py.File(outputpath,'r') as f:
         rec_bkg_each = f.get('data')[:]
 
       return rec_bkg_each
@@ -264,7 +263,7 @@ class Param_evaluate(Param):
   
     ds_dt = np.dtype({'names':newVars,'formats':[(float)]*len(newVars)})
     rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
-    last_substring=f'{outputpath.split('/')[-1]}'
+    last_substring=f'{outputpath.split("/")[-1]}'
     new_dir=outputpath.replace(last_substring, '')
     if not os.path.exists(new_dir):
       os.mkdir(new_dir)
@@ -274,7 +273,7 @@ class Param_evaluate(Param):
       dset = f.create_dataset('data',data=rec_bkg)
     return rec_bkg
 
-  def add_column(self,dsid,outputfolder, newfolder, columns, nevents, input_file, bool_weight, readdir, bool_split, filetag,prefix, bool_select_all):
+  def add_column(self,dsid,outputfolder, newfolder, columns, nevents, input_file, bool_weight, read_dir, bool_split, filetag,prefix, bool_select_all):
     if filetag!='':
        if filetag[0]!='_': filetag='_'+filetag # if filetag is not an empty string and doesn't contain '_' in the beginning, add it
     if bool_split:
@@ -286,7 +285,7 @@ class Param_evaluate(Param):
 
     bkg2, mT_bkg, _, _, _, _ = getTwoJetSystem(nevents=nevents,input_file=input_file,
         track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
-        bool_weight=bool_weight,  extraVars=self.extraVars+columns, plot_dir=self.plot_dir,seed=seed,max_track=self.max_track, bool_pt=self.bool_pt, h5_dir=self.h5_dir, bool_select_all=bool_select_all, readdir=readdir)
+        bool_weight=bool_weight,  extraVars=self.extraVars+columns, plot_dir=self.plot_dir,seed=seed,max_track=self.max_track, bool_pt=self.bool_pt, h5_dir=self.h5_dir, bool_select_all=bool_select_all, read_dir=read_dir)
    
     cprint(mT_bkg.shape, 'yellow') 
     with h5py.File(inputpath,'r') as f:
@@ -321,53 +320,67 @@ class Param_evaluate(Param):
   """
   Here we evaluate on signal files 
   """
-  def eval_sig(self, bool_split=False, columns= ['jet2_Width'], outputfolder='/hdf5_orig/'):
+  def eval_sig(self, bool_split=False, columns= ['jet2_Width'], outputfolder='/hdf5_orig/',bool_select_all=True):
     #bool_select_all= True for most of the times
+    file_ls,filetag_ls=make_dsid()
     for fl in file_ls:
       dsid=fl.split('.')[-2]
       print('*'*30)
       cprint(f'{fl},{dsid=}', 'green')
-      
-      if  os.path.exists(self.h5path): # and (dsid !=515429):
-        with h5py.File(self.h5path,'r') as f:
+      h5path1=self.applydir+outputfolder+f'{self.sig_prefix}{dsid}_log10'+'.hdf5' 
+      h5path2=self.applydir+'/hdf5_jet2_width/'+f'{self.sig_prefix}{dsid}_log10'+'.hdf5' 
+      if  os.path.exists(h5path1 ): # and (dsid !=515429):
+        with h5py.File(h5path1,'r') as f:
+          dset = f.get('data')[:]
+      elif os.path.exists(h5path2):
+        with h5py.File(h5path2,'r') as f:
           dset = f.get('data')[:]
       else:   
-        phi_bkg, pred_phi_bkg, mT_bkg, vae =  call_functions(nevents=self.sig_nevents,  bool_weight=self.bool_weight, input_file=fl,readdir=self.sig_readdir, bool_select_all=self.bool_select_all)
-        rec_bkg_each=write_hdf5(dsid=dsid, phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,  vae=vae, prefix=self.sig_prefix, bool_split=bool_split, outputfolder=outputfolder)
-       """
-       Here you can add a column to a hdf5 file that was already processed and has new columns  
-       """ 
-       '''
+        phi_bkg, pred_phi_bkg, mT_bkg, vae =  self.call_functions(nevents=self.sig_nevents,  bool_weight=self.bool_weight, input_file=fl,read_dir=self.sig_read_dir, bool_select_all=bool_select_all,dsid=dsid)
+        rec_bkg_each=self.write_hdf5(dsid=dsid, phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,  vae=vae, prefix=self.sig_prefix, bool_split=bool_split, outputfolder=outputfolder)
+        """
+        Here you can add a column to a hdf5 file that was already processed and has new columns  
+        """ 
+        '''
         newfolder='/hdf5_jet2_width/'
         filetag='_jet2_width'
-        add_column(dsid=dsid,newfolder=newfolder, columns=columns, nevents=self.sig_nevents, input_file=fl, bool_weight=self.bool_weight, readdir=self.sig_readdir,bool_split=bool_split, filetag=filetag, prefix=self.sig_prefix, bool_select_all=self.bool_select_all) 
-       '''
+        self.add_column(dsid=dsid,newfolder=newfolder, columns=columns, nevents=self.sig_nevents, input_file=fl, bool_weight=self.bool_weight, read_dir=self.sig_read_dir,bool_split=bool_split, filetag=filetag, prefix=self.sig_prefix, bool_select_all=self.bool_select_all) 
+        '''
+    return 
   """
   Here we evaluate on background files 
   #output_self.h5path=self.applydir+'/'+'hdf5_jet2_width'+'/'+f'{bkg_prefix}{dsid}_log10_0-67_jet2_width'+".hdf5" 
   """
-  def eval_bkg(self, bool_split=True, columns= ['jet2_Width'], outputfolder='/hdf5_orig/'):
-    bkg_file='user.ebusch.dataAll.root' #bkg_file='user.ebusch.515503.root'#bkg_file='skim0.user.ebusch.bkgAll.root' #bkg_file='skim0.user.ebusch.QCDskim.root'
+  def eval_bkg(self, bool_split=True, columns= ['jet2_Width'], outputfolder='/hdf5_orig/', bkg_file='skim0.user.ebusch.bkgAll.root', n_file=68,bool_select_all=True):
+    #bkg_file='user.ebusch.dataAll.root' #bkg_file='user.ebusch.515503.root'#bkg_file='skim0.user.ebusch.bkgAll.root' #bkg_file='skim0.user.ebusch.QCDskim.root'
     dsid=bkg_file.split('.')[-2]
     #check in original folder (self.outputfolder)
-    init_outputpath=self.applydir+self.outputfolder+f'{self.bkg_prefix}{dsid}_log10'+'.hdf5' 
-    if  os.path.exists(init_outputpath):
-      with h5py.File(init_outputpath,'r') as f:
+    h5path1=self.applydir+outputfolder+f'{self.bkg_prefix}{dsid}_log10'+'.hdf5' 
+    h5path2=self.applydir+'/hdf5_jet2_width/'+f'{self.bkg_prefix}{dsid}_log10'+'.hdf5' 
+    if  os.path.exists(h5path1):
+      with h5py.File(h5path1,'r') as f:
         dset = f.get('data')[:]
     
-      print('{init_outputpath=}')  
+      new_pt=dset['jet1_pt']
+      new_weight=dset['weight'] 
+      plot_single_variable([new_pt],h_names= [bkg_file],weights_ls=[new_pt], tag_title= f'leading jet pT  {str(dsid)}', plot_dir=self.applydir+'/plots_dsid/',logy=True, tag_file='new_jet1_pt_'+str(dsid), bool_weight=bool_weight)
+    elif  os.path.exists(h5path2):
+      with h5py.File(h5path2,'r') as f:
+        dset = f.get('data')[:]
+    
       new_pt=dset['jet1_pt']
       new_weight=dset['weight'] 
       plot_single_variable([new_pt],h_names= [bkg_file],weights_ls=[new_pt], tag_title= f'leading jet pT  {str(dsid)}', plot_dir=self.applydir+'/plots_dsid/',logy=True, tag_file='new_jet1_pt_'+str(dsid), bool_weight=bool_weight)
     else:
     # if it doesn't exist, 
-      phi_bkg, pred_phi_bkg, mT_bkg,  vae, plot_dir =  call_functions(nevents=self.bkg_nevents,  bool_weight=self.bool_weight, input_file=bkg_file, readdir=self.bkg_readdir, bool_select_all=bool_select_all, plot_dir=plot_dir)
+      phi_bkg, pred_phi_bkg, mT_bkg,  vae, plot_dir =  self.call_functions(nevents=self.bkg_nevents,  bool_weight=self.bool_weight, input_file=bkg_file, read_dir=self.bkg_read_dir, bool_select_all=bool_select_all, plot_dir=plot_dir,dsid=dsid)
       # decide how many loops by choosing n_file and how many events per each file for split_nevents
       split_nevents=100000
-      n_file=13 #  n_file = phi_bkg.shape[0]//split_nevents +1  #  n_file=47 #n_file=1 #n_file=68
+      #n_file=13 #  n_file = phi_bkg.shape[0]//split_nevents +1  #  n_file=47 #n_file=1 
+      #n_file=68
       ls_files=[]
       for subset in range(0,n_file):
-        rec_bkg_each=write_hdf5(dsid=dsid,phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,  vae=vae, plot_dir=plot_dir, subset=subset, split_nevents=split_nevents, bool_split=bool_split, prefix=self.bkg_prefix)
+        rec_bkg_each=self.write_hdf5(dsid=dsid,phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,  vae=vae, plot_dir=plot_dir, subset=subset, split_nevents=split_nevents, bool_split=bool_split, prefix=self.bkg_prefix)
         # concatenate and write
         if subset==0:
           rec_bkg=rec_bkg_each
@@ -383,14 +396,15 @@ class Param_evaluate(Param):
         dset = f.create_dataset('data',data=rec_bkg[:,None]) # has to have [:, None] to be compatible with the original hdf5 format
 
       print('{combined_outputpath=}')  
-       """
-       Here you can add a column to a hdf5 file that was already processed and has new columns  
-       """ 
-       '''
-        newfolder='/hdf5_jet2_width/'
-        filetag='_jet2_width'
-        add_column(dsid=dsid,newfolder=newfolder, columns=columns, nevents=nevents, input_file=input_file, bool_weight=self.bool_weight, readdir=self.bkg_readdir, filetag=filetag, prefix=self.bkg_prefix) 
-       '''
+      """
+      Here you can add a column to a hdf5 file that was already processed and has new columns  
+      """ 
+      '''
+      newfolder='/hdf5_jet2_width/'
+      filetag='_jet2_width'
+      self.add_column(dsid=dsid,newfolder=newfolder, columns=columns, nevents=nevents, input_file=input_file, bool_weight=self.bool_weight, read_dir=self.bkg_read_dir, filetag=filetag, prefix=self.bkg_prefix) 
+      '''
+    return
   def scan(self):
     title=f'track={self.max_track}'
     #bkg_file='bkgAll_log10_0-67_jet2_width.hdf5'#bkg_file='dataAll_log10_jet2_width.hdf5'
@@ -417,20 +431,21 @@ class Param_evaluate(Param):
 
     return
   
-  def (method):
+  def compare_hist(self,method):
+    """
+    Here, you can plot histograms that compare CR/VR/SR and other histograms
+    """
     '''
     filedir_ls=[]
     read bkg files from filedir_ls
     bkgpath for each
     '''
     hists_var={}
-    var_ls=[method, 'weight']
-    #var_ls=[method, 'mT_jj', 'jet2_Width', 'weight']
+    #var_ls=[method, 'weight']
+    var_ls=[method, 'mT_jj', 'jet2_Width', 'weight']
     for filedir in filedir_ls:
-i#applydir
-# bkg_file_prefix
       for dsid in dsids:
-        path=applydir+'/'+'hdf5_jet2_width'+'/'+f"{bkg_file_prefix}bkgAll_log10_0-67_jet2_width.hdf5"
+        path=self.applydir+'/'+'hdf5_jet2_width'+'/'+f"{self.bkg_prefix}bkgAll_log10_0-67_jet2_width.hdf5"
         with h5py.File(path,"r") as f:
           data = f.get('data')[:]
 
@@ -438,50 +453,33 @@ i#applydir
       for var in var_ls:     
         if var =='weight' and not( data['weight'].any()): # if it's weight,  
           h=bkg_data['weight']
-          else: #if array contains only zeros
-            h=np.ones(bkg_data['weight'].shape)) 
+        else: #if array contains only zeros
+          h=np.ones(bkg_data['weight'].shape) 
              
         hists_var[var].append(h)
 
     #plot_single_variable_ratio(hists, h_names, weights_ls,title,density_top=True, logy=False, len_ls=[],  plot_dir="", bool_ratio=True, hists_cut=[], cut_ls=[], cut_operator=[], method_cut=[], bin_min=-999,bin_max=-999, bool_plot=True)
-weight_ls?
-plot_dir?
     var='multi_reco_transformed_log10_sig'
-    plot_single_variable_ratio([hs[var][0],hs[var][1],hs[var][2]],h_names=['(0%)', '(1%)', '(10%)'], weights_ls=[hs['weight'][0],hs['weight'][-1], hs['weight'][2]],plot_dir=plot_dir,logy=True, title= f'mT_jj_{method}_signal_injection', bool_ratio=True, bin_min=0.6, bin_max= 1)
+    plot_single_variable_ratio([hs[var][0],hs[var][1],hs[var][2]],h_names=['(0%)', '(1%)', '(10%)'], weights_ls=[hs['weight'][0],hs['weight'][-1], hs['weight'][2]],plot_dir=self.plot_dir,logy=True, title= f'mT_jj_{method}_signal_injection', bool_ratio=True, bin_min=0.6, bin_max= 1)
     '''
     plot mT_jj for all/ CR/VR/SR 
-    plot_single_variable_ratio([hists_var['mT_jj'][-1],hists_var['mT_jj'][-1],hists_var['mT_jj'][-1], hists_var['mT_jj'][-1]],h_names=['(All)','(CR)', '(VR)', '(SR)'],weights_ls=[weight_ls[-1],weight_ls[-1], weight_ls[-1], weight_ls[-1]],plot_dir=plot_dir,logy=True, title= f'mT_jj_{method}_comparison_region', bool_ratio=True, hists_cut=[[hists_var['jet2_Width'][-1], hists_var[method][-1]],[hists_var['jet2_Width'][-1], hists_var[method][-1]],[ hists_var['jet2_Width'][-1], hists_var[method][-1]],[ hists_var['jet2_Width'][-1], hists_var[method][-1]]],cut_ls=[[0,0],[0.05, 0], [0.05, 0.7],[0.05, 0.7]], cut_operator = [[True, True],[False,True], [True,  False],[True, True]] , method_cut=[['jet2_Width', method],['jet2_Width', method], ['jet2_Width', method], ['jet2_Width', method]], bin_min=1000, bin_max= 5000) 
+    plot_single_variable_ratio([hists_var['mT_jj'][-1],hists_var['mT_jj'][-1],hists_var['mT_jj'][-1], hists_var['mT_jj'][-1]],h_names=['(All)','(CR)', '(VR)', '(SR)'],weights_ls=[hists_var['weight'][-1],hists_var['weight'][-1], hists_var['weight'][-1], hists_var['weight'][-1]],plot_dir=self.plot_dir,logy=True, title= f'mT_jj_{method}_comparison_region', bool_ratio=True, hists_cut=[[hists_var['jet2_Width'][-1], hists_var[method][-1]],[hists_var['jet2_Width'][-1], hists_var[method][-1]],[ hists_var['jet2_Width'][-1], hists_var[method][-1]],[ hists_var['jet2_Width'][-1], hists_var[method][-1]]],cut_ls=[[0,0],[0.05, 0], [0.05, 0.7],[0.05, 0.7]], cut_operator = [[True, True],[False,True], [True,  False],[True, True]] , method_cut=[['jet2_Width', method],['jet2_Width', method], ['jet2_Width', method], ['jet2_Width', method]], bin_min=1000, bin_max= 5000) 
     '''
 if __name__=="__main__":
- # change
-filedir='12_05_23_13_05' # trained with data and signal injection (515503) 10%
-#filedir='12_02_23_09_19' # trained with data and signal injection (515503) 1%
-#filedir='10_08_23_04_08' # trained with data
-#filedir='09_26_23_10_38'
-#filedir='09_27_23_01_32'
-# filedir=
-  param1=Param_evaluate(filedir=filedir)
+   # change
+  #filedir='12_05_23_13_05' # trained with data and signal injection (515503) 10%
+  #filedir='12_02_23_09_19' # trained with data and signal injection (515503) 1%
+  filedir='10_08_23_04_08_cp' # trained with data
+  #filedir='09_26_23_10_38'
+  #filedir='09_27_23_01_32'
+  # filedir=
+  param1=Param_evaluate(filedir=filedir, extraVars=['mT_jj', 'weight', 'jet1_pt'])
   start= time.time()
-  param1.eval_sig():
-  param1.eval_bkg():
+  param1.eval_sig()
+  param1.eval_bkg()
+  param1.compare_hist()
   end= time.time()
   print('time elapsed:', f' {round(end-start, 2)}s or  {round((end-start)/3600,2)}h')
 
 
 
-'''miscellaneous'''
-#score_cut_dict['09_26_23_10_38']={'multi_kl_transformed_log_sig':2.11e-7, 'multi_mse_transformed_log_sig':1.02e-3}
-#score_cut_dict['09_27_23_01_32']={'multi_kl_transformed_log_sig':9.37e-1, 'multi_mse_transformed_log_sig':6.54e-1}
-#score_cut_dict['09_27_23_01_32']={'multi_kl_transformed_log10_sig':9.37e-1, 'multi_mse_transformed_log10_sig':6.54e-1, 'multi_reco_transformed_log10_sig': 9.45e-1}
-score_cut_dict['09_26_23_10_38']={'multi_kl_transformed_log10_sig':1.06e-3, 'multi_mse_transformed_log10_sig':3.45e-2}
-score_cut_dict['09_27_23_01_32']={'multi_kl_transformed_log10_sig':0.72, 'multi_mse_transformed_log10_sig':0.573}
-score_cut_dict['10_08_23_04_08']={'multi_kl_transformed_log10_sig':0.72, 'multi_mse_transformed_log10_sig':0.573, 'multi_reco_transformed_log10_sig':0.7}
-score_cut_dict['12_02_23_09_19']={'multi_kl_transformed_log10_sig':0.72, 'multi_mse_transformed_log10_sig':0.573, 'multi_reco_transformed_log10_sig':0.7}
-newfolder_plot_dir=self.applydir+'/plots/' # applydir/hdf5_orig/plots
-#sys.stdout =stdoutOrigin
-vae_min_dict, vae_max_dict, pfn_min_dict,pfn_max_dict={},{},{},{}
-vae_min_dict['09_26_23_10_38']= {'mse': -12.634254306189314, 'multi_reco':-12.545995242335483, 'multi_kl': -20.211301490367624 , 'multi_mse': -12.542977457162644}
-vae_max_dict['09_26_23_10_38']= {'mse': -3.456886217152505, 'multi_reco':-3.4590470421545785, 'multi_kl':-9.330598758710815, 'multi_mse': -3.458533554054478}
-vae_max_dict['09_27_23_01_32']= {'mse': 4.051665855814887 ,'multi_reco': 4.14657246457546, 'multi_kl':6.57444001122076, 'multi_mse':6.6017456361377675 }
-  #wrong
-vae_min_dict['09_27_23_01_32']= {'mse': -3.2118662852702515,'multi_reco':-3.166914871440587, 'multi_kl':0.9695256492112576, 'multi_mse':1.0634667425682687 }
