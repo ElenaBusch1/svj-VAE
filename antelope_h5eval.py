@@ -248,7 +248,7 @@ def grid_scan(title, outputdir, sig_prefix, bkg_prefix,bkg_file, key='multi_reco
   dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
     sigpath=outputdir+f"{sig_prefix}{dsid}_log10"+".hdf5"
-   
+    print(f'{sigpath=}') 
     try:
       with h5py.File(sigpath,"r") as f:
       #with h5py.File("../v8.1/v8p1_PFNv3_"+str(dsid)+".hdf5","r") as f:
@@ -334,6 +334,7 @@ def grid_s_sqrt_b(score_cut,outputdir, bkg_scale, sig_prefix, bkg_prefix,bkg_fil
 
       sig1_mass = dsid_mass[str(dsid)]
       sig_perc_below = np.sum(sig1_restricted_weight[sig1_restricted_mT<sig1_mass])/np.sum(sig1_restricted_weight)
+     
       if sig_perc_below > 0.6: 
         sig1_mT_low_cut = weighted_percentile(sig1_restricted_mT[sig1_restricted_mT<sig1_mass], sig1_restricted_weight[sig1_restricted_mT<sig1_mass],sig_perc_below-0.6)
         print("mass window: ", sig1_mT_low_cut, " - ", sig1_mass)

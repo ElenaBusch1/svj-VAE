@@ -28,10 +28,11 @@ def sizeof_fmt(num, suffix='B'):
 
 
 
-def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,seed,max_track, plot_dir,extraVars=[], bool_weight=True, bool_pt=False, h5_dir='', bool_select_all=False, read_dir=''):
+def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,seed,max_track, plot_dir,extraVars=[], bool_weight=True, bool_pt=False, h5_dir='', bool_select_all=False, read_dir='', h5tag=''):
     
     getExtraVars = len(extraVars) > 0
-    h5path=f'{h5_dir}/twojet/{input_file}_s={seed}_ne={nevents}_mt={max_track}_new.hdf5'
+    h5path=f'{h5_dir}/twojet/{input_file}_s={seed}_ne={nevents}_mt={max_track}{h5tag}.hdf5'
+    #h5path=f'{h5_dir}/twojet/{input_file}_s={seed}_ne={nevents}_mt={max_track}_new.hdf5' #_new tag for jet2_width
 #    str_ls=['bkg', 'vars_bkg', 'bkg_sel', 'jet_bkg', 'bkg_in0', 'bkg_in1']
     str_ls=['bkg', 'vars_bkg']
     
@@ -155,6 +156,7 @@ def getTwoJetSystem(nevents,input_file, track_array0, track_array1, jet_array,se
     if getExtraVars: return bkg, vars_bkg, bkg_sel, jet_bkg, bkg_in0, bkg_in1
     else: return bkg, np.array([]), bkg_sel, jet_bkg, bkg_in0, bkg_in1
     """
+    print(f'{extraVars=}')
     if getExtraVars: return bkg, vars_bkg, np.array([]), np.array([]), np.array([]), np.array([])
     else: return bkg, np.array([]), np.array([]), np.array([]), np.array([]), np.array([])
 
