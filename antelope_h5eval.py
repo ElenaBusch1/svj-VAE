@@ -216,7 +216,74 @@ def score_cut_mT_plot(key):
     plot_ratio(d,w,labels, var, logy=True) 
 
 
-def grid_scan(title, outputdir, sig_prefix, bkg_prefix,bkg_file, key='multi_reco'): # or 'score'
+
+def get_sig_contamination(title, outputdir, sig_prefix, bkg_prefix, bkg_file,sig_tag,bool_antelope, key='multi_reco', plot_dir=''):# or 'score'
+  if  plot_dir!='':plot_dir+'/plots/'
+  else:plot_dir=outputdir+'/plots/'
+  if not os.path.exists(plot_dir):os.mkdir(plot_dir)
+  bkgpath=outputdir+f"{bkg_prefix}{bkg_file}"
+  with h5py.File(bkgpath,"r") as f:
+    bkg_data = f.get('data')[:]
+  bkg_loss = bkg_data[key]
+  if  bkg_data['weight'].any(): # if it's weight,  
+    w0=bkg_data['weight']
+  else: #if array contains only zeros e.g. if it's weight of data
+    w0=np.ones(bkg_data['weight'].shape)
+  print(w0)
+  #w0 = 5*bkg_data["weight"]
+  bkg_jet2 = bkg_data["jet2_Width"]
+  if bool_antelope:
+    bkg_SR = (bkg_jet2 > 0.05) & (bkg_loss>0.7)
+    bkg_CR = (bkg_jet2 <= 0.05) & (bkg_loss>0.0)
+    bkg_VR = (bkg_jet2 > 0.05) & (bkg_loss<0.7)
+  else:
+    if key!='score': 
+      print('bool_antelope =False but key is not score in get_sig_contamination -> sys.exit')
+      sys.exit()
+    bkg_SR = (bkg_jet2 > 0.05) & (bkg_loss>0.6)
+    bkg_CR = (bkg_jet2 <= 0.05) & (bkg_loss>0.0)
+    bkg_VR = (bkg_jet2 > 0.05) & (bkg_loss<0.6)
+  bkg_CR_count = sum(w0[bkg_CR])
+  bkg_VR_count = sum(w0[bkg_VR])
+  bkg_SR_count = sum(w0[bkg_SR])
+
+  dsids = range(515487,515527)
+  sig_eff = {}
+  for dsid in dsids:
+    sigpath=outputdir+f"{sig_prefix}{dsid}{sig_tag}"+".hdf5"
+    try:
+      with h5py.File(sigpath,"r") as f:
+        sig_data = f.get('data')[:]
+      sig_loss = sig_data[key]
+      w = sig_data["weight"]
+      sig_jet2 = sig_data["jet2_Width"]
+      if bool_antelope:
+        region='antelope'
+        sig_SR = (sig_jet2 > 0.05) & (sig_loss>0.7)
+        sig_CR = (sig_jet2 <= 0.05) & (sig_loss>0.0)
+        sig_VR = (sig_jet2 > 0.05) & (sig_loss<0.7)
+      else:
+        region='pfn'
+        if key!='score': 
+          print('bool_antelope =False but key is not score in get_sig_contamination -> sys.exit')
+          sys.exit()
+        sig_SR = (sig_jet2 > 0.05) & (sig_loss>0.6)
+        sig_CR = (sig_jet2 <= 0.05) & (sig_loss>0.0)
+        sig_VR = (sig_jet2 > 0.05) & (sig_loss<0.6)
+      sig_CR_count = sum(w[sig_CR])
+      sig_VR_count = sum(w[sig_VR])
+      sig_SR_count = sum(w[sig_SR])
+      sig_eff[dsid] = {f"sig_contamination_CR_{region}":100*sig_CR_count/bkg_CR_count, 
+       f"sig_contamination_VR_{region}":100*sig_VR_count/bkg_VR_count,
+       f"sig_effiency_SR_{region}":sig_SR_count/sum(w)}
+    except Exception as e:
+      cprint(e,'red')
+      print(f'{sigpath=}') 
+  do_grid_plots(sig_eff, tag_title=f'{key} '+title, tag_file=f'{key}_'+title,plot_dir=plot_dir)
+
+
+
+def grid_scan(title, outputdir, sig_prefix, bkg_prefix,bkg_file,sig_tag, key='multi_reco'): # or 'score'
   # if this doesn't work try changing bkgpath
   #with h5py.File("../v8.1/v8p1_PFNv1_QCDskim.hdf5","r") as f:
   #  bkg_data = f.get('data')[:]
@@ -224,14 +291,7 @@ def grid_scan(title, outputdir, sig_prefix, bkg_prefix,bkg_file, key='multi_reco
   if not os.path.exists(plot_dir):os.mkdir(plot_dir)
   bkgpath=outputdir+f"{bkg_prefix}{bkg_file}"
   with h5py.File(bkgpath,"r") as f:
-    bkg_data1 = f.get('data')[:]
-#  with h5py.File("../v8.1/v8p1_PFNv3_QCDskim3_2.hdf5","r") as f:
-#    bkg_data2 = f.get('data')[:]
-  #with h5py.File("../v8.1/v8p1_PFNv2_QCDskim0_3.hdf5","r") as f:
-  #  bkg_data3 = f.get('data')[:]
-  bkg_data=bkg_data1
-  #bkg_data = np.concatenate((bkg_data1,bkg_data2))
-  #bkg_data = np.concatenate((bkg_data1,bkg_data2, bkg_data3))
+    bkg_data = f.get('data')[:]
 
   variables = [f_name for (f_name,f_type) in bkg_data.dtype.descr]
   bkg_loss = bkg_data[key]
@@ -241,14 +301,11 @@ def grid_scan(title, outputdir, sig_prefix, bkg_prefix,bkg_file, key='multi_reco
   bkg_weights = np.reshape(bkg_data_weights,len(bkg_data_weights))
   #bkg_weights = np.reshape(bkg_data["weight"],len(bkg_data["weight"]))
   print("bkg events", len(bkg_loss))
-  print(bkg_data1['mT_jj'],bkg_data1['weight']) 
-  print(bkg_data1['mT_jj'].shape,bkg_data1['weight'].shape) 
   sic_values = {}
   
   dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
-    sigpath=outputdir+f"{sig_prefix}{dsid}_log10"+".hdf5"
-    print(f'{sigpath=}') 
+    sigpath=outputdir+f"{sig_prefix}{dsid}{sig_tag}"+".hdf5"
     try:
       with h5py.File(sigpath,"r") as f:
       #with h5py.File("../v8.1/v8p1_PFNv3_"+str(dsid)+".hdf5","r") as f:
@@ -263,6 +320,7 @@ def grid_scan(title, outputdir, sig_prefix, bkg_prefix,bkg_file, key='multi_reco
       cprint(f"{dsid}, sig events, {len(sig1_loss)}", )
     except Exception as e:
       cprint(e,'red')
+      print(f'{sigpath=}') 
     #sig1_cut = sig1_loss[sig1_loss>bkg20]
     #cut = len(sig1_cut)/total
     #print(dsid, f'{cut:.0%}') 
@@ -271,7 +329,7 @@ def grid_scan(title, outputdir, sig_prefix, bkg_prefix,bkg_file, key='multi_reco
   print(f'grid_scan in {plot_dir}')
   do_grid_plots(sic_values, tag_title=f'{key} '+title, tag_file=f'{key}_'+title,plot_dir=plot_dir)
 
-def grid_s_sqrt_b(score_cut,outputdir, bkg_scale, sig_prefix, bkg_prefix,bkg_file,title, cms=False, key="multi_reco"): #all_dir # bkg_scale = 5
+def grid_s_sqrt_b(score_cut,outputdir, bkg_scale, sig_prefix, bkg_prefix,bkg_file,sig_tag,title, cms=False, key="multi_reco"): #all_dir # bkg_scale = 5
   # if can't read the file try changing sigpath or outputdir
   plot_dir=outputdir+'/plots/'
   if not os.path.exists(plot_dir):os.mkdir(plot_dir)
@@ -305,7 +363,7 @@ def grid_s_sqrt_b(score_cut,outputdir, bkg_scale, sig_prefix, bkg_prefix,bkg_fil
     dsid_mass = json.load(f)
   dsids = range(515487,515527) #,515499,515502,515507,515510,515515,515518,515520,515522]
   for dsid in dsids:
-    sigpath=outputdir+f"{sig_prefix}{dsid}_log10"+".hdf5"
+    sigpath=outputdir+f"{sig_prefix}{dsid}{sig_tag}"+".hdf5"
     # sigpath="../v8.1/"+sig_prefix+str(dsid)+".hdf5"
     try:
       with h5py.File(sigpath,"r") as f:

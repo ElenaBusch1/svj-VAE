@@ -327,8 +327,8 @@ class Param_evaluate():
       bool_plot_weight=False
     else:  
       bool_plot_weight=True
-    plot_single_variable([rec_bkg['mT_jj']],h_names= [f'{dsid}'],weights_ls=[rec_bkg['weight']], tag_title= f'mT_jj {str(dsid)} (weighted)', plot_dir=self.plot_dir,logy=True, tag_file=f'mT_jj_'+str(dsid), bool_weight=bool_plot_weight, bool_show=True) 
-    plot_single_variable([rec_bkg['jet1_pt']],h_names= [f'{dsid}'],weights_ls=[rec_bkg['weight']], tag_title= f'jet1_pt {str(dsid)} (weighted)', plot_dir=self.plot_dir,logy=True, tag_file=f'jet1_pt_'+str(dsid), bool_weight=bool_plot_weight, bool_show=True) 
+    plot_single_variable([rec_bkg['mT_jj']],h_names= [f'{dsid}'],weights_ls=[rec_bkg['weight']], tag_title= f'mT_jj {str(dsid)} (weighted)', plot_dir=self.plot_dir,logy=True, tag_file=f'mT_jj_'+str(dsid), bool_weight=bool_plot_weight, bool_show=False) 
+    plot_single_variable([rec_bkg['jet1_pt']],h_names= [f'{dsid}'],weights_ls=[rec_bkg['weight']], tag_title= f'jet1_pt {str(dsid)} (weighted)', plot_dir=self.plot_dir,logy=True, tag_file=f'jet1_pt_'+str(dsid), bool_weight=bool_plot_weight, bool_show=False) 
 #    plot_single_variable([mT_bkg[:,-1]],h_names= [input_file],weights_ls=[mT_bkg[:,1]], tag_title= f'{self.extraVars[-1]} {str(dsid)} (weighted)', plot_dir=self.plot_dir,logy=True, tag_file=f'{self.extraVars[-1]}_'+str(dsid), bool_weight=bool_weight)
     return rec_bkg
 
@@ -350,18 +350,18 @@ class Param_evaluate():
         input_tag=''
         output_tag='_jet2_width'
         self.add_column(dsid=dsid,outputfolder=outputfolder,newfolder=newfolder, columns=columns, nevents=self.sig_nevents, input_file=fl, bool_weight=self.bool_weight, read_dir=self.sig_read_dir,bool_split=bool_split, input_tag=input_tag,output_tag=output_tag, prefix=self.sig_prefix, bool_select_all=bool_select_all) 
-        return 
-      h5path1=self.applydir+outputfolder+f'{self.sig_prefix}{dsid}_log10'+'.hdf5' 
-      h5path2=self.applydir+'/hdf5_jet2_width/'+f'{self.sig_prefix}{dsid}_log10'+'.hdf5' 
-      if  os.path.exists(h5path1 ): # and (dsid !=515429):
-        with h5py.File(h5path1,'r') as f:
-          dset = f.get('data')[:]
-      elif os.path.exists(h5path2):
-        with h5py.File(h5path2,'r') as f:
-          dset = f.get('data')[:]
-      else:   
-        phi_bkg, pred_phi_bkg, mT_bkg, vae =  self.call_functions(nevents=self.sig_nevents,  bool_weight=self.bool_weight, input_file=fl,read_dir=self.sig_read_dir, bool_select_all=bool_select_all,dsid=dsid)
-        rec_bkg_each=self.write_hdf5(dsid=dsid, phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,  vae=vae, prefix=self.sig_prefix, bool_split=bool_split, outputfolder=outputfolder)
+      else:
+        h5path1=self.applydir+outputfolder+f'{self.sig_prefix}{dsid}_log10'+'.hdf5' 
+        h5path2=self.applydir+'/hdf5_jet2_width/'+f'{self.sig_prefix}{dsid}_log10'+'.hdf5' 
+        if  os.path.exists(h5path1 ): # and (dsid !=515429):
+          with h5py.File(h5path1,'r') as f:
+            dset = f.get('data')[:]
+        elif os.path.exists(h5path2):
+          with h5py.File(h5path2,'r') as f:
+            dset = f.get('data')[:]
+        else:   
+          phi_bkg, pred_phi_bkg, mT_bkg, vae =  self.call_functions(nevents=self.sig_nevents,  bool_weight=self.bool_weight, input_file=fl,read_dir=self.sig_read_dir, bool_select_all=bool_select_all,dsid=dsid)
+          rec_bkg_each=self.write_hdf5(dsid=dsid, phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,  vae=vae, prefix=self.sig_prefix, bool_split=bool_split, outputfolder=outputfolder)
     return 
   """
   Here we evaluate on background files 
@@ -381,60 +381,60 @@ class Param_evaluate():
       input_tag='_0-67'
       output_tag='_0-67_jet2_width'
       self.add_column(dsid=dsid,outputfolder=outputfolder,newfolder=newfolder, columns=columns, nevents=self.sig_nevents, input_file=bkg_file, bool_weight=self.bool_weight, read_dir=self.bkg_read_dir, bool_split=bool_split,input_tag=input_tag,output_tag=output_tag, prefix=self.bkg_prefix, bool_select_all=bool_select_all)
-      return 
-    if  os.path.exists(h5path1):
-      with h5py.File(h5path1,'r') as f:
-        dset = f.get('data')[:]
-    
-      new_pt=dset['jet1_pt']
-      new_weight=dset['weight']
-
-      plot_single_variable([new_pt],h_names= [bkg_file],weights_ls=[new_weight], tag_title= f'leading jet pT  {str(dsid)}', plot_dir=self.applydir+'/plots_dsid/',logy=True, tag_file='new_jet1_pt_'+str(dsid), bool_weight=bool_plot_weight)
-    elif  os.path.exists(h5path2):
-      with h5py.File(h5path2,'r') as f:
-        dset = f.get('data')[:]
-
-    
-      plot_single_variable([new_pt],h_names= [bkg_file],weights_ls=[new_weight], tag_title= f'leading jet pT  {str(dsid)}', plot_dir=self.applydir+'/plots_dsid/',logy=True, tag_file='new_jet1_pt_'+str(dsid), bool_weight=bool_plot_weight)
     else:
-    # if it doesn't exist, 
-      # decide how many loops by choosing n_file and how many events per each file for split_nevents
-      split_nevents=100000
-      #n_file=13 #  n_file = phi_bkg.shape[0]//split_nevents +1  #  n_file=47 #n_file=1 
-      #n_file=68
-      ls_files=[]
-      bool_new=True
-      for subset in range(0,n_file):
-        outputpath=self.applydir+outputfolder+f'{self.bkg_prefix}{dsid}_log10_{subset}'+'.hdf5'
-        if os.path.exists(outputpath):
-          with h5py.File(outputpath,'r') as f:
-            rec_bkg_each = f.get('data')[:]
-        else: 
-          if bool_new: 
-            phi_bkg, pred_phi_bkg, mT_bkg,  vae =  self.call_functions(nevents=self.bkg_nevents,  bool_weight=self.bool_weight, input_file=bkg_file, read_dir=self.bkg_read_dir, bool_select_all=bool_select_all, dsid=dsid)
-            bool_new=False
-          rec_bkg_each=self.write_hdf5(dsid=dsid, phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,  vae=vae, prefix=self.sig_prefix, bool_split=bool_split, outputfolder=outputfolder)
-          rec_bkg_each=self.write_hdf5(dsid=dsid,phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,  vae=vae,prefix=self.bkg_prefix, bool_split=bool_split,  outputfolder=outputfolder,subset=subset, split_nevents=split_nevents)
-        # concatenate and write
-        if subset==0:
-          rec_bkg=rec_bkg_each
-        else:
-          rec_bkg= np.append(rec_bkg, np.array(rec_bkg_each , dtype=rec_bkg_each.dtype))
-    
-        ls_files.append(subset)
-    
-      ls_files=list_files(ls_files)
-      cprint(ls_files, 'yellow')
-      combined_outputpath=f"{h5path1.split('.hdf5')[-2]}_{ls_files}.hdf5"
-      with h5py.File(combined_outputpath,'w') as f:
-        dset = f.create_dataset('data',data=rec_bkg[:,None]) # has to have [:, None] to be compatible with the original hdf5 format
-
-      print(f'{combined_outputpath=}')  
-      """
-      Here you can add a column to a hdf5 file that was already processed and has new columns  
-      """ 
+      if  os.path.exists(h5path1):
+        with h5py.File(h5path1,'r') as f:
+          dset = f.get('data')[:]
+      
+        new_pt=dset['jet1_pt']
+        new_weight=dset['weight']
+  
+        plot_single_variable([new_pt],h_names= [bkg_file],weights_ls=[new_weight], tag_title= f'leading jet pT  {str(dsid)}', plot_dir=self.applydir+'/plots_dsid/',logy=True, tag_file='new_jet1_pt_'+str(dsid), bool_weight=bool_plot_weight)
+      elif  os.path.exists(h5path2):
+        with h5py.File(h5path2,'r') as f:
+          dset = f.get('data')[:]
+  
+      
+        plot_single_variable([new_pt],h_names= [bkg_file],weights_ls=[new_weight], tag_title= f'leading jet pT  {str(dsid)}', plot_dir=self.applydir+'/plots_dsid/',logy=True, tag_file='new_jet1_pt_'+str(dsid), bool_weight=bool_plot_weight)
+      else:
+      # if it doesn't exist, 
+        # decide how many loops by choosing n_file and how many events per each file for split_nevents
+        split_nevents=100000
+        #n_file=13 #  n_file = phi_bkg.shape[0]//split_nevents +1  #  n_file=47 #n_file=1 
+        #n_file=68
+        ls_files=[]
+        bool_new=True
+        for subset in range(0,n_file):
+          outputpath=self.applydir+outputfolder+f'{self.bkg_prefix}{dsid}_log10_{subset}'+'.hdf5'
+          if os.path.exists(outputpath):
+            with h5py.File(outputpath,'r') as f:
+              rec_bkg_each = f.get('data')[:]
+          else: 
+            if bool_new: 
+              phi_bkg, pred_phi_bkg, mT_bkg,  vae =  self.call_functions(nevents=self.bkg_nevents,  bool_weight=self.bool_weight, input_file=bkg_file, read_dir=self.bkg_read_dir, bool_select_all=bool_select_all, dsid=dsid)
+              bool_new=False
+            rec_bkg_each=self.write_hdf5(dsid=dsid, phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,  vae=vae, prefix=self.sig_prefix, bool_split=bool_split, outputfolder=outputfolder)
+            rec_bkg_each=self.write_hdf5(dsid=dsid,phi_bkg=phi_bkg, pred_phi_bkg=pred_phi_bkg, mT_bkg=mT_bkg,  vae=vae,prefix=self.bkg_prefix, bool_split=bool_split,  outputfolder=outputfolder,subset=subset, split_nevents=split_nevents)
+          # concatenate and write
+          if subset==0:
+            rec_bkg=rec_bkg_each
+          else:
+            rec_bkg= np.append(rec_bkg, np.array(rec_bkg_each , dtype=rec_bkg_each.dtype))
+      
+          ls_files.append(subset)
+      
+        ls_files=list_files(ls_files)
+        cprint(ls_files, 'yellow')
+        combined_outputpath=f"{h5path1.split('.hdf5')[-2]}_{ls_files}.hdf5"
+        with h5py.File(combined_outputpath,'w') as f:
+          dset = f.create_dataset('data',data=rec_bkg[:,None]) # has to have [:, None] to be compatible with the original hdf5 format
+  
+        print(f'{combined_outputpath=}')  
+        """
+        Here you can add a column to a hdf5 file that was already processed and has new columns  
+        """ 
     return
-  def scan(self, bkg_file='bkgAll_log10_0-67_jet2_width.hdf5',outputfolder='/hdf5_orig/'):
+  def scan(self, bkg_file='bkgAll_log10_0-67_jet2_width.hdf5',outputfolder='/hdf5_orig/', sig_tag='_log10_jet2_width'):# sig_tag='_log10'
     title=f'track={self.max_track}'
     #bkg_file='bkgAll_log10_0-67_jet2_width.hdf5'#bkg_file='dataAll_log10_jet2_width.hdf5'
     #bkg_file='dataAll_log10_0-12.hdf5' #bkg_file='bkgAll_log10_0-67_jet2_width.hdf5'#bkg_file='dataAll_log10_jet2_width.hdf5'
@@ -444,15 +444,19 @@ class Param_evaluate():
     keys=[f'{key}_transformed_log10_sig' for key in keys ]
     '''
     score_cut_dict[self.filedir]={'multi_kl_transformed_log10_sig':0.72, 'multi_mse_transformed_log10_sig':0.573, 'multi_reco_transformed_log10_sig':0.7}
-    keys=list(score_cut_dict[self.filedir].keys())
+    #keys=list(score_cut_dict[self.filedir].keys())
+    keys=['multi_reco_transformed_log10_sig']
     for key in keys:
       print(self.filedir,key)
       #check_yield( title='Background', all_dir=all_dir, bkg_prefix=self.bkg_prefix, filename=bkg_file,key=key)
     #  correlation_plots( title='Background', all_dir=all_dir, bkg_prefix=bkg_prefix, filename=bkg_file,key=key)
       outputdir=self.applydir+outputfolder # or choose newfolder if used add_columns()
 
-      grid_scan(title, outputdir=outputdir, sig_prefix=self.sig_prefix,bkg_prefix=self.bkg_prefix, bkg_file=bkg_file,key=key)
-      grid_s_sqrt_b(score_cut_dict[self.filedir][key], outputdir=outputdir,bkg_scale=5, sig_prefix=self.sig_prefix,bkg_prefix=self.bkg_prefix,bkg_file=bkg_file, title=title,cms=False, key=key)
+      #get_sig_contamination(title, outputdir=outputdir, sig_prefix=self.sig_prefix,bkg_prefix=self.bkg_prefix, bkg_file=bkg_file,key=key, bool_antelope=True,sig_tag=sig_tag)
+      cprint(f'MAKE sure that self.sig_read_dir and self.bkg_readdir are the same for get_sig_contamination', 'red')
+      get_sig_contamination(title, outputdir=self.sig_read_dir, sig_prefix=f'{self.sig_version}_PFNv6_',bkg_prefix=f'{self.bkg_version}_PFNv6_', bkg_file=bkg_file,key='score', bool_antelope=False, sig_tag='', plot_dir=self.applydir+'/hdf5_v9p2_PFNv6_cp/')
+      #grid_scan(title, outputdir=outputdir, sig_prefix=self.sig_prefix,bkg_prefix=self.bkg_prefix, bkg_file=bkg_file,key=key, sig_tag=sig_tag)
+      #grid_s_sqrt_b(score_cut_dict[self.filedir][key], outputdir=outputdir,bkg_scale=5, sig_prefix=self.sig_prefix,bkg_prefix=self.bkg_prefix,bkg_file=bkg_file, title=title,cms=False, key=key, sig_tag=sig_tag)
 
 
       #score=getSignalSensitivityScore(bkg_loss, sig_loss)
@@ -479,7 +483,7 @@ class Param_evaluate():
 
         # concatenate here
     for var in var_ls:    
-      if var =='weight' and not( data['weight'].any()): # if it's weight,  
+      if var =='weight' and data['weight'].any(): # if it's weight,  
         h=data['weight']
       else: #if array contains only zeros e.g. if it's weight of data
         h=np.ones(data['weight'].shape) 
@@ -497,7 +501,8 @@ if __name__=="__main__":
    # change
   #filedir='12_05_23_13_05' # trained with data and signal injection (515503) 10%
   #filedir='12_02_23_09_19' # trained with data and signal injection (515503) 1%
-  filedir='10_08_23_04_08_cp' # trained with data
+  #  filedir='10_08_23_04_08_cp' # trained with data
+  filedir='10_08_23_04_08' # trained with data
   #filedir='09_26_23_10_38'
   #filedir='09_27_23_01_32'
   # filedir=
@@ -508,7 +513,8 @@ if __name__=="__main__":
   #param1.eval_bkg(bool_add=True)
 #  param1.scan(outputfolder='/hdf5_jet2_width/')
 #  param1.scan(bkg_file='bkgAll_log10_0-67.hdf5')
-  param1.scan(bkg_file='dataAll_log10.hdf5')
+#  param1.scan(bkg_file='dataAll_log10_jet2_width.hdf5', outputfolder='/hdf5_jet2_width/')
+  param1.scan(bkg_file='dataAll.hdf5', outputfolder='/hdf5_jet2_width/')
   param1.compare_hist(method)
   end= time.time()
   print('time elapsed:', f' {round(end-start, 2)}s or  {round((end-start)/3600,2)}h')

@@ -239,6 +239,9 @@ def make_sic(fpr,tpr,trh,auc, bkg, tag_file="", tag_title="",  plot_dir=""):
   score_cut = np.percentile(bkg,100-(qcdEff*100)) # find 100-(qcdEff*100), say, 90% percentile from bkg array, if qcdEff = .09
   trhmax_i = trh[1:][good][ymax_i]
   score_cut2 = trhmax_i
+
+    
+
   #print(f'{score_cut}, {score_cut2}', 'red')
   print("Max improvement: ", ymax)
   print("Sig eff: ", sigEff)
@@ -279,6 +282,7 @@ def make_grid_plot(values,val,tag_file,tag_title,plot_dir,tag=''):
     elif val == "score_cut": ax.text(i,j,'{0:.2e}'.format(label),ha='center', va='center', fontsize = 'large', color='white', fontweight='bold')
     elif val == "score_cut2": ax.text(i,j,'{0:.2e}'.format(label),ha='center', va='center', fontsize = 'large', color='white',fontweight='bold')
     #elif val == "score_cut": ax.text(i,j,'{0:.3f}'.format(label),ha='center', va='center', fontsize = 'large')
+    elif "sig_contami" in val: ax.text(i,j,'{0:.3e}'.format(label),ha='center', va='center', fontsize = 'large', color='white',fontweight='bold')
     else: ax.text(i,j,'{0:.2f}'.format(label),ha='center', va='center', fontsize = 'large', color='white',fontweight='bold')
 
   # x-y labels for grid 
@@ -293,7 +297,8 @@ def make_grid_plot(values,val,tag_file,tag_title,plot_dir,tag=''):
   
   ax.set_title(tag_title+"; "+val)
   plt.tight_layout()
-  plt.savefig(plot_dir+'table_'+tag_file+'_'+val+'_'+tag+'.png')
+  if tag!='': tag='_'+tag
+  plt.savefig(plot_dir+'table_'+tag_file+'_'+val+tag+'.png')
   plt.clf()
   print("Saved grid plot for", val)
 
