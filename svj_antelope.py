@@ -35,7 +35,10 @@ params = {'legend.fontsize': 'x-large',
          'ytick.labelsize':'x-large', 
  
 """ 
-plt.rcParams.update(params) 
+plt.rcParams.update(params)
+"""
+This code has some parts that train SVJ ANTELOPE model and other parts that train VAE models targetted towards ECG examples to check if VAE training is reasonable. Currently, the code for ANTELOPE model is written here, but ECG example has been tested and only requires a slight modification to use it if necessary in future. Signal injection is also possible.
+""" 
 class Param_ANTELOPE(Param):
   def __init__(self,  
       arch_dir_pfn, arch_dir_vae='',kl_loss_scalar=100,
@@ -51,7 +54,7 @@ class Param_ANTELOPE(Param):
       step_size=1,
       metric_dict={},
       bool_shift=False,
-      bool_no_scaling=False,
+      bool_no_scaling=True,
       bool_nonzero=True,
       scalar_ecg=1,
       decoder_activation='relu',
@@ -62,7 +65,19 @@ class Param_ANTELOPE(Param):
       ):
       #sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim0.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],seed=0 ):
       #changeable: encoding_dim,latent_dim, nepochs, learning_rate, bkg_events, sig_events
-
+    """Here, only the variables that have not been defined in svj_pfn.py will be defined
+    :param int step_size: this is set as 1, because if it is set higher and thus batch_size for evaluating ANTELOPE score is larger, the evaluated values seem less accurate  
+    :param str metric_dict: not currently used (initializing metric_dict ={} such that in plot_loss_dict, it looks like metric_dict[method][metric])  
+    :param bool bool_shift: in eval_helper/scale_phi(), if True, shift the latent space variables/phis (i.e. phi_bkg, phi_testb, etc) to restricted range of [0.1,1]
+    :param bool bool_no_scaling: this overrides, bool_shift; if True, it's not scaling, which is what SVJ analysis decided to do  
+    :param bool bool_nonzero: in eval_helper/scale_phi(), if True, only shift non-zero phis to restricted range of [0.1,1]. If False, shift all phis. 
+    :param float scalar_ecg: not currently used (only used for ECG example) 
+    :param str decoder_activation: in models/get_vae(), decoder activation function
+    :param bool bool_float64: if True, phis are in float64; if False, in float32/default; float32 suffices if bool_no_scaling=True (which is the case of final version of ANTELOPE model in SVJ anlaysis) since most of those values are not such small values 
+    :param float inj_ratio: a rough estimate of injection ratio
+    :param bool bool_inj: if True, signal is injected
+    :param int inj_dsid: if bool_inj=True, then the signal file of this DSID will be injected
+    """
     super().__init__( arch_dir,print_dir,plot_dir,h5_dir,
       pfn_model, vae_model, bkg_events, sig_events,
       num_elements, element_size, encoding_dim, latent_dim, phi_dim, nepochs, n_neuron, learning_rate,
@@ -75,8 +90,6 @@ class Param_ANTELOPE(Param):
  
     self.inj_ratio=inj_ratio
     self.inj_nElements=math.floor((self.bkg_events-self.sig_events)*19/20 /(-1+ 1/self.inj_ratio ))
-    #self.inj_nElements=math.floor((self.bkg_events-self.sig_events)*.90*self.inj_ratio)
-    #print(f'{self.inj_nElements=}=rounded down of ({self.bkg_events}-{self.sig_events})*.9*{self.inj_ratio}')
     print(f'{self.inj_nElements=}=rounded down of ({self.bkg_events}-{self.sig_events})*19/20*{-1+1/self.inj_ratio}')
     self.bool_inj=bool_inj
     if self.bool_inj and self.inj_nElements<=0: 
@@ -189,7 +202,7 @@ class Param_ANTELOPE(Param):
   def evaluate_test_ECG(self):
     x_testb, x_evalb, y_testb, y_evalb= self.prepare_test_ECG( bool_float64=self.bool_float64)
 
-    #x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val= self.prepare_test_ECG()
+    #x_testb, x_evalb_train, x_evalb_val, y_testb, y_evalb_train, y_evalb_val= self.prepare_test_ECG() 
     print('prepare_test_ECG')
 #    try: vae = self.load_vae()
 #    except: 
@@ -900,19 +913,13 @@ if __name__=="__main__":
   ls_bkg=[170000]
   #ls_bkg=[200000]
   for  kl_loss_scalar in [1]:
+    """some examples of codes here"""
     #param1=Param_ANTELOPE(pfn_model=pfn_model,  h5_dir='h5dir/antelope/aug17_jetpt/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/', # nov 2023
     param1=Param_ANTELOPE(pfn_model=pfn_model,  h5_dir='h5dir/antelope/v9p2/', arch_dir_pfn='/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/', # nov 2023
-#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, arch_dir_vae='/data/users/kpark/svj-vae/results/grid_sept26/09_26_23_10_38/architectures_saved/', step_size=1)
-#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, arch_dir_vae='/data/users/kpark/svj-vae/results/grid_sept26/09_27_23_01_32/architectures_saved/', step_size=1, bool_no_scaling=True)
-#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=False, bool_shift=True)
-#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, step_size=1, bool_nonzero=True, bool_shift=True)
-  
+#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, arch_dir_vae='/data/users/kpark/svj-vae/results/grid_sept26/09_26_23_10_38/architectures_saved/', step_size=1) # if training is already done, you can specify arch_dir_vae 
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1, bool_no_scaling=True, decoder_activation='relu', bool_float64=False, bool_weight=False)# nov 2023
-      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1, bool_no_scaling=True, decoder_activation='relu', bool_float64=False, bool_weight=False, bool_inj=True, inj_ratio=.1, bkg_events=184000)
-#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1) # MAKE SURE TO CHECK RELU VS SIGMOID 
-      #extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'],  step_size=1, bool_no_scaling=True, kl_loss_scalar=1000)
-#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8)
-#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8, scalar_ecg=10)
+      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar=kl_loss_scalar, step_size=1, bool_no_scaling=True, decoder_activation='relu', bool_float64=False, bool_weight=False, bool_inj=True, inj_ratio=.1, bkg_events=184000) # for signal injection
+#      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim=140, encoding_dim=16, latent_dim=8, scalar_ecg=10) # ecg example?
 #      extraVars=['mT_jj', 'weight', 'jet1_pt', 'jet2_pt'], kl_loss_scalar= kl_loss_scalar, phi_dim= 784, encoding_dim=196, latent_dim=49)# if flattening
     start= time.time() 
     stdoutOrigin=param1.open_print()
@@ -927,27 +934,7 @@ if __name__=="__main__":
     print('time elapsed:', f' {round(end-start, 2)}s or  {round((end-start)/3600,2)}h')
     print(param1.close_print(stdoutOrigin))
     print(param1.save_info())
-"""
-encoding_dim = 32
-latent_dim = 12
-phi_dim = 64
-#nepochs=20
-nepochs=50
-batchsize_vae=32
 
-#pfn_model = 'PFNv1'
-pfn_model = 'PFNv6'
-vae_model = 'vANTELOPE' # vae change
-#vae_model = 'ANTELOPE'
-#arch_dir = "architectures_saved/"
-arch_dir='/nevis/katya01/data/users/kpark/svj-vae/results/antelope/architectures_saved/'
-#arch_dir = "/data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/"
-
-#  all_dir='/nevis/katya01/data/users/kpark/svj-vae/'
-#    plot_dir=all_dir+'results/antelope/plots_vae/' # vae change
-################### Train the AE or VAE ###############################
-
-"""
 """
 Troubleshooting
 1) OSError: SavedModel file does not exist at: /data/users/ebusch/SVJ/autoencoder/svj-vae/architectures_saved/PFN_graph_arch/{saved_model.pbtxt|saved_model.pb}

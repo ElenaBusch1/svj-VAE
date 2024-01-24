@@ -45,6 +45,7 @@ class Param:
     :param float learning_rate: learning rate
     :param int nlayer_phi: number of layers in phi network of of get_full_PFN()
     :param int nlayer_F: number of layers in F network of of get_full_PFN()
+    :param int max_track: number of maximum tracks (if more number of tracks, those would be cut to enforce uniformity and save computing power and storage space)
     :param int batchsize_pfn: batchsize of training PFN
     :param int batchsize_vae: batchsize of training VAE -> not used in this code but will be inherited to svj_antelope.py
     :param bool bool_pt: if True, in eval_helper.py/apply_TrackSelection, pT cut is applied 

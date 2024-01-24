@@ -18,6 +18,7 @@ from helper import Label
 from antelope_h5eval import *
 import time
 ###########functions
+
 def list_files(ls):
   ls=sorted(ls)
   min_ls=min(ls)
@@ -80,6 +81,17 @@ class Param_evaluate():
       vae_model='vANTELOPE',
       h5_dir='/nevis/katya01/data/users/kpark/svj-vae/h5dir/antelope/v9p2', 
       ):
+      """Most of these variables are defined in svj_pfn.py and svj_antelope.py 
+      :param int bkg_nevents: in getTwoJetSystem(), if nevents =-1, it reads all events, which is what we want when we want to evaluate the entire file (rather than evaluate randomly selected sample unlike in svj_pfn.py or svj_antelope.py)
+      """
+      '''  
+      sig_read_dir: directory of the file the root file is read from 
+      h5_dir: from reading sig_read_dir or bkg_read_dir, it creates h5 files of np arrays
+      all_dir: has PFN or VAE model and plots
+      arch_dir: subfolder of all_dir; has PFN or VAE model 
+      apply_dir: subfolder of all_dir; all the new files/plots from this class will be saved here
+      plot_dir: subfolder of apply_dir; e.g. score, phi2D, inputs, hist_jet1_pt plots of each signal point/other files     
+      '''
       self.filedir=filedir
       self.extraVars=extraVars
       self.seed=seed
@@ -102,14 +114,6 @@ class Param_evaluate():
       if bool_weight:self.weight_tag='ws'
       else:self.weight_tag='nws'
 
-      '''
-      sig_read_dir: directory of the file the root file is read from 
-      h5_dir: from reading sig_read_dir or bkg_read_dir, it creates h5 files of np arrays
-      all_dir: has PFN or VAE model and plots
-      arch_dir: subfolder of all_dir; has PFN or VAE model 
-      apply_dir: subfolder of all_dir; all the new files/plots from this class will be saved here
-      plot_dir: subfolder of apply_dir; e.g. score, phi2D, inputs, hist_jet1_pt plots of each signal point/other files     
-      '''
       
       if self.vae_model=='': # if evaluating PFN
         self.sig_prefix=f'{self.sig_version}_'
@@ -132,6 +136,7 @@ class Param_evaluate():
 
   
   def call_functions(self,nevents, bool_weight, input_file,read_dir, bool_select_all,dsid):
+    """this function reads PFN and ANTELOPE model and read events from existing hdf5 files and plots them """
     cprint(f'{self.extraVars=}, {self.pfn_model=}, {self.vae_model=}', 'red')
     print(self.arch_dir_pfn+self.pfn_model+'_graph_arch')
     graph = keras.models.load_model(self.arch_dir_pfn+self.pfn_model+'_graph_arch')
@@ -204,6 +209,7 @@ class Param_evaluate():
     return phi_bkg, pred_phi_bkg, mT_bkg,  vae
    
   def write_hdf5(self,dsid,phi_bkg, pred_phi_bkg, mT_bkg, vae,  prefix,outputfolder, subset=0, split_nevents=0, bool_split=False):
+    """apply scores e.g. {method}_transformed_log10_sig -> multi_reco_transformed_log10_sig"""
     if bool_split: outputpath=self.applydir+outputfolder+f'{prefix}{dsid}_log10_{subset}'+'.hdf5' 
     else: outputpath=self.applydir+outputfolder+f'{prefix}{dsid}_log10'+'.hdf5' 
 
@@ -223,7 +229,8 @@ class Param_evaluate():
       if bool_split:
         phi_bkg, pred_phi_bkg, mT_bkg= phi_bkg[subset*split_nevents: (subset+1)*split_nevents, :]  , pred_phi_bkg[subset*split_nevents: (subset+1)*split_nevents, :],   mT_bkg[subset*split_nevents: (subset+1)*split_nevents, :]
         print('after split',phi_bkg.shape, pred_phi_bkg.shape, mT_bkg.shape)
-       
+
+      """Apply the scores using keras.losses.mse and get_multi_loss_each -> takes a long time"""
       bkg_loss={}
       # ## AE loss
       bkg_loss['mse'] = np.array(keras.losses.mse(phi_bkg, pred_phi_bkg))
@@ -275,6 +282,7 @@ class Param_evaluate():
     return rec_bkg
 
   def add_column(self,dsid,outputfolder, newfolder, columns, nevents, input_file, bool_weight, read_dir, bool_split, input_tag,output_tag,prefix, bool_select_all):
+    """ if we need more variables than the ones we already read and want to add them to type 2 HDF5 (for more on HDF5, read README.md)"""
     if output_tag!='':
        if output_tag[0]!='_': output_tag='_'+output_tag # if output_tag is not an empty string and doesn't contain '_' in the beginning, add it
 #    if bool_split:
@@ -336,6 +344,7 @@ class Param_evaluate():
   Here we evaluate on signal files 
   """
   def eval_sig(self, bool_split=False, columns= ['jet2_Width'], outputfolder='/hdf5_orig/',bool_select_all=True, bool_add=False):
+   
     #bool_select_all= True for most of the times
     file_ls,filetag_ls=make_dsid()
     for fl in file_ls:

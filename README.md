@@ -26,6 +26,18 @@ s
 `svj_vae.py`: train simple AE  
 `evaluate.py`: evaluate simple AE (defunct)  
 
+### Additional information on the main files
+A) svj\_pfn.py
+-read ROOT files -> randomly select events with given seed -> only select jets w/ at least 3 tracks (but no pT selections on tracks) in apply\_TrackSelection() -> in apply\_JetScalingRotation, apply rotations for eta and phi, and scaling for pT and E -> load PFN model (not trained yet) -> split train and test samples -> in apply\_StandardScaling, scale train data and with the same scaler, scale test data -> train the PFN model -> apply the model to the test samples -> make AUC/ROC curve plot, loss function plot, and a plot of PFN scores of signal vs background of test and train 
+B) svj\_antelope.py 
+- in prepare\_pfn(), load PFN model (trained) -> read from Type 1 HDF5 files (if already existent) -> in apply\_StandardScaling, scale background and signal samples with the scaler used in svj\_pfn.py -> if asked for signal injection, add signals to background samples -> if asked for scaling (or shift), scale (or shift) the PFN latent space variables; the standard case is that neither scaling nor shifting happens for PFN latent space variables -> in evaluate\_vae(), if ANTELOPE model hasn't been trained, call in train\_vae() -> in train\_vae(), train ANTELOPE model -> apply it to the test samples -> in plot\_loss\_dict(), make AUC/ROC curve plot and loss function plot; and a plot of ANTELOPE (a.k.a anomaly score, or in code, multi\_reco\_log10\_sig ) scores 
+-- note that there is transformation of log10 and then sigmoid function, which means that if the ANTELOPE score is originally x, we want sigmoid(log10(x)); this ensures that the ANTELOPE score is restricted to \[0,1\] (due to sigmoid function) and their shapes are more visually distinguishable / less squashed (due to log10 function)
+-- multi\_reco\_transformed\_log10\_sig is combination of multi\_kl\_transformed\_log10\_sig (KL = KL divergence term) and multi\_mse\_transformed\_log10\_sig (MSE = mean squared error term); it was ultimately chosen to use  multi\_reco instead only either using multi\_kl or multi\_mse for better performance 
+C) pfn\_evaluate.py
+- in eval\_sig(), evaluate signal files by call\_functions -> load PFN and/or ANTELOPE models -> read from Type 1 HDF5 files (if already existent) -> make plots -> scale or shift if specified -> in write\_hdf5(), create HDF5 files (type 2) with applied scores (ANTELOPE scores incl. 'mse', 'multi\_reco', 'mse\_transformed\_log10\_sig', etc) and other variables from extraVars list -> repeat in eval\_bkg for the background files to be evaluated
+- in scan(), to make some signal grid plots, such as SIC, sensitivity, optimal AUC score cut, etc, run(uncomment) grid\_scan() or grid\_s\_sqrt\_b(); or run get\_sig\_contamination()
+- in compare\_hist(), make data/MC plots; CR/VR/SR plots;  or other histograms all in one plot using plot\_single\_variable\_ratio() 
+
 ## Organization of the files
 Input files can be found in the shared eos area: /eos/atlas/atlascerngroupdisk/phys-exotics/jdm/svjets-schannel, or check /data/users/ebusch/SVJ/autoencoder/ on katya.
 There are 3 different types of input files relevant here:
@@ -133,7 +145,7 @@ python svj_pfn.py
 ```
 Notice, then, the output files are all saved in self.all\_dir of the class.
 
-### Step C
+### Step B
 To train the ANTELOPE on the already trained PFN model, first, you can reset the arguments of svj\_antelope.py in the similar manner as specified in Step A above. Afterwards, run 
 ```bash
 python svj_antelope.py
@@ -147,5 +159,4 @@ Only after then, run
 ```
 python pfn_evaluate.py
 ```
-
 
