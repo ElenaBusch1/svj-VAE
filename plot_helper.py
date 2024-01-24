@@ -282,7 +282,7 @@ def make_grid_plot(values,val,tag_file,tag_title,plot_dir,tag=''):
     elif val == "score_cut": ax.text(i,j,'{0:.2e}'.format(label),ha='center', va='center', fontsize = 'large', color='white', fontweight='bold')
     elif val == "score_cut2": ax.text(i,j,'{0:.2e}'.format(label),ha='center', va='center', fontsize = 'large', color='white',fontweight='bold')
     #elif val == "score_cut": ax.text(i,j,'{0:.3f}'.format(label),ha='center', va='center', fontsize = 'large')
-    elif "sig_contami" in val: ax.text(i,j,'{0:.3e}'.format(label),ha='center', va='center', fontsize = 'large', color='white',fontweight='bold')
+    elif "sig_contami" in val: ax.text(i,j,'{0:.1e}'.format(label),ha='center', va='center', fontsize = 'large', color='white',fontweight='bold')
     else: ax.text(i,j,'{0:.2f}'.format(label),ha='center', va='center', fontsize = 'large', color='white',fontweight='bold')
 
   # x-y labels for grid 

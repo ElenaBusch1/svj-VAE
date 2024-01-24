@@ -1,10 +1,10 @@
 __pycache__
 *png
-plots/*
+plots*
 *arch*
 *weights*
 *history*
-plots_result/*
+plots_result*
 h5dir*
 results/*
 plots/*

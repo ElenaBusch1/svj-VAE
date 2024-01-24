@@ -275,6 +275,8 @@ def get_sig_contamination(title, outputdir, sig_prefix, bkg_prefix, bkg_file,sig
       sig_SR_count = sum(w[sig_SR])
       sig_eff[dsid] = {f"sig_contamination_CR_{region}":100*sig_CR_count/bkg_CR_count, 
        f"sig_contamination_VR_{region}":100*sig_VR_count/bkg_VR_count,
+       f"sig_effiency_CR_{region}":sig_CR_count/sum(w),
+       f"sig_effiency_VR_{region}":sig_VR_count/sum(w),
        f"sig_effiency_SR_{region}":sig_SR_count/sum(w)}
     except Exception as e:
       cprint(e,'red')
