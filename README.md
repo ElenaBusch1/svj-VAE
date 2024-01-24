@@ -42,29 +42,108 @@ There are 3 different types of input files relevant here:
 - the reason why PFN and ANTELOPE score HDF5 files are separate from type 1 files is to avoid data corruption eventhough there is a downside of taking up more storage space
 
 Now that the main input files (0 and 1) and output file (2) are explained, let's look at some folders where some other output files will be stored. Within the directory, (once you have run svj\_pfn.py or pfn\_evaluate.py files following the description in 4) usage), the following directories should be created (if parent\_dir is set as /nevis/katya01/data/users/$USERNAME/svj-vae/) :
-A) /nevis/katya01/data/users/$USERNAME/svj-vae/results/grid\_sept26/$FOLDERNAME: 
-	this is where most files will be created from running the main files; the most important directory($FOLDERNAME) is 10_08_23_04_08 which contains the latest version of the ANTELOPE model that was trained on data 
+A) /nevis/katya01/data/users/$USERNAME/svj-vae/results/grid\_sept26/$FOLDERNAME:
+    $FOLDERNAME here is when the folder is created (specified in svj\_pfn.py and svj\_antelope.py). An example of this is 10\_08\_23\_04\_08 which was created on October 8th, 2023 at 04:08. This structure of organization is useful when comparing different hyperparmeters and going back to old records as these folders are  where most files will be created from running the main files. The most important directory($FOLDERNAME) is 10\_08\_23\_04\_08 which contains the latest version of the ANTELOPE model that was trained on data 
   a)  /nevis/katya01/data/users/$USERNAME/svj-vae/results/grid\_sept26/$FOLDERNAME/architectures\_saved
     where architectures are saved (examples of files and subdirectories vANTELOPE_decoder_arch, vANTELOPE_encoder_arch, vANTELOPE_decoder_weights.h5, vANTELOPE_encoder_weights.h5)
   b) /nevis/katya01/data/users/$USERNAME/svj-vae/results/grid\_sept26/$FOLDERNAME/applydir
     where HDF5 files with evaluated scores are saved along with relevant plots in the subdirectory of which name can be set up in pfn_evaluate.py file i.e. in, say hdf5_jet2_width subdirectory, there are a directory called plots, and HDF5 files of evaluated scores of multiple signal files. 
     
 ## Getting started
+Three options for conda environments are given below (Tips on conda environments also listed below).
 
-Create a conda enviroment from the svj\_env.yml file. Key packages are:
-`h5py tensorflow keras numpy matplotlib pandas scikit-learn`
+Option A:  Using GPU (recommended way):
+Simply activate the environment already set up by Gabriel Matos that uses GPU (for faster computing power especially useful when training VAE model and evaluating events based on the model)
+```bash
+conda activate /data/users/gpm2117/envs/tf
+``` 
+and this is all you have to do! (to add packages, ask Gabriel Matos)
+
+Option B: Not using GPU:
+You could activate the environment already set up by K Park 
+```bash
+conda activate /nevis/katya01/data/users/kpark/env/ae-env
+```
+Option C: Or simply create your new environment by following below:
+
+1) In the directory where the repository was cloned to, open uproot-env.yml
+```bash
+vim svj_env.yml
+```
+and inside this file, replace the line below with whichever location you want the environment to be stored in:
+
+prefix: /nevis/katya01/data/users/kpark/env/svj\_env
+ 
+2) Create a conda enviroment from the svj\_env.yml file. 
+```bash
+conda env create -f svj_env.yml
+```
+
+3) and then checking if the environment was installed by:
+```bash
+conda info --envs
+```
+4) Now, everytime you open a new terminal tab, type in
+```bash
+conda activate [prefix]
+```
+where [prefix] is the prefix you typed in step 1)
+e.g. conda activate /nevis/katya01/data/users/kpark/env/uproot-env.
+
+TIP: If you are unsure of your prefix, to retrieve prefix of the current conda environment, type in
+```bash
+echo $CONDA_PREFIX
+```
+TIP2: If there are still a few packages that are missing (which is possible), which raises errors when running the code, then try (only after activiating the conda environmnt,
+```bash
+conda install jupyter --channel conda-forge 
+```
+The channel specified here to install packages from is conda-forge which is updated often (so many packages are usually up-to-date), but other channels or default option might also work with the command such as 
+```bash
+conda install [package_name]
+```
+
+TIP3: 
+If a long prefix shown is annoying, copy the exact command below without changing it:
+```bash
+conda config --set env_prompt '({name})'
+```
+This command will change your .condarc usually placed in a home directory (if not, it will be automatically generated from this command), which should include this line:
+envi\_prompt: ({name})
+
+
+More on creating an environment can be found in:
+- https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file
+- https://carpentries-incubator.github.io/introduction-to-conda-for-data-scientists/02-working-with-environments/index.html
 
 **Note**: uproot is not included in the conda environment. The Columbia group uses a local installation of uprooti (v4.3.5), which may be more efficient
 
 
 ## Usage
 
-Training is done with the file `svj_pfn.py`, in svj conda environment.
-```
+
+Always activate the conda environment first before running any commands (by following one of the three options above).
+
+### Step A
+Training is done with the file `svj_pfn.py`.  
+Before running the code, however, check the arguments of the init function of the class inside the code and see whether you want different values than the default ones. If you want different values, you could either change the default values or scroll near the bottom of the script and find where the class is instatiated and reset the arguments for this instance. For example, 
+param1=Param(sig\_events=502000, bkg\_events=502000, learning\_rate=0.002). With your chosen settings, now, you can run 
+```bash
 python svj_pfn.py
 ```
+Notice, then, the output files are all saved in self.all\_dir of the class.
 
-You can save your trained network, and evaluate using the `pfn_evaluate.py` script.
+### Step C
+To train the ANTELOPE on the already trained PFN model, first, you can reset the arguments of svj\_antelope.py in the similar manner as specified in Step A above. Afterwards, run 
+```bash
+python svj_antelope.py
+```
+### Step C
+You can either 
+a) apply PFN model OR
+b) apply PFN model and then apply ANTELOPE model 
+using the `pfn_evaluate.py` script. Here, you also change the arguments of the instance as specificied in step A. The most important thing is change the filedir, where output files will be made (if b) then ANTELOPE model will also be used from this folder, but doesn't apply to case a). For other important parameters to check, look at the init function (e.g. extraVars, bkg\_version, pfn\_model, arch\_dir\_pfn, etc) 
+Only after then, run
 ```
 python pfn_evaluate.py
 ```

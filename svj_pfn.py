@@ -26,8 +26,34 @@ class Param:
       batchsize_vae=32, # batchsize_pfn=500 -> 512 or any power of 2
       bool_pt=False,
       sig_file="skim3.user.ebusch.SIGskim.root", bkg_file="skim3.user.ebusch.QCDskim.root",  bool_weight=True, extraVars=[],seed=0):
-      #sig_file="user.ebusch.SIGskim.mc20e.root", bkg_file="user.ebusch.QCDskim.mc20e.root",  bool_weight=True, extraVars=[]):
-     
+    """
+    :param str arch_dir: where model architectures will be saved
+    :param str print_dir: if '', then saved within the all_dir
+    :param str plot_dir: where plots are saved 
+    :param str h5_dir: where type 1 HDF5 (see README.md for more detail) will be created if it doesn't already exist yet
+    :param str pfn_model: name of PFN
+    :param str vae_model: name of VAE 
+    :param int bkg_events: number of events of background 
+    :param int sig_events: number of events of signal
+    :param int num_elements: input_dim of get_full_PFN() in models.py is [num_elements, element_size] 
+    :param int element_size: input_dim of get_full_PFN() in models.py is [num_elements, element_size]  
+    :param int encoding_dim: actually no longer in use -> but still can use for ECG example (get_ECG_encoder) 
+    :param int latent_dim: also no longer in use -> but still can use for ECG example (get_ECG_encoder) e.g. encoder_outputs = keras.layers.Dense(latent_dim, activation='relu')(encoded)
+    :param int phi_dim: dimension of latent space. For example, if phi_dim=64, an event would have 64 variables from PFN model that was applied and those would been seen as input to ANTELOPE.  
+    :param int nepochs: number of epochs
+    :param int n_neuron: number of neurons
+    :param float learning_rate: learning rate
+    :param int nlayer_phi: number of layers in phi network of of get_full_PFN()
+    :param int nlayer_F: number of layers in F network of of get_full_PFN()
+    :param int batchsize_pfn: batchsize of training PFN
+    :param int batchsize_vae: batchsize of training VAE -> not used in this code but will be inherited to svj_antelope.py
+    :param bool bool_pt: if True, in eval_helper.py/apply_TrackSelection, pT cut is applied 
+    :param str sig_file: signal file name 
+    :param str bkg_file: background file name
+    :param bool bool_weight: if True, background is weighted (but signal is always NOT weighted -> bool_weight_sig is set to False)
+    :param ls extraVars: list of extra variables to read and use other than track_array0, track_array1, and jet_array 
+    :param int seed: seed for randomly picking events from sig_file or bkg_file 
+    """
     self.time=time.strftime("%m_%d_%y_%H_%M", time.localtime())
     self.time_dir=time.strftime("%m_%d/", time.localtime())
 #    self. all_dir='/nevis/katya01/data/users/kpark/svj-vae/results/stats/'+self.time+'/' # for statistics
@@ -49,7 +75,6 @@ class Param:
     dir_ls =[self.all_dir, self.print_dir, self.plot_dir,self.arch_dir]
        
   
-
     for d in dir_ls:
       if not os.path.exists(d):
         os.mkdir(d)
@@ -137,6 +162,10 @@ class Param:
 
     start = time.time()
 
+    """
+    select events, apply_TrackSelection(), make HDF5 files (Type 1 - read README.md)
+
+    """
     sig, mT_sig, sig_sel, jet_sig, sig_in0, sig_in1 = getTwoJetSystem(nevents=self.sig_events,input_file=self.sig_file,
       track_array0=track_array0, track_array1=track_array1,  jet_array= jet_array,
       bool_weight=bool_weight_sig,  extraVars=self.extraVars, plot_dir=self.plot_dir, seed=self.seed,max_track=self.max_track, bool_pt=self.bool_pt,h5_dir=self.h5_dir)
@@ -291,30 +320,18 @@ def read_auc(filedir):
   return dict_ls
 
 #read_auc('/nevis/katya01/data/users/kpark/svj-vae/results/test')
-#sig_events=900
-#sig_events=90000
-#bkg_events=600
-#bkg_events=66000
-#sig_events=915000
-#bkg_events=665000
 #seeds=np.random.randint(0,300,100)
 #seeds=np.arange(1,100, dtype=int)
 seeds=np.arange(0,100, dtype=int)
 #seed=seeds[0]
-"""
-sig_events=915000 # change before pt >10 per track
-bkg_events=665000
-sig_events=1151555
-bkg_events=3234186
-"""
 sig_events=502000 # change after no pt requirement
 bkg_events=502000
-#sig_events=5000
-#bkg_events=5000
-#max_track=15 #160
 max_track=80 #160
 #max_track=15 #160
+
+"""Main Function
 """
+
 for nlayer in [3]:
   param1=Param(  bkg_events=bkg_events, sig_events=sig_events, nlayer_phi=nlayer, nlayer_F=nlayer)
   stdoutOrigin=param1.open_print()
@@ -325,6 +342,8 @@ for nlayer in [3]:
   print(param1.close_print(stdoutOrigin)) 
   print(param1.save_info())
   sys.exit()
+
+"""UNCOMMENT BELOW IF NECESSARY
 for max_t in [max_track]:
   param1=Param(  bkg_events=bkg_events, sig_events=sig_events, max_track=max_t)
 #  sys.exit()
