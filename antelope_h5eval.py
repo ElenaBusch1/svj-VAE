@@ -103,8 +103,8 @@ def mT_shape_compare():
   #  znunu = f.get('data')[:]
   #with h5py.File("../v9.1/v9p1_PFNv4_Wjetsskim0_w300k.hdf5","r") as f:
   #  wjets = f.get('data')[:]
-  #with h5py.File("../v9.1/v9p1_PFNv8_data16.hdf5","r") as f:
-  #  data = f.get('data')[:]
+  with h5py.File("../v9.2/v9p2_PFNv6_dataAll.hdf5","r") as f:
+    data = f.get('data')[:]
   with h5py.File("../v8.1/v8p1_PFNv6_515503.hdf5","r") as f:
     sig1 = f.get('data')[:]
   with h5py.File("../v8.1/v8p1_PFNv6_515506.hdf5","r") as f:
@@ -114,10 +114,14 @@ def mT_shape_compare():
   variables = ["mT_jj"]
   for var in variables:
     #if var == "mT_jj": continue
+    selectionDT = data["jet2_Width"]<0.05
     selectionCR = qcd["jet2_Width"]<0.05
-    selectionSR = (qcd["jet2_Width"]>0.05) & (qcd["score"]>0.6)
+    #selectionVR = (qcd["jet2_Width"]>0.05) & (qcd["score"]<0.6)
+    #selectionSR = (qcd["jet2_Width"]>0.05) & (qcd["score"]>0.6)
+    data_loss = data[var][selectionDT]
     qcd_lossCR = qcd[var][selectionCR]
-    qcd_lossSR = qcd[var][selectionSR]
+    #qcd_lossVR = qcd[var][selectionVR]
+    #qcd_lossSR = qcd[var][selectionSR]
     #print("bkg shape: ", qcd_loss.shape)
     #znunu_loss = znunu[var]
     #wjets_loss = wjets[var]
@@ -128,18 +132,20 @@ def mT_shape_compare():
     sig1_loss = sig1[var][selection1]
     sig2_loss = sig2[var][selection2]
     qcd_weightsCR = np.reshape(5*qcd["weight"][selectionCR],len(qcd_lossCR))
-    qcd_weightsSR = np.reshape(5*qcd["weight"][selectionSR],len(qcd_lossSR))
-    print("CR:",sum(qcd_weightsCR))
-    print("SR:",sum(qcd_weightsSR))
+    #qcd_weightsVR = np.reshape(5*qcd["weight"][selectionVR],len(qcd_lossVR))
+    #qcd_weightsSR = np.reshape(5*qcd["weight"][selectionSR],len(qcd_lossSR))
+    #print("CR:",sum(qcd_weightsCR))
+    #print("VR:",sum(qcd_weightsVR))
+    #print("SR:",sum(qcd_weightsSR))
     #znunu_weights = 9.17*np.reshape(znunu["weight"],len(znunu["weight"]))
     #wjets_weights = 35.97*np.reshape(wjets["weight"],len(wjets["weight"]))
     #total_weights = np.concatenate((qcd_weights,znunu_weights,wjets_weights))
-    d = [qcd_lossCR, qcd_lossSR]#, sig1_loss, sig2_loss]
-    w = [qcd_weightsCR, qcd_weightsSR]#np.ones(len(sig1_loss)), np.ones(len(sig2_loss))]
-    labels = ["MC - CR", "MC - SR"]#, "2500 GeV 0.8"]
-    #d = [data_loss, total_bkg]
-    #w = [np.ones(len(data_loss)), total_weights]
-    #labels = ["Data", "QCD + Znunu + Wjets"]#"2000 GeV 0.2", "2000 GeV 0.8"]
+    #d = [qcd_lossCR, qcd_lossVR, qcd_lossSR]#, sig1_loss, sig2_loss]
+    #w = [qcd_weightsCR, qcd_weightsVR, qcd_weightsSR]#np.ones(len(sig1_loss)), np.ones(len(sig2_loss))]
+    #labels = ["MC - CR", "MC - VR", "MC - SR"]#, "2500 GeV 0.8"]
+    d = [data_loss, qcd_lossCR]
+    w = [np.ones(len(data_loss)), qcd_weightsCR]
+    labels = ["Data - CR", "MC - CR"]#"2000 GeV 0.2", "2000 GeV 0.8"]
     #labels = [l+str(len(ds)) for l,ds in zip(lab,d)]
     #plot_single_variable(d,w,labels, var, logy=True) 
     plot_simple_ratio(d,w,labels, var, logy=True) 
@@ -390,7 +396,7 @@ def compare_s_sqrt_b():
   do_grid_plots(v3_compare, "k_fold")  
 
 def main():
-  #mT_shape_compare()
+  mT_shape_compare()
   #grid_scan("PFNv6_1_skim1")
   #compare_s_sqrt_b()
   #correlation_plots()
@@ -398,7 +404,7 @@ def main():
   #grid_s_sqrt_b(0.99)
   #cms_mT_plots()
   #score_cut_mT_plot()
-  test_transform()
+  #test_transform()
 
 if __name__ == '__main__':
   main()
