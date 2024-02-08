@@ -53,12 +53,12 @@ There are 3 different types of input files relevant here:
 - this file has been created from running pfn\_evaluate.py and has PFN and ANTELOPE scores
 - the reason why PFN and ANTELOPE score HDF5 files are separate from type 1 files is to avoid data corruption eventhough there is a downside of taking up more storage space
 
-Now that the main input files (0 and 1) and output file (2) are explained, let's look at some folders where some other output files will be stored. Within the directory, (once you have run svj\_pfn.py or pfn\_evaluate.py files following the description in 4) usage), the following directories should be created (if parent\_dir is set as /nevis/katya01/data/users/$USERNAME/svj-vae/) :
-A) /nevis/katya01/data/users/$USERNAME/svj-vae/results/grid\_sept26/$FOLDERNAME:
-    $FOLDERNAME here is when the folder is created (specified in svj\_pfn.py and svj\_antelope.py). An example of this is 10\_08\_23\_04\_08 which was created on October 8th, 2023 at 04:08. This structure of organization is useful when comparing different hyperparmeters and going back to old records as these folders are  where most files will be created from running the main files. The most important directory($FOLDERNAME) is 10\_08\_23\_04\_08 which contains the latest version of the ANTELOPE model that was trained on data 
-  a)  /nevis/katya01/data/users/$USERNAME/svj-vae/results/grid\_sept26/$FOLDERNAME/architectures\_saved
+Now that the main input files (0 and 1) and output file (2) are explained, let's look at some folders where some other output files will be stored. Within the directory, (once you have run svj\_pfn.py or pfn\_evaluate.py files following the description in 4) usage), the following directories should be created (if parent\_dir is set as /nevis/katya01/data/users/USERNAME/svj-vae/):
+A) /nevis/katya01/data/users/USERNAME/svj-vae/results/grid\_sept26/FOLDERNAME:
+    FOLDERNAME here is the time when the folder is created (specified in svj\_pfn.py and svj\_antelope.py). An example of this is 10\_08\_23\_04\_08 which was created on October 8th, 2023 at 04:08. This structure of organization is useful when comparing different hyperparmeters and going back to old records as these folders are  where most files will be created from running the main files. The most important directory(FOLDERNAME) is 10\_08\_23\_04\_08 which contains the latest version of the ANTELOPE model that was trained on data 
+  a)  /nevis/katya01/data/users/USERNAME/svj-vae/results/grid\_sept26/FOLDERNAME/architectures\_saved
     where architectures are saved (examples of files and subdirectories vANTELOPE_decoder_arch, vANTELOPE_encoder_arch, vANTELOPE_decoder_weights.h5, vANTELOPE_encoder_weights.h5)
-  b) /nevis/katya01/data/users/$USERNAME/svj-vae/results/grid\_sept26/$FOLDERNAME/applydir
+  b) /nevis/katya01/data/users/USERNAME/svj-vae/results/grid\_sept26/FOLDERNAME/applydir
     where HDF5 files with evaluated scores are saved along with relevant plots in the subdirectory of which name can be set up in pfn_evaluate.py file i.e. in, say hdf5_jet2_width subdirectory, there are a directory called plots, and HDF5 files of evaluated scores of multiple signal files. 
     
 ## Getting started
