@@ -26,17 +26,51 @@ s
 `svj_vae.py`: train simple AE  
 `evaluate.py`: evaluate simple AE (defunct)  
 
+* Note that parentheses are used to notate functions.
+
 ### Additional information on the main files
 A) svj\_pfn.py
--read ROOT files -> randomly select events with given seed -> only select jets w/ at least 3 tracks (but no pT selections on tracks) in apply\_TrackSelection() -> in apply\_JetScalingRotation, apply rotations for eta and phi, and scaling for pT and E -> load PFN model (not trained yet) -> split train and test samples -> in apply\_StandardScaling, scale train data and with the same scaler, scale test data -> train the PFN model -> apply the model to the test samples -> make AUC/ROC curve plot, loss function plot, and a plot of PFN scores of signal vs background of test and train 
+1) read ROOT files  randomly select events with given seed 
+2) only select jets w/ at least 3 tracks (but no pT selections on tracks) in apply\_TrackSelection() 
+3) in apply\_JetScalingRotation(), apply rotations for eta and phi, and scaling for pT and E 
+4) load PFN model (not trained yet) 
+5) split train and test samples 
+6) in apply\_StandardScaling(), scale train data and with the same scaler, scale test data
+7) train the PFN model 
+8) apply the model to the test samples 
+9) make AUC/ROC curve plot, loss function plot, and a plot of PFN scores of signal vs background of test and train 
+
 B) svj\_antelope.py 
-- in prepare\_pfn(), load PFN model (trained) -> read from Type 1 HDF5 files (if already existent) -> in apply\_StandardScaling, scale background and signal samples with the scaler used in svj\_pfn.py -> if asked for signal injection, add signals to background samples -> if asked for scaling (or shift), scale (or shift) the PFN latent space variables; the standard case is that neither scaling nor shifting happens for PFN latent space variables -> in evaluate\_vae(), if ANTELOPE model hasn't been trained, call in train\_vae() -> in train\_vae(), train ANTELOPE model -> apply it to the test samples -> in plot\_loss\_dict(), make AUC/ROC curve plot and loss function plot; and a plot of ANTELOPE (a.k.a anomaly score, or in code, multi\_reco\_log10\_sig ) scores 
+
+a) in prepare\_pfn(), load PFN model (trained) 
+1) read from Type 1 HDF5 files (if already existent) 
+2) in apply\_StandardScaling, scale background and signal samples with the scaler used in svj\_pfn.py 
+3) if asked for signal injection, add signals to background samples 
+4) if asked for scaling (or shift), scale (or shift) the PFN latent space variables; the standard case is that neither scaling nor shifting happens for PFN latent space variables 
+
+b) in evaluate\_vae(), if ANTELOPE model hasn't been trained, call in train\_vae() 
+
+c) in train\_vae(), train ANTELOPE model 
+1) apply it to the test samples 
+
+d) in plot\_loss\_dict(), make AUC/ROC curve plot and loss function plot; and a plot of ANTELOPE (a.k.a anomaly score, or in code, multi\_reco\_log10\_sig ) scores 
 -- note that there is transformation of log10 and then sigmoid function, which means that if the ANTELOPE score is originally x, we want sigmoid(log10(x)); this ensures that the ANTELOPE score is restricted to \[0,1\] (due to sigmoid function) and their shapes are more visually distinguishable / less squashed (due to log10 function)
 -- multi\_reco\_transformed\_log10\_sig is combination of multi\_kl\_transformed\_log10\_sig (KL = KL divergence term) and multi\_mse\_transformed\_log10\_sig (MSE = mean squared error term); it was ultimately chosen to use  multi\_reco instead only either using multi\_kl or multi\_mse for better performance 
+
 C) pfn\_evaluate.py
-- in eval\_sig(), evaluate signal files by call\_functions -> load PFN and/or ANTELOPE models -> read from Type 1 HDF5 files (if already existent) -> make plots -> scale or shift if specified -> in write\_hdf5(), create HDF5 files (type 2) with applied scores (ANTELOPE scores incl. 'mse', 'multi\_reco', 'mse\_transformed\_log10\_sig', etc) and other variables from extraVars list -> repeat in eval\_bkg for the background files to be evaluated
-- in scan(), to make some signal grid plots, such as SIC, sensitivity, optimal AUC score cut, etc, run(uncomment) grid\_scan() or grid\_s\_sqrt\_b(); or run get\_sig\_contamination()
-- in compare\_hist(), make data/MC plots; CR/VR/SR plots;  or other histograms all in one plot using plot\_single\_variable\_ratio() 
+
+a) in eval\_sig(), evaluate signal files by call\_functions 
+1) load PFN and/or ANTELOPE models 
+2) read from Type 1 HDF5 files (if already existent) 
+3) make plots 
+4) scale or shift if specified 
+
+b) in write\_hdf5(), create HDF5 files (type 2) with applied scores (ANTELOPE scores incl. 'mse', 'multi\_reco', 'mse\_transformed\_log10\_sig', etc) and other variables from extraVars list
+1) repeat in eval\_bkg for the background files to be evaluated
+
+c) in scan(), to make some signal grid plots, such as SIC, sensitivity, optimal AUC score cut, etc, run(uncomment) grid\_scan() or grid\_s\_sqrt\_b(); or run get\_sig\_contamination()
+
+d) in compare\_hist(), make data/MC plots; CR/VR/SR plots;  or other histograms all in one plot using plot\_single\_variable\_ratio() 
 
 ## Organization of the files
 Input files can be found in the shared eos area: /eos/atlas/atlascerngroupdisk/phys-exotics/jdm/svjets-schannel, or check /data/users/ebusch/SVJ/autoencoder/ on katya.
@@ -54,12 +88,17 @@ There are 3 different types of input files relevant here:
 - the reason why PFN and ANTELOPE score HDF5 files are separate from type 1 files is to avoid data corruption eventhough there is a downside of taking up more storage space
 
 Now that the main input files (0 and 1) and output file (2) are explained, let's look at some folders where some other output files will be stored. Within the directory, (once you have run svj\_pfn.py or pfn\_evaluate.py files following the description in 4) usage), the following directories should be created (if parent\_dir is set as /nevis/katya01/data/users/USERNAME/svj-vae/):
-A) /nevis/katya01/data/users/USERNAME/svj-vae/results/grid\_sept26/FOLDERNAME:
-    FOLDERNAME here is the time when the folder is created (specified in svj\_pfn.py and svj\_antelope.py). An example of this is 10\_08\_23\_04\_08 which was created on October 8th, 2023 at 04:08. This structure of organization is useful when comparing different hyperparmeters and going back to old records as these folders are  where most files will be created from running the main files. The most important directory(FOLDERNAME) is 10\_08\_23\_04\_08 which contains the latest version of the ANTELOPE model that was trained on data 
-  a)  /nevis/katya01/data/users/USERNAME/svj-vae/results/grid\_sept26/FOLDERNAME/architectures\_saved
-    where architectures are saved (examples of files and subdirectories vANTELOPE_decoder_arch, vANTELOPE_encoder_arch, vANTELOPE_decoder_weights.h5, vANTELOPE_encoder_weights.h5)
-  b) /nevis/katya01/data/users/USERNAME/svj-vae/results/grid\_sept26/FOLDERNAME/applydir
-    where HDF5 files with evaluated scores are saved along with relevant plots in the subdirectory of which name can be set up in pfn_evaluate.py file i.e. in, say hdf5_jet2_width subdirectory, there are a directory called plots, and HDF5 files of evaluated scores of multiple signal files. 
+
+A) /nevis/katya01/data/users/USERNAME/svj-vae/results/grid\_sept26/FOLDERNAME
+- FOLDERNAME here is the time when the folder is created (specified in svj\_pfn.py and svj\_antelope.py). 
+- An example of this is 10\_08\_23\_04\_08 which was created on October 8th, 2023 at 04:08. This structure of organization is useful when comparing different hyperparmeters and going back to old records as these folders are  where most files will be created from running the main files. 
+- The most important directory(FOLDERNAME) is 10\_08\_23\_04\_08 which contains the latest version of the ANTELOPE model that was trained on data 
+
+a)  /nevis/katya01/data/users/USERNAME/svj-vae/results/grid\_sept26/FOLDERNAME/architectures\_saved
+- where architectures are saved (examples of files and subdirectories vANTELOPE_decoder_arch, vANTELOPE_encoder_arch, vANTELOPE_decoder_weights.h5, vANTELOPE_encoder_weights.h5)
+
+b) /nevis/katya01/data/users/USERNAME/svj-vae/results/grid\_sept26/FOLDERNAME/applydir
+- where HDF5 files with evaluated scores are saved along with relevant plots in the subdirectory of which name can be set up in pfn_evaluate.py file i.e. in, say hdf5_jet2_width subdirectory, there are a directory called plots, and HDF5 files of evaluated scores of multiple signal files. 
     
 ## Getting started
 Three options for conda environments are given below (Tips on conda environments also listed below).
