@@ -10,7 +10,7 @@ from plot_helper import *
 from eval_helper import *
 
 # Example usage
-nevents = 640052
+nevents = 500000
 num_elements = 80
 element_size = 7
 encoding_dim = 32
@@ -20,14 +20,14 @@ nepochs= 100
 batchsize_pfn=500
 batchsize_ae=32
 
-pfn_model = 'PFNv6_1'
+pfn_model = 'PFNv12'
 arch_dir = "architectures_saved/"
 
 ## Load leading two jets
-bkg_file = "../v9.1/skim1.user.ebusch.QCDskim.root"
+bkg_file = "../v12.5/user.ebusch.qcdBKG.root"
 #bkg2_file = "../v9.1/skim0.user.ebusch.METbkg.root"
 #bkg3_file = "../v9.1/skim0.user.ebusch.topPhys.root"
-sig_file = "../v8.1/skim3_1.user.ebusch.SIGall.root"
+sig_file = "../v12.5/user.ebusch.sigALL.root"
 #bkgpt = read_flat_vars(bkg_file,nevents, ["met_met"], True)
 #plot_single_variable([bkgpt], [np.ones(len(bkgpt))], ["totalBKG"],"met_met",True)
 

@@ -23,7 +23,8 @@ def getTwoJetSystem(x_events,input_file, extraVars=[], use_weight=True, idx_rang
     jet_bkg = read_flat_vars(input_file, x_events, jet_array, use_weight=use_weight, idx_range=idx_range)
     if getExtraVars: 
         vars_bkg = read_flat_vars(input_file, x_events, extraVars, use_weight=use_weight, idx_range=idx_range)
-
+    
+    print("Loaded data")
     print("Selecting tracks & rotating...")
     plot_nTracks(bkg_in1, "j2_presel")
     x0, _, bkg_nz0 = apply_TrackSelection(bkg_in0, jet_bkg)

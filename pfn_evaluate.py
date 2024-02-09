@@ -16,7 +16,7 @@ import h5py
 ## ---------- USER PARAMETERS ----------
 ## Model options:
 ##    "AE", "VAE", "PFN_AE", "PFN_VAE"
-pfn_models = ['PFNv6']
+pfn_models = ['PFNv12']
 arch_dir = "architectures_saved/"
 #pfn_model = 'PFNv6'
 x_events = -1
@@ -36,7 +36,7 @@ for pfn_model in pfn_models:
   classifier.compile()
 
   ## parse input files
-  with open("../v11.1/v11p1_test.txt", "r") as f:
+  with open("../v12.5/v12p5_data_eval.txt", "r") as f:
     files = []
     for line in f:
       line = line.strip()
@@ -46,9 +46,9 @@ for pfn_model in pfn_models:
   for myFile in files:
     print("-------> Evaluating", myFile)
     dsid = myFile[myFile.find(myCernID)+len(myCernID)+1:myFile.find(".root")]
-    my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "deltaY_12", "dphi_12", "weight", "mcEventWeight"]
+    my_variables = ["mT_jj", "jet1_pt", "jet2_pt", "jet1_Width", "jet2_Width", "met_met", "mT_jj_neg", "rT", "maxphi_minphi", "dphi_min", "pt_balance_12", "dR_12", "deta_12", "deltaY_12", "dphi_12", "weight", "mcEventWeight", "mcChannelNumber", "runNumber"]
     try:
-      bkg2,mT_bkg = getTwoJetSystem(x_events,"../v11.1/"+myFile, my_variables, False)
+      bkg2,mT_bkg = getTwoJetSystem(x_events,"../v12.5/"+myFile, my_variables, False)
     except:
       continue
     scaler = load(arch_dir+pfn_model+'_scaler.bin')
@@ -67,7 +67,7 @@ for pfn_model in pfn_models:
     ds_dt = np.dtype({'names':my_variables,'formats':[(float)]*len(my_variables)})
     rec_bkg = np.rec.array(save_bkg, dtype=ds_dt)
     
-    with h5py.File("v9p2_PFNv6_"+dsid+".hdf5","w") as h5f:
+    with h5py.File("../v12.5/v12p5_PFNv12_"+dsid+".hdf5","w") as h5f:
       dset = h5f.create_dataset("data",data=rec_bkg)
     print("Saved hdf5 for", dsid)
 

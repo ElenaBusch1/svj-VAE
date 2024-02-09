@@ -6,7 +6,7 @@ from matplotlib import colors
 from math import ceil
 from scipy.stats import pearsonr
 
-tag = "kp_relu"
+tag = "mTShapeCompOLD"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def my_metric(s,b):
@@ -239,23 +239,19 @@ def plot_single_variable(hists, weights, h_names, title, logy=False):
     h,b,_ = ax.hist(data, bins=bins, histtype='step', label=name, density=False, weights=weight)
     print(name)
     print(h[1],h[9],h[17])
-  #plt.legend(loc='lower center', fontsize='x-small')
+  plt.legend(loc='upper right', fontsize='x-small')
   print(bins)
   if (logy): ax.set_yscale("log")
   plt.title(title)
-  ax.set_xticks(np.arange(2000,8001,1000))
-  ax.set_xticks(np.arange(1600,8000,200), minor=True)
-  ax.set_yticks(np.logspace(-3,3,num=7))
-  print(np.logspace(-3,3,num=7))
-  yminor = [(10**j)*i for j in range(-3,4) for i in range(2,9,2)]
-  #yminor2 = [1e0*i if i%2==0 else 1e-1*i for i in range(2,9)]
-  #yminor3 = [1e2*i if i%2==0 else 1e1*i for i in range(1,10)]
-  #yminor = yminor1+yminor2+yminor3
-  #yminor.sort()
-  print(yminor)
-  ax.set_yticks(yminor, minor=True)
-  ax.grid(which='minor', alpha=0.2) 
-  ax.grid(which='major', alpha=0.5) 
+  #ax.set_xticks(np.arange(2000,8001,1000))
+  #ax.set_xticks(np.arange(1600,8000,200), minor=True)
+  #ax.set_yticks(np.logspace(-3,3,num=7))
+  #print(np.logspace(-3,3,num=7))
+  #yminor = [(10**j)*i for j in range(-3,4) for i in range(2,9,2)]
+  #print(yminor)
+  #ax.set_yticks(yminor, minor=True)
+  #ax.grid(which='minor', alpha=0.2) 
+  #ax.grid(which='major', alpha=0.5) 
   plt.savefig(plot_dir+'hist_'+title.replace(" ","")+'_'+tag+'.png')
   plt.clf()
   print("Saved plot",title)

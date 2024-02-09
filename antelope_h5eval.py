@@ -103,49 +103,63 @@ def mT_shape_compare():
   #  znunu = f.get('data')[:]
   #with h5py.File("../v9.1/v9p1_PFNv4_Wjetsskim0_w300k.hdf5","r") as f:
   #  wjets = f.get('data')[:]
-  with h5py.File("../v9.2/v9p2_PFNv6_dataAll.hdf5","r") as f:
-    data = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv6_515503.hdf5","r") as f:
+  #with h5py.File("../v9.2/v9p2_PFNv6_dataAll.hdf5","r") as f:
+  #  data = f.get('data')[:]
+  with h5py.File("../v12.5/v12p5_PFNv12_515503.hdf5","r") as f:
     sig1 = f.get('data')[:]
-  with h5py.File("../v8.1/v8p1_PFNv6_515506.hdf5","r") as f:
+  with h5py.File("../v12.5/v12p5_PFNv12_515505.hdf5","r") as f:
     sig2 = f.get('data')[:]
+  with h5py.File("../v12.5/v12p5_PFNv12_515511.hdf5","r") as f:
+    sig3 = f.get('data')[:]
+  with h5py.File("../v12.5/v12p5_PFNv12_515513.hdf5","r") as f:
+    sig4 = f.get('data')[:]
 
   #variables = [f_name for (f_name,f_type) in qcd.dtype.descr]
   variables = ["mT_jj"]
   for var in variables:
     #if var == "mT_jj": continue
-    selectionDT = data["jet2_Width"]<0.05
+    #selectionDT = data["jet2_Width"]<0.05
     selectionCR = qcd["jet2_Width"]<0.05
-    #selectionVR = (qcd["jet2_Width"]>0.05) & (qcd["score"]<0.6)
-    #selectionSR = (qcd["jet2_Width"]>0.05) & (qcd["score"]>0.6)
-    data_loss = data[var][selectionDT]
+    selectionVR = (qcd["jet2_Width"]>0.05) & (qcd["score"]<0.6)
+    selectionSR = (qcd["jet2_Width"]>0.05) & (qcd["score"]>0.6)
+    #data_loss = data[var][selectionDT]
     qcd_lossCR = qcd[var][selectionCR]
-    #qcd_lossVR = qcd[var][selectionVR]
-    #qcd_lossSR = qcd[var][selectionSR]
+    qcd_lossVR = qcd[var][selectionVR]
+    qcd_lossSR = qcd[var][selectionSR]
     #print("bkg shape: ", qcd_loss.shape)
     #znunu_loss = znunu[var]
     #wjets_loss = wjets[var]
     #data_loss = data[var]
     #total_bkg = np.concatenate((qcd_loss, znunu_loss, wjets_loss))
-    selection1 = sig1["score"]>0.6
-    selection2 = sig2["score"]>0.6
+    selection1 = (sig1["score"]>0.6) & (sig1["jet2_Width"]>0.05)
+    selection2 = (sig2["score"]>0.6) & (sig2["jet2_Width"]>0.05)
+    selection3 = (sig3["score"]>0.6) & (sig3["jet2_Width"]>0.05)
+    selection4 = (sig4["score"]>0.6) & (sig4["jet2_Width"]>0.05)
     sig1_loss = sig1[var][selection1]
     sig2_loss = sig2[var][selection2]
-    qcd_weightsCR = np.reshape(5*qcd["weight"][selectionCR],len(qcd_lossCR))
-    #qcd_weightsVR = np.reshape(5*qcd["weight"][selectionVR],len(qcd_lossVR))
-    #qcd_weightsSR = np.reshape(5*qcd["weight"][selectionSR],len(qcd_lossSR))
+    sig3_loss = sig3[var][selection3]
+    sig4_loss = sig4[var][selection4]
+    qcd_weightsCR = np.reshape(0.55*qcd["weight"][selectionCR],len(qcd_lossCR))
+    qcd_weightsVR = np.reshape(0.55*qcd["weight"][selectionVR],len(qcd_lossVR))
+    qcd_weightsSR = np.reshape(0.55*qcd["weight"][selectionSR],len(qcd_lossSR))
+    sig1_weights = np.reshape(sig1["weight"][selection1],len(sig1_loss))
+    sig2_weights = np.reshape(sig2["weight"][selection2],len(sig2_loss))
+    sig3_weights = np.reshape(sig3["weight"][selection3],len(sig3_loss))
+    sig4_weights = np.reshape(sig4["weight"][selection4],len(sig4_loss))
     #print("CR:",sum(qcd_weightsCR))
     #print("VR:",sum(qcd_weightsVR))
     #print("SR:",sum(qcd_weightsSR))
     #znunu_weights = 9.17*np.reshape(znunu["weight"],len(znunu["weight"]))
     #wjets_weights = 35.97*np.reshape(wjets["weight"],len(wjets["weight"]))
     #total_weights = np.concatenate((qcd_weights,znunu_weights,wjets_weights))
-    #d = [qcd_lossCR, qcd_lossVR, qcd_lossSR]#, sig1_loss, sig2_loss]
-    #w = [qcd_weightsCR, qcd_weightsVR, qcd_weightsSR]#np.ones(len(sig1_loss)), np.ones(len(sig2_loss))]
-    #labels = ["MC - CR", "MC - VR", "MC - SR"]#, "2500 GeV 0.8"]
-    d = [data_loss, qcd_lossCR]
-    w = [np.ones(len(data_loss)), qcd_weightsCR]
-    labels = ["Data - CR", "MC - CR"]#"2000 GeV 0.2", "2000 GeV 0.8"]
+    d = [qcd_lossCR, qcd_lossVR, qcd_lossSR]#, sig1_loss, sig2_loss]
+    w = [qcd_weightsCR, qcd_weightsVR, qcd_weightsSR]#np.ones(len(sig1_loss)), np.ones(len(sig2_loss))]
+    labels = ["MC - CR", "MC - VR", "MC - SR"]
+    #d = [qcd_lossSR, sig1_loss, sig2_loss, sig3_loss, sig4_loss]
+    #w = [qcd_weightsSR, sig1_weights, sig2_weights, sig3_weights, sig4_weights]
+    #labels = ["MC BKG", "2500 GeV 0.2", "2500 GeV 0.6", "3500 0.2", "3500 0.6"]
+    #for l,wi,i in zip(labels,w,range(len(labels))):
+    #  labels[i] = l+" ({:.2e})".format(sum(wi))
     #labels = [l+str(len(ds)) for l,ds in zip(lab,d)]
     #plot_single_variable(d,w,labels, var, logy=True) 
     plot_simple_ratio(d,w,labels, var, logy=True) 
