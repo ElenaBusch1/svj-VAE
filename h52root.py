@@ -10,18 +10,18 @@ import random
 #outputFile = "v9.1/v9p1_PFNv6_totalBkgALL_skim0_downSample.root"
 #inputFileString = "v9.2/v9p2_PFNv6_dataAll.hdf5"
 #outputFile = "v9.2/v9p2_PFNv6_dataAll_downSample_5GeVBins_LowStat.root"
-inputFileString = "v12.5/v12p5_PFNv12_bkgALL.hdf5"
-outputFile = "v12.5/v12p5_PFNv12_bkgALL_downSampleTest.root"
+inputFileString = "../v12.5/v12p5_PFNv12_bkgALL.hdf5"
+outputFile = "../v12.5/v12p5_PFNv12_bkgALL_downSampleTest.root"
 
 score_cut = 0.6
 #score_name='multi_reco_transformed_log10_sig'
 score_name='score'
 jet2_cut = 0.05
 downSample = 1
-scaleDown = True
+scaleDown = False
 addGaussian = False
 signalScaleFactor=1
-dataSRStats = 5418 #54181
+dataSRStats = 54181 #54181
 xmin = 1500.
 xmax = 6000.
 tmp = 0.
@@ -86,6 +86,7 @@ def makeHist(inputFileString, outputFile):
     weightData_CR = np.concatenate((weightData_CR,sig_weight))
 
   if downSample > 0:
+    print("Down Sampling")
     PS_hists = []
     CR_hists = []
     VR_hists = []
@@ -95,21 +96,30 @@ def makeHist(inputFileString, outputFile):
     #random.shuffle(mtData_VR)
     #if not isData: print("WARNING!!! Just shuffled MC weighted samples without shuffling weights")
     for i in range(downSample):
-      weights = np.array([])
-      mts = np.array([])
-      while weights.sum() < dataSRStats:
-        idx = get_weighted_elements(weightData_PS, i, 1000)
-        weights = np.append(weights, weightData_PS[idx])
-        mts = np.append(mts, mtData_PS[idx])
-        weightData_PS[idx] = 0
-        if weightData_PS.sum == 0: break
-        print(weights.sum())
-      #PS_hists.append(np.histogram(mtData_PS[i::downSample],binning,(xmin,xmax),weights=weightData_PS[i::downSample]))
-      #CR_hists.append(np.histogram(mtData_CR[i::downSample],binning,(xmin,xmax),weights=weightData_CR[i::downSample]))
-      #VR_hists.append(np.histogram(mtData_VR[i::downSample],binning,(xmin,xmax),weights=weightData_VR[i::downSample]))
-      #if not isData:
-      #  SR_hists.append(np.histogram(mtData_SR[i::downSample],binning,(xmin,xmax),weights=weightData_SR[i::downSample]))
-    return()
+      # PS, CR, VR
+      for weightData, mtData, hists in zip([weightData_PS, weightData_CR, weightData_VR], [mtData_PS, mtData_CR, mtData_VR], [PS_hists, CR_hists, VR_hists]):
+        weights = np.array([])
+        mts = np.array([])
+        while weights.sum() < dataSRStats:
+          idx = get_weighted_elements(weightData, i, 1000)
+          weights = np.append(weights, weightData[idx])
+          mts = np.append(mts, mtData[idx])
+          weightData[idx] = 0
+          if weightData.sum == 0: break
+        print("Weighted selected events: ", weights.sum())
+        hists.append(np.histogram(mts,binning,(xmin,xmax),weights=weights))
+      #SR
+      if not isData:
+        weights = np.array([])
+        mts = np.array([])
+        while weights.sum() < dataSRStats:
+          idx = get_weighted_elements(weightData_SR, i, 1000)
+          weights = np.append(weights, weightData_SR[idx])
+          mts = np.append(mts, mtData_SR[idx])
+          weightData_SR[idx] = 0
+          if weightData_SR.sum == 0: break
+        print("Weighted selected events: ", weights.sum())
+        SR_hists.append(np.histogram(mts,binning,(xmin,xmax),weights=weights))
   else:
     mtHist_PS = np.histogram(mtData_PS,binning,(xmin,xmax),weights=weightData_PS)
     mtHist_CR = np.histogram(mtData_CR,binning,(xmin,xmax),weights=weightData_CR)
@@ -131,7 +141,7 @@ def makeHist(inputFileString, outputFile):
   
   print("Writing to ", outputFile)
   with uproot.recreate(outputFile) as outputFile:
-    if downSample > 1:
+    if downSample > 0:
       for i in range(downSample):
         outputFile["mT_PS"+str(i)] = PS_hists[i]
         print(outputFile["mT_PS"+str(i)].errors())
