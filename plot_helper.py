@@ -6,7 +6,7 @@ from matplotlib import colors
 from math import ceil
 from scipy.stats import pearsonr
 
-tag = "mTShapeCompOLD"
+tag = "jzSlice_inputZoom"
 plot_dir = '/a/home/kolya/ebusch/WWW/SVJ/autoencoder/'
 
 def my_metric(s,b):
@@ -225,22 +225,42 @@ def plot_inputs(bkg, sig, variable_array):
       plt.savefig(plot_dir+'input_vars_'+str(i)+tag+'.png')
       plt.clf()
 
+def plot_jz_input(vrs):
+  mt = vrs[:,0]
+  jz_vals = vrs[:,1]
+  d = [mt]
+  w = [np.ones(len(mt))]
+  labels = ["All"]
+  print(mt)
+  print(jz_vals)
+  for jz in range(364704, 364706):
+    selection = jz_vals == jz #PS
+    print(selection)
+    dt = mt[selection]
+    print(len(dt))
+    #selection = (qcd["mcChannelNumber"] == jz) & (qcd["jet2_Width"]<0.05) #CR
+    #selection = (qcd["mcChannelNumber"] == jz) & (qcd["jet2_Width"]>0.05) & (qcd["score"]<0.6) #VR
+    #selection = (qcd["mcChannelNumber"] == jz) & (qcd["jet2_Width"]>0.05) & (qcd["score"]>0.6) #SR
+    d.append(dt)
+    w.append(np.ones(len(dt)))
+    labels.append(str(jz))
+ 
+  plot_single_variable(d,w,labels, "mT_jj", logy=True)
+  
 def plot_single_variable(hists, weights, h_names, title, logy=False):
   nbins=100
   hists_flat=np.concatenate(hists)
   bin_min=np.min(hists_flat)
   bin_max=np.max(hists_flat)
   bins=np.linspace(bin_min,bin_max,nbins)
-  if(title=="mT_jj"): bins=np.linspace(1550,7950,65)
+  if(title=="mT_jj"): bins=np.linspace(1500,2500,100)
   if(title=="rT"): bins=np.linspace(0,1.0, nbins)
   fig = plt.figure()
   ax = fig.add_subplot(1,1,1)
   for data,weight,name in zip(hists,weights,h_names):
-    h,b,_ = ax.hist(data, bins=bins, histtype='step', label=name, density=False, weights=weight)
-    print(name)
-    print(h[1],h[9],h[17])
+    if name == "All": h,b,_ = ax.hist(data, bins=bins, histtype='step', label=name, density=False, weights=weight, color='black')
+    else: h,b,_ = ax.hist(data, bins=bins, histtype='step', label=name, density=False, weights=weight)
   plt.legend(loc='upper right', fontsize='x-small')
-  print(bins)
   if (logy): ax.set_yscale("log")
   plt.title(title)
   #ax.set_xticks(np.arange(2000,8001,1000))
@@ -373,9 +393,9 @@ def plot_vectors(train,sig,extra_tag):
     if(bins[-1] > 3000): bins = np.arange(0,3000,50)
     plt.subplot(4,2,i+1)
     plt.tight_layout(h_pad=1, w_pad=1)
-    plt.hist(train_v, alpha=0.5, label="MC", bins=bins, density=False, histtype='step')
+    plt.hist(train_v, alpha=0.5, label="bkg", bins=bins, density=False, histtype='step')
     #plt.hist(test_v, alpha=0.5, label="test", bins=bins, density=True, color='lightskyblue')
-    plt.hist(sig_v, alpha=0.5, label="data", bins=bins, density=False, histtype='step')
+    plt.hist(sig_v, alpha=0.5, label="sig", bins=bins, density=False, histtype='step')
     plt.yscale('log')
     plt.title(variable_array[i])
     if i == 1: plt.legend()

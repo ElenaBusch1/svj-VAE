@@ -31,7 +31,7 @@ sig_file = "../v12.5/user.ebusch.sigALL.root"
 #bkgpt = read_flat_vars(bkg_file,nevents, ["met_met"], True)
 #plot_single_variable([bkgpt], [np.ones(len(bkgpt))], ["totalBKG"],"met_met",True)
 
-bkg = getTwoJetSystem(nevents,bkg_file,[],use_weight=True)
+bkg, vrs = getTwoJetSystem(nevents,bkg_file,["mT_jj", "mcChannelNumber"],use_weight=True)
 #bkg2 = getTwoJetSystem(193900,bkg2_file,[],use_weight=False)
 #bkg3 = getTwoJetSystem(80000,bkg3_file,[],use_weight=False)
 sig = getTwoJetSystem(nevents,sig_file,[],use_weight=False)
@@ -41,6 +41,8 @@ print("Sig shape:", sig.shape)
 
 # Plot inputs
 plot_vectors(bkg,sig,"PFNinput")
+plot_jz_input(vrs)
+exit()
 #check_weights(nevents)
 #plot_nTracks(bkg, "bkg")
 #plot_nTracks(sig, "sig")

@@ -163,7 +163,29 @@ def mT_shape_compare():
     #labels = [l+str(len(ds)) for l,ds in zip(lab,d)]
     #plot_single_variable(d,w,labels, var, logy=True) 
     plot_simple_ratio(d,w,labels, var, logy=True) 
-    
+
+def jz_slice_compare(qcd, jz_range):
+  d = [qcd["mT_jj"][qcd["mcChannelNumber"] > 0]]
+  w = [qcd["weight"][qcd["mcChannelNumber"] > 0]]
+  labels = ["All"]
+  for jz in jz_range:
+    selection = qcd["mcChannelNumber"] == jz #PS
+    #selection = (qcd["mcChannelNumber"] == jz) & (qcd["jet2_Width"]<0.05) #CR
+    #selection = (qcd["mcChannelNumber"] == jz) & (qcd["jet2_Width"]>0.05) & (qcd["score"]<0.6) #VR
+    #selection = (qcd["mcChannelNumber"] == jz) & (qcd["jet2_Width"]>0.05) & (qcd["score"]>0.6) #SR
+    dt = qcd["mT_jj"][selection]
+    wt = qcd["weight"][selection]
+    d.append(dt)
+    w.append(wt)
+    labels.append(str(jz))
+ 
+  plot_single_variable(d,w,labels, "mT_jj", logy=True)
+
+def jz_slice_call():
+  with h5py.File("../v12.5/v12p5_PFNv12_bkgALL.hdf5","r") as f:
+    qcd = f.get('data')[:]
+  jz_range = range(364704, 364706)
+  jz_slice_compare(qcd, jz_range)
 
 def cms_mT_plots():
   with h5py.File("../v9.1/v9p1_CMS_totalBkgALL_skim0.hdf5","r") as f:
@@ -410,7 +432,8 @@ def compare_s_sqrt_b():
   do_grid_plots(v3_compare, "k_fold")  
 
 def main():
-  mT_shape_compare()
+  jz_slice_call()
+  #mT_shape_compare()
   #grid_scan("PFNv6_1_skim1")
   #compare_s_sqrt_b()
   #correlation_plots()

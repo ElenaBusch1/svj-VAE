@@ -61,7 +61,7 @@ def read_vectors(infile, nEvents, jet_array, use_weight=True, idx_range=[]):
     return padded_jet_array
 
 def main():
-    read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 100, ['mT_jj', 'met_met'])
+    read_flat_vars("../v12.5/user.ebusch.QCD.root", 500000, ['mT_jj', 'met_met'])
     read_flat_vars("../v8.1/user.ebusch.QCDskim.mc20e.root", 200, ['mT_jj', 'met_met'])
     read_vectors("../v8.1/user.ebusch.QCDskim.mc20e.root", 100, ['jet0_GhostTrack_pt'])
 
